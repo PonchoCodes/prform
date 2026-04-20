@@ -1,0 +1,70 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+}
+
+model User {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  password  String
+  name      String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  age              Int?
+  biologicalSex    String?
+  weeklyMileage    String?
+  experienceLevel  String?
+  onboardingDone   Boolean @default(false)
+
+  currentWakeTime  String?
+  currentBedTime   String?
+  restedFeeling    String?
+
+  notifPhase1      Boolean @default(true)
+  notifPhase2      Boolean @default(true)
+  notifPhase3      Boolean @default(true)
+  notifPhase4      Boolean @default(true)
+
+  workouts  Workout[]
+  meets     Meet[]
+  sessions  Session[]
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  userId       String
+  expires      DateTime
+  sessionToken String   @unique
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model Workout {
+  id          String   @id @default(cuid())
+  userId      String
+  date        DateTime
+  type        String
+  distance    Float?
+  duration    Int?
+  effort      Int?
+  isTemplate  Boolean  @default(false)
+  dayOfWeek   Int?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model Meet {
+  id        String   @id @default(cuid())
+  userId    String
+  name      String
+  date      DateTime
+  distances String
+  priority  String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}

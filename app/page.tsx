@@ -1,100 +1,136 @@
-import Image from "next/image";
+"use client";
+import Link from "next/link";
+import { motion } from "framer-motion";
+import { FadeUp } from "@/components/FadeUp";
+import { Ticker } from "@/components/Ticker";
+import { Button } from "@/components/Button";
 
-export default function Home() {
+const meets = [
+  "Penn Relays",
+  "Boston Marathon",
+  "New York Road Runners",
+  "USATF Outdoor Championships",
+  "Drake Relays",
+  "Prefontaine Classic",
+  "NYC Half Marathon",
+  "Chicago Marathon",
+  "Millrose Games",
+  "Mt. SAC Relays",
+];
+
+const features = [
+  {
+    tag: "Sleep Science",
+    title: "Circadian Optimization",
+    body: "PRform calculates your precise bedtime by working backward from race day — shifting your sleep phase earlier so your body peaks at the start line, not 2 hours later.",
+  },
+  {
+    tag: "Behavioral Coaching",
+    title: "Wind-Down Protocol",
+    body: "A time-stamped 3-hour countdown before bed. Light dimming, screen removal, final cool-down. Behavioral consistency is what actually shifts your rhythm — not an app.",
+  },
+  {
+    tag: "Race Readiness",
+    title: "Meet-Day Precision",
+    body: "Every A, B, and C race gets its own taper curve. PRform knows whether tomorrow is a tempo day or race week — and adjusts your sleep need accordingly.",
+  },
+];
+
+export default function LandingPage() {
   return (
-    <div className="grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20 font-[family-name:var(--font-geist-sans)]">
-      <main className="flex flex-col gap-8 row-start-2 items-center sm:items-start">
-        <Image
-          className="dark:invert"
-          src="https://nextjs.org/icons/next.svg"
-          alt="Next.js logo"
-          width={180}
-          height={38}
-          priority
-        />
-        <ol className="list-inside list-decimal text-sm text-center sm:text-left font-[family-name:var(--font-geist-mono)]">
-          <li className="mb-2">
-            Get started by editing{" "}
-            <code className="bg-black/[.05] dark:bg-white/[.06] px-1 py-0.5 rounded font-semibold">
-              app/page.tsx
-            </code>
-            .
-          </li>
-          <li>Save and see your changes instantly.</li>
-        </ol>
-
-        <div className="flex gap-4 items-center flex-col sm:flex-row">
-          <a
-            className="rounded-full border border-solid border-transparent transition-colors flex items-center justify-center bg-foreground text-background gap-2 hover:bg-[#383838] dark:hover:bg-[#ccc] text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="https://nextjs.org/icons/vercel.svg"
-              alt="Vercel logomark"
-              width={20}
-              height={20}
-            />
-            Deploy now
-          </a>
-          <a
-            className="rounded-full border border-solid border-black/[.08] dark:border-white/[.145] transition-colors flex items-center justify-center hover:bg-[#f2f2f2] dark:hover:bg-[#1a1a1a] hover:border-transparent text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 sm:min-w-44"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Read our docs
-          </a>
+    <div className="min-h-screen bg-white">
+      <nav className="border-b border-[#E5E5E5] bg-white sticky top-0 z-50">
+        <div className="max-w-[1200px] mx-auto px-6 h-14 flex items-center justify-between">
+          <span className="font-black text-xl uppercase tracking-tight">
+            PR<span className="text-[#E8FF00] bg-[#0A0A0A] px-1">form</span>
+          </span>
+          <div className="flex items-center gap-4">
+            <Link href="/login" className="link-wipe text-sm font-bold uppercase tracking-wider text-[#6B6B6B] hover:text-[#0A0A0A]">
+              Log In
+            </Link>
+            <Link
+              href="/signup"
+              className="bg-[#0A0A0A] text-white px-4 py-2 text-xs font-bold uppercase tracking-wider hover:bg-[#E8FF00] hover:text-[#0A0A0A] transition-colors"
+            >
+              Sign Up
+            </Link>
+          </div>
         </div>
-      </main>
-      <footer className="row-start-3 flex gap-6 flex-wrap items-center justify-center">
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="https://nextjs.org/icons/file.svg"
-            alt="File icon"
-            width={16}
-            height={16}
-          />
-          Learn
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="https://nextjs.org/icons/window.svg"
-            alt="Window icon"
-            width={16}
-            height={16}
-          />
-          Examples
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="https://nextjs.org/icons/globe.svg"
-            alt="Globe icon"
-            width={16}
-            height={16}
-          />
-          Go to nextjs.org →
-        </a>
+      </nav>
+
+      <motion.section
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ duration: 0.4 }}
+        className="bg-[#0A0A0A] text-white px-6 py-24 md:py-36"
+      >
+        <div className="max-w-[1200px] mx-auto">
+          <p className="text-xs font-bold uppercase tracking-[0.3em] text-[#E8FF00] mb-6">Performance Sleep Optimization</p>
+          <h1 className="font-black uppercase leading-none mb-8 text-5xl md:text-8xl xl:text-[96px]">
+            Sleep Sharp.<br />Race Faster.
+          </h1>
+          <p className="text-[#AAAAAA] text-lg md:text-xl max-w-2xl mb-10 leading-relaxed">
+            PRform uses sport science to calculate the exact bedtime you need every night of your training cycle — then coaches you through a wind-down protocol that actually shifts your circadian rhythm before race day.
+          </p>
+          <div className="flex flex-col sm:flex-row gap-4">
+            <Link href="/signup">
+              <Button size="lg" variant="primary">Get Started Free</Button>
+            </Link>
+            <Link href="/login">
+              <Button size="lg" variant="ghost" className="!border-[#444] !text-white hover:!border-white">
+                Demo Login
+              </Button>
+            </Link>
+          </div>
+          <p className="mt-6 text-xs text-[#6B6B6B] font-mono">demo@prform.com / demo1234</p>
+        </div>
+      </motion.section>
+
+      <Ticker items={meets} />
+
+      <section className="py-24 px-6">
+        <div className="max-w-[1200px] mx-auto">
+          <FadeUp>
+            <p className="text-xs font-bold uppercase tracking-[0.3em] text-[#6B6B6B] mb-3">How It Works</p>
+            <h2 className="font-black text-4xl md:text-5xl uppercase mb-16">Built on Sleep Science</h2>
+          </FadeUp>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-px bg-[#E5E5E5]">
+            {features.map((f, i) => (
+              <FadeUp key={f.tag} delay={i * 80}>
+                <div className="bg-white p-8 h-full border border-[#E5E5E5] group hover:border-[#0A0A0A] transition-colors">
+                  <p className="text-xs font-bold uppercase tracking-widest text-[#E8FF00] bg-[#0A0A0A] inline-block px-2 py-0.5 mb-6">
+                    {f.tag}
+                  </p>
+                  <h3 className="font-black text-xl uppercase mb-4">{f.title}</h3>
+                  <p className="text-[#6B6B6B] text-sm leading-relaxed">{f.body}</p>
+                </div>
+              </FadeUp>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      <section className="bg-[#0A0A0A] py-24 px-6">
+        <div className="max-w-[1200px] mx-auto text-center text-white">
+          <FadeUp>
+            <h2 className="font-black text-4xl md:text-6xl uppercase mb-6">Your Next PR Starts Tonight</h2>
+            <p className="text-[#AAAAAA] text-lg max-w-xl mx-auto mb-10">
+              Elite runners don&apos;t sleep more than you — they sleep at the right time.
+            </p>
+            <Link href="/signup">
+              <Button size="lg" variant="primary">Create Free Account</Button>
+            </Link>
+          </FadeUp>
+        </div>
+      </section>
+
+      <footer className="border-t border-[#E5E5E5] py-8 px-6">
+        <div className="max-w-[1200px] mx-auto flex items-center justify-between">
+          <span className="font-black text-sm uppercase tracking-tight">
+            PR<span className="text-[#E8FF00] bg-[#0A0A0A] px-1">form</span>
+          </span>
+          <p className="text-xs text-[#6B6B6B] uppercase tracking-wider">Sleep Sharp. Race Faster.</p>
+        </div>
       </footer>
     </div>
   );
