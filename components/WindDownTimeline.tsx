@@ -132,7 +132,7 @@ export function WindDownTimeline({ windDown }: WindDownTimelineProps) {
         })}
       </div>
       <p className="mt-4 text-sm text-[#6B6B6B] leading-relaxed border-l-2 border-[#E8FF00] pl-4">
-        Consistent wind-down timing is what shifts your circadian rhythm. PRform can&apos;t dim your screen — but following this protocol every night will.
+        Consistent wind-down timing is what shifts your circadian rhythm. PRform cannot dim your screen, but following this protocol every night will move your sleep phase and maximize your readiness on meet day.
       </p>
     </div>
   );

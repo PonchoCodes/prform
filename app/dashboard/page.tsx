@@ -70,7 +70,7 @@ export default function DashboardPage() {
   const nextMeet = meets?.find((m: any) => new Date(m.date) >= new Date());
 
   const recoveryScore = today.recoveryScore;
-  const recoveryLabel = recoveryScore >= 80 ? "Peak readiness" : recoveryScore >= 60 ? "Moderate fatigue accumulating" : "High fatigue — prioritize rest";
+  const recoveryLabel = recoveryScore >= 80 ? "Peak readiness. You are primed to run a PR." : recoveryScore >= 60 ? "Moderate fatigue accumulating. Follow your wind-down to protect meet-day performance." : "High fatigue. Prioritize rest to protect your PR window.";
 
   return (
     <div className="min-h-screen bg-white">
@@ -112,7 +112,7 @@ export default function DashboardPage() {
                 </div>
                 <div className="text-right">
                   <p className="font-mono font-black text-6xl text-[#E8FF00] leading-none">
-                    {today.daysUntilNextMeet ?? "—"}
+                    {today.daysUntilNextMeet ?? "0"}
                   </p>
                   <p className="text-[#6B6B6B] text-xs uppercase tracking-wider mt-1">days away</p>
                 </div>
@@ -158,7 +158,7 @@ export default function DashboardPage() {
                 if (!day) return (
                   <div key={i} className={`flex-1 p-4 min-w-[100px] ${isToday ? "bg-[#0A0A0A] text-white" : "bg-white"}`}>
                     <p className={`text-xs font-bold uppercase tracking-wider mb-3 ${isToday ? "text-[#E8FF00]" : "text-[#6B6B6B]"}`}>{DAYS[i]}</p>
-                    <p className="text-xs text-[#6B6B6B]">—</p>
+                    <p className="text-xs text-[#6B6B6B]">Rest</p>
                   </div>
                 );
                 return (

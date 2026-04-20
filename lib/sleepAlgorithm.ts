@@ -27,7 +27,7 @@ export interface UserInput {
 }
 
 export interface WindDownPhases {
-  phase1: string; // "HH:MM" 24h — 2 hours before bed
+  phase1: string; // "HH:MM" 24h, 2 hours before bed
   phase2: string; // 90 min before
   phase3: string; // 30 min before
   phase4: string; // 15 min before

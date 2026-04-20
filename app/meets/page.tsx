@@ -274,7 +274,7 @@ export default function MeetsPage() {
                             className="border-t border-[#E5E5E5] p-6"
                           >
                             <p className="text-xs font-bold uppercase tracking-[0.3em] text-[#6B6B6B] mb-4">
-                              Sleep Ramp — 10 Days Out
+                              Sleep Ramp: 10 Days to Race Day
                             </p>
                             <div className="h-48">
                               <ResponsiveContainer width="100%" height="100%">

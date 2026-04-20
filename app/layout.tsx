@@ -3,7 +3,7 @@ import "./globals.css";
 import { Providers } from "@/components/Providers";
 
 export const metadata: Metadata = {
-  title: "PRform — Sleep Sharp. Race Faster.",
+  title: "PRform: Sleep Sharp. Race Faster.",
   description: "Performance sleep optimization for competitive runners.",
 };
 

@@ -167,10 +167,10 @@ export default function ProfilePage() {
             <h2 className="font-black text-xl uppercase mt-10 mb-6 border-b border-[#E5E5E5] pb-3">Wind-Down Notifications</h2>
             <div className="space-y-3">
               {[
-                { key: "notifPhase1", label: "2 hrs before — Dim Lights" },
-                { key: "notifPhase2", label: "90 min before — Night Mode" },
-                { key: "notifPhase3", label: "30 min before — No Screens" },
-                { key: "notifPhase4", label: "15 min before — Lights Off" },
+                { key: "notifPhase1", label: "2 hrs before: Dim Lights" },
+                { key: "notifPhase2", label: "90 min before: Night Mode" },
+                { key: "notifPhase3", label: "30 min before: No Screens" },
+                { key: "notifPhase4", label: "15 min before: Lights Off" },
               ].map((phase) => (
                 <div key={phase.key} className="flex items-center justify-between border border-[#E5E5E5] p-4">
                   <p className="text-sm font-bold">{phase.label}</p>

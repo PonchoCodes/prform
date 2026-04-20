@@ -22,17 +22,17 @@ const features = [
   {
     tag: "Sleep Science",
     title: "Circadian Optimization",
-    body: "PRform calculates your precise bedtime by working backward from race day — shifting your sleep phase earlier so your body peaks at the start line, not 2 hours later.",
+    body: "PRform calculates your precise bedtime by working backward from race day, shifting your sleep phase earlier so your body peaks at the start line and you cross the finish line with a PR.",
   },
   {
     tag: "Behavioral Coaching",
     title: "Wind-Down Protocol",
-    body: "A time-stamped 3-hour countdown before bed. Light dimming, screen removal, final cool-down. Behavioral consistency is what actually shifts your rhythm — not an app.",
+    body: "A time-stamped 3-hour countdown before bed. Light dimming, screen removal, final cool-down. Behavioral consistency is what actually shifts your circadian rhythm and makes meet day performance possible.",
   },
   {
     tag: "Race Readiness",
     title: "Meet-Day Precision",
-    body: "Every A, B, and C race gets its own taper curve. PRform knows whether tomorrow is a tempo day or race week — and adjusts your sleep need accordingly.",
+    body: "Every A, B, and C race gets its own taper curve. PRform knows whether tomorrow is a tempo day or peak race week and adjusts your nightly sleep target to maximize your PR potential.",
   },
 ];
 
@@ -70,7 +70,7 @@ export default function LandingPage() {
             Sleep Sharp.<br />Race Faster.
           </h1>
           <p className="text-[#AAAAAA] text-lg md:text-xl max-w-2xl mb-10 leading-relaxed">
-            PRform uses sport science to calculate the exact bedtime you need every night of your training cycle — then coaches you through a wind-down protocol that actually shifts your circadian rhythm before race day.
+            PRform uses sport science to calculate the exact bedtime you need every night of your training cycle, then coaches you through a wind-down protocol that actually shifts your circadian rhythm before meet day. More PRs start the night before than at the start line.
           </p>
           <div className="flex flex-col sm:flex-row gap-4">
             <Link href="/signup">
@@ -115,7 +115,7 @@ export default function LandingPage() {
           <FadeUp>
             <h2 className="font-black text-4xl md:text-6xl uppercase mb-6">Your Next PR Starts Tonight</h2>
             <p className="text-[#AAAAAA] text-lg max-w-xl mx-auto mb-10">
-              Elite runners don&apos;t sleep more than you — they sleep at the right time.
+              Elite runners do not sleep more than you. They sleep at the right time. That is the difference between a PR and a missed window.
             </p>
             <Link href="/signup">
               <Button size="lg" variant="primary">Create Free Account</Button>

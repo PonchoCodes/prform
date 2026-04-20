@@ -46,21 +46,21 @@ export default function OnboardingPage() {
   const { data: session } = useSession();
   const [step, setStep] = useState(1);
 
-  // Step 1 — Profile
+  // Step 1: Profile
   const [age, setAge] = useState("");
   const [biologicalSex, setBiologicalSex] = useState("");
   const [weeklyMileage, setWeeklyMileage] = useState("");
   const [experienceLevel, setExperienceLevel] = useState("");
 
-  // Step 2 — Sleep baseline
+  // Step 2: Sleep baseline
   const [wakeTime, setWakeTime] = useState("06:00");
   const [bedTime, setBedTime] = useState("22:00");
   const [restedFeeling, setRestedFeeling] = useState("");
 
-  // Step 3 — Workout schedule
+  // Step 3: Workout schedule
   const [weekTemplate, setWeekTemplate] = useState<WeekTemplate>(defaultWeek);
 
-  // Step 4 — Meets
+  // Step 4: Meets
   const [meets, setMeets] = useState<Meet[]>([
     { name: "", date: "", distances: "", priority: "A" },
   ]);
