@@ -23,6 +23,7 @@
     "@splinetool/react-spline": "^4.1.0",
     "@splinetool/runtime": "^1.12.87",
     "@types/bcryptjs": "^2.4.6",
+    "@types/ws": "^8.18.1",
     "bcryptjs": "^3.0.3",
     "dotenv": "^17.4.2",
     "framer-motion": "^12.38.0",
@@ -32,6 +33,7 @@
     "react": "^18",
     "react-dom": "^18",
     "recharts": "^3.8.1",
+    "ws": "^8.20.0",
     "zustand": "^5.0.12"
   },
   "devDependencies": {
