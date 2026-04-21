@@ -6,11 +6,12 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ```bash
 npm run dev          # Start dev server at http://localhost:3000
-npm run build        # Production build
+npm run build        # Production build (next build only — no migrate)
 npm run lint         # ESLint via Next.js
 npm run seed         # Seed demo user (demo@prform.com / demo1234)
 
-npx prisma migrate dev --name <name>   # Create and apply a migration
+npx prisma migrate dev --name <name>   # Create and apply a migration locally
+npx prisma migrate deploy              # Apply pending migrations to production DB (run manually before deploy)
 npx prisma generate                    # Regenerate Prisma client (required after schema changes)
 npx prisma studio                      # Browse database
 ```
