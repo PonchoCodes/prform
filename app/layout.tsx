@@ -5,6 +5,13 @@ import { Providers } from "@/components/Providers";
 export const metadata: Metadata = {
   title: "PRform: Sleep Sharp. Race Faster.",
   description: "Performance sleep optimization for competitive runners.",
+  themeColor: "#0A0A0A",
+  manifest: "/manifest.json",
+  appleWebApp: {
+    capable: true,
+    title: "PRform",
+    statusBarStyle: "black-translucent",
+  },
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

@@ -17,6 +17,7 @@
 [![TypeScript](https://img.shields.io/badge/TypeScript-5-3178C6?style=flat-square&logo=typescript)](https://typescriptlang.org)
 [![Prisma](https://img.shields.io/badge/Prisma-7-2D3748?style=flat-square&logo=prisma)](https://prisma.io)
 [![Tailwind CSS](https://img.shields.io/badge/Tailwind-3-06B6D4?style=flat-square&logo=tailwindcss)](https://tailwindcss.com)
+[![Deployed on Vercel](https://img.shields.io/badge/Deployed%20on-Vercel-black?style=flat-square&logo=vercel)](https://prform.vercel.app)
 [![License: MIT](https://img.shields.io/badge/License-MIT-E8FF00?style=flat-square)](LICENSE)
 
 </div>
@@ -35,7 +36,20 @@ Then it holds you accountable. The wind-down dashboard delivers a live, time-sta
 
 ---
 
-## Quick Start
+## Live Demo
+
+**[prform.vercel.app](https://prform.vercel.app)**
+
+```
+Email:    demo@prform.com
+Password: demo1234
+```
+
+Pre-loaded with 8 weeks of training data, a weekly template, and three upcoming meets.
+
+---
+
+## Quick Start (local)
 
 ```bash
 # Clone and install
@@ -43,29 +57,19 @@ git clone https://github.com/PonchoCodes/prform.git
 cd prform
 npm install
 
-# Set up the database
-npx prisma migrate dev --name init
+# Set up environment — create .env with your Neon connection string and a secret
+DATABASE_URL="postgresql://..."
+NEXTAUTH_SECRET="..."
 
-# Seed demo data
-npx ts-node --compiler-options '{"module":"CommonJS"}' prisma/seed.ts
+# Apply migrations and seed demo data
+npx prisma migrate deploy
+npm run seed
 
 # Run
 npm run dev
 ```
 
 Open [http://localhost:3000](http://localhost:3000)
-
-### Demo Account (ready to use immediately)
-
-```
-Email:    demo@prform.com
-Password: demo1234
-```
-
-Pre-loaded with 8 weeks of training data, a weekly template, and three upcoming meets:
-- **State Championships** in 18 days (A Race)
-- **Local Invitational** in 6 days (B Race)
-- **Regional Open** in 45 days (C Race)
 
 ---
 
@@ -76,7 +80,8 @@ Pre-loaded with 8 weeks of training data, a weekly template, and three upcoming 
 | Framework | Next.js 14 App Router | Server components, API routes, file-based routing |
 | Language | TypeScript 5 | Type-safe algorithm and data models |
 | Styling | Tailwind CSS 3 | Design system tokens, zero-config utility classes |
-| Database | SQLite via Prisma 7 | Zero-setup local DB with full ORM, Prisma v7 better-sqlite3 adapter |
+| Database | PostgreSQL (Neon) via Prisma 7 | Serverless-compatible Neon driver, Prisma v7 adapter-neon |
+| Hosting | Vercel | Serverless functions, automatic deploys from GitHub |
 | Auth | NextAuth.js v4 | JWT-based sessions, credentials provider |
 | Charts | Recharts | Sleep ramp visualization on meet detail pages |
 | Animation | Framer Motion + Tailwind keyframes | Page transitions, fade-up scroll, accent pulse, ticker |
