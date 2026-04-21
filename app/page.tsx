@@ -4,6 +4,7 @@ import { motion } from "framer-motion";
 import { FadeUp } from "@/components/FadeUp";
 import { Ticker } from "@/components/Ticker";
 import { Button } from "@/components/Button";
+import Spline from "@splinetool/react-spline/next";
 
 const meets = [
   "Penn Relays",
@@ -62,9 +63,19 @@ export default function LandingPage() {
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         transition={{ duration: 0.4 }}
-        className="bg-[#0A0A0A] text-white px-6 py-24 md:py-36"
+        className="bg-[#0A0A0A] text-white relative overflow-hidden"
+        style={{ minHeight: "100vh" }}
       >
-        <div className="max-w-[1200px] mx-auto">
+        {/* Spline 3D scene — full bleed background */}
+        <div className="absolute inset-0 w-full h-full z-0">
+          <Spline scene="https://prod.spline.design/Y6X8ndP0-zjE6WcK/scene.splinecode" />
+        </div>
+
+        {/* Gradient overlay so text stays legible over the 3D scene */}
+        <div className="absolute inset-0 z-10 bg-gradient-to-r from-[#0A0A0A] via-[#0A0A0A]/80 to-transparent pointer-events-none" />
+
+        {/* Content */}
+        <div className="relative z-20 max-w-[1200px] mx-auto px-6 py-24 md:py-36 flex flex-col justify-center min-h-screen">
           <p className="text-xs font-bold uppercase tracking-[0.3em] text-[#E8FF00] mb-6">Performance Sleep Optimization</p>
           <h1 className="font-black uppercase leading-none mb-8 text-5xl md:text-8xl xl:text-[96px]">
             Sleep Sharp.<br />Race Faster.
