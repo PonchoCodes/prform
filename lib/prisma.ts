@@ -1,10 +1,12 @@
 import { PrismaClient } from "@prisma/client";
 import { neonConfig } from "@neondatabase/serverless";
 import { PrismaNeon } from "@prisma/adapter-neon";
-import ws from "ws";
 
-// Node.js 18/20 (Vercel serverless) doesn't expose WebSocket as a global
-neonConfig.webSocketConstructor = ws;
+// Dynamically require ws so it's never bundled — only runs in Node.js at runtime
+if (typeof WebSocket === "undefined") {
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  neonConfig.webSocketConstructor = require("ws");
+}
 
 function createPrismaClient(): PrismaClient {
   const adapter = new PrismaNeon({ connectionString: process.env.DATABASE_URL });
