@@ -4,7 +4,6 @@ import { motion } from "framer-motion";
 import { FadeUp } from "@/components/FadeUp";
 import { Ticker } from "@/components/Ticker";
 import { Button } from "@/components/Button";
-import Spline from "@splinetool/react-spline/next";
 
 const meets = [
   "Penn Relays",
@@ -66,10 +65,15 @@ export default function LandingPage() {
         className="bg-[#0A0A0A] text-white relative overflow-hidden"
         style={{ minHeight: "100vh" }}
       >
-        {/* Spline 3D scene — full bleed background */}
-        <div className="absolute inset-0 w-full h-full z-0">
-          <Spline scene="https://prod.spline.design/Y6X8ndP0-zjE6WcK/scene.splinecode" />
-        </div>
+        {/* Hero background video */}
+        <video
+          className="absolute inset-0 w-full h-full object-cover z-0"
+          src="/hero.mov"
+          autoPlay
+          loop
+          muted
+          playsInline
+        />
 
         {/* Gradient overlay so text stays legible over the 3D scene */}
         <div className="absolute inset-0 z-10 bg-gradient-to-r from-[#0A0A0A] via-[#0A0A0A]/80 to-transparent pointer-events-none" />
