@@ -1,11 +1,12 @@
 import { PrismaClient } from "@prisma/client";
-import { PrismaBetterSqlite3 } from "@prisma/adapter-better-sqlite3";
+import { PrismaPg } from "@prisma/adapter-pg";
+import { Pool } from "pg";
 import bcrypt from "bcryptjs";
-import path from "path";
+import "dotenv/config";
 
-const dbPath = path.resolve(__dirname, "../dev.db");
-const adapter = new PrismaBetterSqlite3({ url: dbPath });
-const prisma = new PrismaClient({ adapter } as any);
+const pool = new Pool({ connectionString: process.env.DATABASE_URL });
+const adapter = new PrismaPg(pool);
+const prisma = new PrismaClient({ adapter });
 
 const WORKOUT_SCHEDULE: Array<{ dow: number; type: string; distance: number | null }> = [
   { dow: 0, type: "easy", distance: 6 },
@@ -44,6 +45,7 @@ async function main() {
       currentBedTime: "22:30",
       restedFeeling: "sometimes",
       onboardingDone: true,
+      sport: "track",
     },
   });
 

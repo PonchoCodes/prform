@@ -3,7 +3,7 @@ generator client {
 }
 
 datasource db {
-  provider = "sqlite"
+  provider = "postgresql"
 }
 
 model User {
@@ -19,6 +19,7 @@ model User {
   weeklyMileage    String?
   experienceLevel  String?
   onboardingDone   Boolean @default(false)
+  sport            String? @default("track")
 
   currentWakeTime  String?
   currentBedTime   String?

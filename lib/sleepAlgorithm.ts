@@ -24,6 +24,7 @@ export interface UserInput {
   biologicalSex: string;
   currentWakeTime: string; // "HH:MM" 24h
   currentBedTime: string;  // "HH:MM" 24h
+  sport?: string;
 }
 
 export interface WindDownPhases {
@@ -58,11 +59,12 @@ function minutesToTime(minutes: number): string {
   return `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`;
 }
 
-function baseSleepMinutes(age: number, sex: string): number {
+function baseSleepMinutes(age: number, sex: string, sport?: string): number {
   let base = 8.0;
   if (age >= 13 && age <= 17) base = 9.0;
   else if (age >= 18 && age <= 25) base = 8.5;
   if (sex === "female") base += 0.5;
+  if (sport === "swimming") return base * 60 + 20;
   return base * 60;
 }
 
@@ -109,7 +111,7 @@ export function calculateSleepPlan(
   today.setHours(0, 0, 0, 0);
 
   const wakeMinutes = timeToMinutes(user.currentWakeTime);
-  const baseMinutes = baseSleepMinutes(user.age, user.biologicalSex);
+  const baseMinutes = baseSleepMinutes(user.age, user.biologicalSex, user.sport);
 
   // Build a date→workout map
   const workoutMap = new Map<string, WorkoutInput>();

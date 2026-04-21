@@ -14,7 +14,7 @@ export async function GET() {
       id: true, name: true, email: true, age: true, biologicalSex: true,
       weeklyMileage: true, experienceLevel: true, currentWakeTime: true,
       currentBedTime: true, restedFeeling: true, notifPhase1: true,
-      notifPhase2: true, notifPhase3: true, notifPhase4: true,
+      notifPhase2: true, notifPhase3: true, notifPhase4: true, sport: true,
     },
   });
   return NextResponse.json(user);
@@ -41,6 +41,7 @@ export async function PUT(req: Request) {
       notifPhase2: body.notifPhase2,
       notifPhase3: body.notifPhase3,
       notifPhase4: body.notifPhase4,
+      sport: body.sport,
     },
   });
   return NextResponse.json({ ok: true });

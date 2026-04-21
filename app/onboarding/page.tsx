@@ -11,16 +11,28 @@ interface WeekTemplate {
   [day: number]: { type: WorkoutType; distance: string };
 }
 
-const WORKOUT_TYPES: { value: WorkoutType; label: string }[] = [
-  { value: "rest", label: "Rest" },
-  { value: "easy", label: "Easy Run" },
-  { value: "moderate", label: "Moderate Run" },
-  { value: "tempo", label: "Tempo" },
-  { value: "long_run", label: "Long Run" },
-  { value: "track", label: "Track Workout" },
-  { value: "race", label: "Race" },
-  { value: "cross_train", label: "Cross Train" },
-];
+function getWorkoutTypes(sport: string): { value: WorkoutType; label: string }[] {
+  if (sport === "swimming") return [
+    { value: "rest",        label: "Rest" },
+    { value: "easy",        label: "Easy Swim" },
+    { value: "moderate",    label: "Moderate Swim" },
+    { value: "tempo",       label: "Threshold" },
+    { value: "long_run",    label: "Distance Swim" },
+    { value: "cross_train", label: "Dryland" },
+    { value: "race",        label: "Race" },
+    { value: "cross_train", label: "Cross Train" },
+  ];
+  return [
+    { value: "rest",        label: "Rest" },
+    { value: "easy",        label: "Easy Run" },
+    { value: "moderate",    label: "Moderate Run" },
+    { value: "tempo",       label: "Tempo" },
+    { value: "long_run",    label: "Long Run" },
+    { value: "track",       label: "Track Workout" },
+    { value: "race",        label: "Race" },
+    { value: "cross_train", label: "Cross Train" },
+  ];
+}
 
 const DAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 
@@ -47,6 +59,7 @@ export default function OnboardingPage() {
   const [step, setStep] = useState(1);
 
   // Step 1: Profile
+  const [sport, setSport] = useState("track");
   const [age, setAge] = useState("");
   const [biologicalSex, setBiologicalSex] = useState("");
   const [weeklyMileage, setWeeklyMileage] = useState("");
@@ -87,6 +100,7 @@ export default function OnboardingPage() {
     setLoading(true);
 
     const payload = {
+      sport,
       age: parseInt(age),
       biologicalSex,
       weeklyMileage,
@@ -142,6 +156,24 @@ export default function OnboardingPage() {
                 <p className="text-xs font-bold uppercase tracking-[0.3em] text-[#6B6B6B] mb-2">Step 1 of 4</p>
                 <h1 className="font-black text-3xl uppercase mb-8">Athlete Profile</h1>
                 <div className="space-y-6">
+                  <div>
+                    <label className="block text-xs font-bold uppercase tracking-wider mb-3">Your Sport</label>
+                    <div className="flex gap-3">
+                      {[{ value: "track", label: "Track & Field" }, { value: "swimming", label: "Swimming" }].map((s) => (
+                        <button
+                          key={s.value}
+                          onClick={() => setSport(s.value)}
+                          className={`flex-1 py-3 text-xs font-bold uppercase tracking-wider border transition-colors ${
+                            sport === s.value
+                              ? "bg-[#0A0A0A] text-white border-[#0A0A0A]"
+                              : "border-[#E5E5E5] hover:border-[#0A0A0A]"
+                          }`}
+                        >
+                          {s.label}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
                   <div>
                     <label className="block text-xs font-bold uppercase tracking-wider mb-2">Age</label>
                     <input
@@ -280,7 +312,7 @@ export default function OnboardingPage() {
                           onChange={(e) => updateDay(i, "type", e.target.value)}
                           className="flex-1 border border-[#E5E5E5] px-3 py-2 text-xs font-bold uppercase focus:outline-none focus:border-[#0A0A0A] bg-white"
                         >
-                          {WORKOUT_TYPES.map((t) => (
+                          {getWorkoutTypes(sport).map((t) => (
                             <option key={t.value} value={t.value}>{t.label}</option>
                           ))}
                         </select>

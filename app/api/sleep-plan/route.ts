@@ -63,6 +63,7 @@ export async function GET() {
       biologicalSex: user.biologicalSex ?? "male",
       currentWakeTime: user.currentWakeTime ?? "06:00",
       currentBedTime: user.currentBedTime ?? "22:00",
+      sport: user.sport ?? "track",
     },
     workouts,
     meets.map((m) => ({

@@ -149,7 +149,12 @@ export default function DashboardPage() {
         <div className="max-w-[1200px] mx-auto">
           <FadeUp>
             <p className="text-xs font-bold uppercase tracking-[0.3em] text-[#6B6B6B] mb-2">This Week</p>
-            <h2 className="font-black text-2xl uppercase mb-6">Sleep Schedule</h2>
+            <div className="flex items-center gap-3 mb-6">
+              <h2 className="font-black text-2xl uppercase">Sleep Schedule</h2>
+              <span className="text-xs font-bold uppercase tracking-wider text-[#6B6B6B] border border-[#E5E5E5] px-2 py-1">
+                {data.user?.sport === "swimming" ? "Swimming" : "Track & Field"}
+              </span>
+            </div>
           </FadeUp>
           <div className="overflow-x-auto">
             <div className="flex gap-px min-w-[700px] bg-[#E5E5E5]">

@@ -9,16 +9,28 @@ import { Button } from "@/components/Button";
 
 type WorkoutType = "easy" | "moderate" | "tempo" | "long_run" | "track" | "race" | "rest" | "cross_train";
 
-const WORKOUT_TYPES: { value: WorkoutType; label: string; color: string }[] = [
-  { value: "rest", label: "Rest", color: "bg-gray-200 text-gray-600" },
-  { value: "easy", label: "Easy Run", color: "bg-green-100 text-green-800" },
-  { value: "moderate", label: "Moderate", color: "bg-blue-100 text-blue-800" },
-  { value: "tempo", label: "Tempo", color: "bg-orange-100 text-orange-800" },
-  { value: "long_run", label: "Long Run", color: "bg-purple-100 text-purple-800" },
-  { value: "track", label: "Track", color: "bg-red-100 text-red-800" },
-  { value: "race", label: "Race", color: "bg-[#E8FF00] text-[#0A0A0A]" },
-  { value: "cross_train", label: "Cross Train", color: "bg-teal-100 text-teal-800" },
-];
+function getWorkoutTypes(sport: string): { value: WorkoutType; label: string; color: string }[] {
+  if (sport === "swimming") return [
+    { value: "rest",        label: "Rest",          color: "bg-gray-200 text-gray-600" },
+    { value: "easy",        label: "Easy Swim",     color: "bg-green-100 text-green-800" },
+    { value: "moderate",    label: "Moderate Swim", color: "bg-orange-100 text-orange-800" },
+    { value: "tempo",       label: "Threshold",     color: "bg-orange-200 text-orange-900" },
+    { value: "long_run",    label: "Distance Swim", color: "bg-purple-100 text-purple-800" },
+    { value: "cross_train", label: "Dryland",       color: "bg-gray-200 text-gray-600" },
+    { value: "race",        label: "Race",          color: "bg-red-100 text-red-800" },
+    { value: "cross_train", label: "Cross Train",   color: "bg-gray-200 text-gray-600" },
+  ];
+  return [
+    { value: "rest",        label: "Rest",          color: "bg-gray-200 text-gray-600" },
+    { value: "easy",        label: "Easy Run",      color: "bg-green-100 text-green-800" },
+    { value: "moderate",    label: "Moderate",      color: "bg-blue-100 text-blue-800" },
+    { value: "tempo",       label: "Tempo",         color: "bg-orange-100 text-orange-800" },
+    { value: "long_run",    label: "Long Run",      color: "bg-purple-100 text-purple-800" },
+    { value: "track",       label: "Track",         color: "bg-red-100 text-red-800" },
+    { value: "race",        label: "Race",          color: "bg-[#E8FF00] text-[#0A0A0A]" },
+    { value: "cross_train", label: "Cross Train",   color: "bg-teal-100 text-teal-800" },
+  ];
+}
 
 const DAYS = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
 
@@ -28,6 +40,7 @@ export default function SchedulePage() {
   const { data: session, status } = useSession();
   const router = useRouter();
   const [workouts, setWorkouts] = useState<any[]>([]);
+  const [sport, setSport] = useState("track");
   const [loading, setLoading] = useState(true);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [showAddForm, setShowAddForm] = useState(false);
@@ -40,16 +53,21 @@ export default function SchedulePage() {
 
   useEffect(() => {
     if (status !== "authenticated") return;
-    fetch("/api/workouts")
-      .then((r) => r.json())
-      .then((d) => { setWorkouts(d); setLoading(false); });
+    Promise.all([
+      fetch("/api/workouts").then((r) => r.json()),
+      fetch("/api/user/profile").then((r) => r.json()),
+    ]).then(([workoutData, profileData]) => {
+      setWorkouts(workoutData);
+      if (profileData?.sport) setSport(profileData.sport);
+      setLoading(false);
+    });
   }, [status]);
 
   const templateWorkouts = workouts.filter((w) => w.isTemplate);
   const oneOffWorkouts = workouts.filter((w) => !w.isTemplate).sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
 
   const getTypeInfo = (type: WorkoutType) =>
-    WORKOUT_TYPES.find((t) => t.value === type) ?? WORKOUT_TYPES[0];
+    getWorkoutTypes(sport).find((t) => t.value === type) ?? getWorkoutTypes(sport)[0];
 
   const handleAddWorkout = async () => {
     setSaving(true);
@@ -166,7 +184,7 @@ export default function SchedulePage() {
                       onChange={(e) => setAddForm({ ...addForm, type: e.target.value as WorkoutType })}
                       className="border border-[#E5E5E5] px-3 py-2 text-xs font-bold uppercase focus:outline-none focus:border-[#0A0A0A] bg-white"
                     >
-                      {WORKOUT_TYPES.map((t) => (
+                      {getWorkoutTypes(sport).map((t) => (
                         <option key={t.value} value={t.value}>{t.label}</option>
                       ))}
                     </select>
