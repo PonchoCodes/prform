@@ -17,7 +17,7 @@
 [![TypeScript](https://img.shields.io/badge/TypeScript-5-3178C6?style=flat-square&logo=typescript)](https://typescriptlang.org)
 [![Prisma](https://img.shields.io/badge/Prisma-7-2D3748?style=flat-square&logo=prisma)](https://prisma.io)
 [![Tailwind CSS](https://img.shields.io/badge/Tailwind-3-06B6D4?style=flat-square&logo=tailwindcss)](https://tailwindcss.com)
-[![Deployed on Vercel](https://img.shields.io/badge/Deployed%20on-Vercel-black?style=flat-square&logo=vercel)](https://prform.vercel.app)
+[![Deployed on Vercel](https://img.shields.io/badge/Deployed%20on-Vercel-black?style=flat-square&logo=vercel)](https://prformm.vercel.app)
 [![License: MIT](https://img.shields.io/badge/License-MIT-E8FF00?style=flat-square)](LICENSE)
 
 </div>
@@ -38,7 +38,7 @@ Then it holds you accountable. The wind-down dashboard delivers a live, time-sta
 
 ## Live Demo
 
-**[prform.vercel.app](https://prform.vercel.app)**
+**[prformm.vercel.app](https://prformm.vercel.app)**
 
 ```
 Email:    demo@prform.com
