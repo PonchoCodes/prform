@@ -97,9 +97,9 @@ async function main() {
 
   await prisma.meet.createMany({
     data: [
-      { userId: user.id, name: "State Championships", date: meetA, distances: "5K, 10K", priority: "A" },
-      { userId: user.id, name: "Local Invitational", date: meetB, distances: "5K", priority: "B" },
-      { userId: user.id, name: "Regional Open", date: meetC, distances: "10K", priority: "C" },
+      { userId: user.id, name: "State Championships", date: meetA, distances: "5K, 10K", priority: "A", raceTime: "09:00" },
+      { userId: user.id, name: "Local Invitational", date: meetB, distances: "5K", priority: "B", raceTime: "10:30" },
+      { userId: user.id, name: "Regional Open", date: meetC, distances: "10K", priority: "C", raceTime: "14:00" },
     ],
   });
 

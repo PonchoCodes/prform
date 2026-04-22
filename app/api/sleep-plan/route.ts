@@ -70,6 +70,7 @@ export async function GET() {
       date: m.date,
       priority: m.priority as "A" | "B" | "C",
       name: m.name,
+      raceTime: m.raceTime ?? null,
     }))
   );
 

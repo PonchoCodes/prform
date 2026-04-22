@@ -52,6 +52,7 @@ export async function POST(req: Request) {
         date: new Date(m.date),
         distances: m.distances,
         priority: m.priority,
+        raceTime: m.raceTime || null,
       })),
     });
   }

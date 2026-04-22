@@ -9,6 +9,7 @@ import { WindDownTimeline } from "@/components/WindDownTimeline";
 import { Badge } from "@/components/Badge";
 import { Navbar } from "@/components/Navbar";
 import type { DailySleepPlan } from "@/lib/sleepAlgorithm";
+import { formatTime12h } from "@/lib/sleepAlgorithm";
 
 const DAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 
@@ -115,6 +116,11 @@ export default function DashboardPage() {
                     {today.daysUntilNextMeet ?? "0"}
                   </p>
                   <p className="text-[#6B6B6B] text-xs uppercase tracking-wider mt-1">days away</p>
+                  {nextMeet.raceTime && today.daysUntilNextMeet !== null && today.daysUntilNextMeet <= 10 && (
+                    <p className="text-[#6B6B6B] text-xs font-mono uppercase tracking-wider mt-1">
+                      RACE AT {formatTime12h(nextMeet.raceTime)}
+                    </p>
+                  )}
                 </div>
               </div>
               {today.daysUntilNextMeet !== null && today.daysUntilNextMeet <= 10 && (

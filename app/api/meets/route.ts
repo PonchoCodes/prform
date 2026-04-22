@@ -28,6 +28,7 @@ export async function POST(req: Request) {
       date: new Date(body.date),
       distances: body.distances,
       priority: body.priority,
+      raceTime: body.raceTime || null,
     },
   });
   return NextResponse.json(meet);
@@ -46,6 +47,7 @@ export async function PUT(req: Request) {
       date: new Date(body.date),
       distances: body.distances,
       priority: body.priority,
+      raceTime: body.raceTime || null,
     },
   });
   return NextResponse.json(meet);

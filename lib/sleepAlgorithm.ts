@@ -17,6 +17,7 @@ export interface MeetInput {
   date: Date;
   priority: "A" | "B" | "C";
   name: string;
+  raceTime?: string | null;
 }
 
 export interface UserInput {
@@ -90,6 +91,39 @@ function daysApart(a: Date, b: Date): number {
   return Math.round((b.getTime() - a.getTime()) / msPerDay);
 }
 
+function raceTimeShiftFraction(daysOut: number): number {
+  if (daysOut >= 8 && daysOut <= 10) return 0.10;
+  if (daysOut >= 5 && daysOut <= 7) return 0.25;
+  if (daysOut >= 2 && daysOut <= 4) return 0.40;
+  if (daysOut === 1) return 0.25;
+  return 0;
+}
+
+export function computeRaceTimeShift(
+  raceTime: string | null,
+  wakeTime: string,
+  priority: "A" | "B" | "C"
+): number {
+  if (!raceTime) return 0;
+
+  const [wh, wm] = wakeTime.split(":").map(Number);
+  const wakeHour = wh + wm / 60;
+  const [rh, rm] = raceTime.split(":").map(Number);
+  const raceHour = rh + rm / 60;
+
+  const tmin = ((wakeHour - 2) + 24) % 24;
+  const naturalPeak = (tmin + 11) % 24;
+
+  const requiredAdvance = naturalPeak - raceHour;
+  if (requiredAdvance <= 0) return 0;
+
+  let advanceMinutes = requiredAdvance * 60;
+  const scale = priority === "A" ? 1.0 : priority === "B" ? 0.75 : 0.5;
+  advanceMinutes *= scale;
+
+  return Math.min(advanceMinutes, 90);
+}
+
 function preMeetShiftMinutes(daysOut: number, priority: "A" | "B" | "C"): number {
   let shift = 0;
   if (daysOut >= 10 && daysOut <= 8) shift = 15;
@@ -152,13 +186,16 @@ export function calculateSleepPlan(
     const nextMeet = futureMeets.find((m) => m.date >= date) ?? null;
     const daysUntilNextMeet = nextMeet ? daysApart(date, nextMeet.date) : null;
 
-    // Pre-meet shift
+    // Pre-meet shift (base + race-time-adjusted advance)
     let shiftMinutes = 0;
     for (const meet of futureMeets) {
       const daysOut = daysApart(date, meet.date);
       if (daysOut >= 1 && daysOut <= 10) {
-        const s = preMeetShiftMinutes(daysOut, meet.priority);
-        if (s > shiftMinutes) shiftMinutes = s;
+        const baseShift = preMeetShiftMinutes(daysOut, meet.priority);
+        const totalRaceShift = computeRaceTimeShift(meet.raceTime ?? null, user.currentWakeTime, meet.priority);
+        const raceShift = Math.round(totalRaceShift * raceTimeShiftFraction(daysOut));
+        const totalShift = baseShift + raceShift;
+        if (totalShift > shiftMinutes) shiftMinutes = totalShift;
       }
     }
 

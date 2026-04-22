@@ -51,6 +51,7 @@ interface Meet {
   date: string;
   distances: string;
   priority: "A" | "B" | "C";
+  raceTime: string;
 }
 
 export default function OnboardingPage() {
@@ -75,7 +76,7 @@ export default function OnboardingPage() {
 
   // Step 4: Meets
   const [meets, setMeets] = useState<Meet[]>([
-    { name: "", date: "", distances: "", priority: "A" },
+    { name: "", date: "", distances: "", priority: "A", raceTime: "" },
   ]);
 
   const [loading, setLoading] = useState(false);
@@ -88,7 +89,7 @@ export default function OnboardingPage() {
   };
 
   const addMeet = () =>
-    setMeets((prev) => [...prev, { name: "", date: "", distances: "", priority: "A" }]);
+    setMeets((prev) => [...prev, { name: "", date: "", distances: "", priority: "A", raceTime: "" }]);
 
   const updateMeet = (i: number, field: keyof Meet, value: string) =>
     setMeets((prev) => prev.map((m, idx) => (idx === i ? { ...m, [field]: value } : m)));
@@ -364,6 +365,15 @@ export default function OnboardingPage() {
                           onChange={(e) => updateMeet(i, "date", e.target.value)}
                           className="w-full border border-[#E5E5E5] px-4 py-2 text-sm font-mono focus:outline-none focus:border-[#0A0A0A]"
                         />
+                        <div>
+                          <label className="block text-xs font-bold uppercase tracking-[0.3em] text-[#6B6B6B] mb-1">Race Time</label>
+                          <input
+                            type="time"
+                            value={meet.raceTime}
+                            onChange={(e) => updateMeet(i, "raceTime", e.target.value)}
+                            className="w-full border border-[#E5E5E5] px-4 py-2 text-sm font-mono focus:outline-none focus:border-[#0A0A0A]"
+                          />
+                        </div>
                         <input
                           type="text"
                           placeholder="Distances (e.g. 5K, 10K)"

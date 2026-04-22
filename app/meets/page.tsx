@@ -3,7 +3,8 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
 import { motion } from "framer-motion";
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, ReferenceLine } from "recharts";
+import { formatTime12h } from "@/lib/sleepAlgorithm";
 import { FadeUp } from "@/components/FadeUp";
 import { Navbar } from "@/components/Navbar";
 import { Badge } from "@/components/Badge";
@@ -49,6 +50,7 @@ interface Meet {
   date: string;
   distances: string;
   priority: "A" | "B" | "C";
+  raceTime: string | null;
 }
 
 export default function MeetsPage() {
@@ -59,7 +61,7 @@ export default function MeetsPage() {
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [showForm, setShowForm] = useState(false);
   const [editMeet, setEditMeet] = useState<Meet | null>(null);
-  const [form, setForm] = useState({ name: "", date: "", distances: "", priority: "A" as "A" | "B" | "C" });
+  const [form, setForm] = useState({ name: "", date: "", distances: "", priority: "A" as "A" | "B" | "C", raceTime: "" });
   const [saving, setSaving] = useState(false);
   const [userData, setUserData] = useState<any>(null);
 
@@ -100,7 +102,7 @@ export default function MeetsPage() {
     }
     setShowForm(false);
     setEditMeet(null);
-    setForm({ name: "", date: "", distances: "", priority: "A" });
+    setForm({ name: "", date: "", distances: "", priority: "A", raceTime: "" });
     setSaving(false);
   };
 
@@ -120,6 +122,7 @@ export default function MeetsPage() {
       date: new Date(m.date).toISOString().split("T")[0],
       distances: m.distances,
       priority: m.priority,
+      raceTime: m.raceTime ?? "",
     });
     setShowForm(true);
   };
@@ -146,7 +149,7 @@ export default function MeetsPage() {
               <p className="text-xs font-bold uppercase tracking-[0.3em] text-[#6B6B6B] mb-2">Race Calendar</p>
               <h1 className="font-black text-4xl uppercase text-white">Meets</h1>
             </div>
-            <Button variant="primary" size="sm" onClick={() => { setShowForm(!showForm); setEditMeet(null); setForm({ name: "", date: "", distances: "", priority: "A" }); }}>
+            <Button variant="primary" size="sm" onClick={() => { setShowForm(!showForm); setEditMeet(null); setForm({ name: "", date: "", distances: "", priority: "A", raceTime: "" }); }}>
               + Add Meet
             </Button>
           </div>
@@ -172,6 +175,15 @@ export default function MeetsPage() {
                   onChange={(e) => setForm({ ...form, date: e.target.value })}
                   className="border border-[#E5E5E5] px-4 py-3 text-sm font-mono focus:outline-none focus:border-[#0A0A0A] bg-white"
                 />
+                <div>
+                  <label className="block text-xs font-bold uppercase tracking-[0.3em] text-[#6B6B6B] mb-1">Race Time</label>
+                  <input
+                    type="time"
+                    value={form.raceTime}
+                    onChange={(e) => setForm({ ...form, raceTime: e.target.value })}
+                    className="w-full border border-[#E5E5E5] px-4 py-3 text-sm font-mono focus:outline-none focus:border-[#0A0A0A] bg-white"
+                  />
+                </div>
                 <input
                   type="text"
                   placeholder="Distances (e.g. 5K, 10K)"
@@ -201,7 +213,7 @@ export default function MeetsPage() {
                 <Button variant="secondary" size="sm" onClick={handleSave} disabled={!form.name || !form.date || saving}>
                   {saving ? "Saving..." : editMeet ? "Update" : "Add Meet"}
                 </Button>
-                <Button variant="ghost" size="sm" onClick={() => { setShowForm(false); setEditMeet(null); }}>
+                <Button variant="ghost" size="sm" onClick={() => { setShowForm(false); setEditMeet(null); setForm({ name: "", date: "", distances: "", priority: "A", raceTime: "" }); }}>
                   Cancel
                 </Button>
               </div>
@@ -236,6 +248,11 @@ export default function MeetsPage() {
                             <div>
                               <p className="font-black text-base">{m.name}</p>
                               <p className="text-xs text-[#6B6B6B]">{formatDate(new Date(m.date))} · {m.distances}</p>
+                              {m.raceTime ? (
+                                <p className="text-xs font-mono text-[#6B6B6B] mt-0.5">RACE TIME: {formatTime12h(m.raceTime)}</p>
+                              ) : (
+                                <p className="text-xs font-mono text-[#AAAAAA] mt-0.5">RACE TIME: NOT SET</p>
+                              )}
                             </div>
                           </div>
                           <div className="flex items-center gap-4">
@@ -301,6 +318,13 @@ export default function MeetsPage() {
                                       return [`${h12}:${String(m).padStart(2, "0")} ${period}`, "Bedtime"];
                                     }}
                                     contentStyle={{ border: "1px solid #E5E5E5", borderRadius: 0, fontFamily: "JetBrains Mono", fontSize: 11 }}
+                                  />
+                                  <ReferenceLine
+                                    y={rampData[9].bedtime}
+                                    stroke="#E8FF00"
+                                    strokeDasharray="4 4"
+                                    strokeOpacity={0.5}
+                                    label={{ value: "TARGET", position: "insideTopRight", fontSize: 9, fontFamily: "JetBrains Mono", fill: "#E8FF00" }}
                                   />
                                   <Line
                                     type="monotone"
