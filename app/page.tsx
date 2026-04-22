@@ -4,6 +4,8 @@ import { motion } from "framer-motion";
 import { FadeUp } from "@/components/FadeUp";
 import { Ticker } from "@/components/Ticker";
 import { Button } from "@/components/Button";
+import { WebGLShader } from "@/components/ui/web-gl-shader";
+import { LiquidButton } from "@/components/ui/liquid-glass-button";
 
 const meets = [
   "Penn Relays",
@@ -65,18 +67,11 @@ export default function LandingPage() {
         className="bg-[#0A0A0A] text-white relative overflow-hidden"
         style={{ minHeight: "100vh" }}
       >
-        {/* Hero background video */}
-        <video
-          className="absolute inset-0 w-full h-full object-cover z-0"
-          src="/hero.mov"
-          autoPlay
-          loop
-          muted
-          playsInline
-        />
+        {/* WebGL chromatic-aberration shader background */}
+        <WebGLShader />
 
-        {/* Gradient overlay so text stays legible over the 3D scene */}
-        <div className="absolute inset-0 z-10 bg-gradient-to-r from-[#0A0A0A] via-[#0A0A0A]/80 to-transparent pointer-events-none" />
+        {/* Gradient overlay — keeps text legible over the shader */}
+        <div className="absolute inset-0 z-10 bg-gradient-to-r from-[#0A0A0A] via-[#0A0A0A]/70 to-transparent pointer-events-none" />
 
         {/* Content */}
         <div className="relative z-20 max-w-[1200px] mx-auto px-6 py-24 md:py-36 flex flex-col justify-center min-h-screen">
@@ -87,9 +82,11 @@ export default function LandingPage() {
           <p className="text-[#AAAAAA] text-lg md:text-xl max-w-2xl mb-10 leading-relaxed">
             PRform uses sport science to calculate the exact bedtime you need every night of your training cycle, then coaches you through a wind-down protocol that actually shifts your circadian rhythm before meet day. More PRs start the night before than at the start line.
           </p>
-          <div className="flex flex-col sm:flex-row gap-4">
+          <div className="flex flex-col sm:flex-row gap-4 items-start">
             <Link href="/signup">
-              <Button size="lg" variant="primary">Get Started Free</Button>
+              <LiquidButton size="xl" className="text-white border border-white/20">
+                Get Started Free
+              </LiquidButton>
             </Link>
             <Link href="/login">
               <Button size="lg" variant="ghost" className="!border-[#444] !text-white hover:!border-white">
