@@ -68,7 +68,7 @@ export function WebGLShader() {
       refs.camera = new THREE.OrthographicCamera(-1, 1, 1, -1, 0, -1)
 
       refs.uniforms = {
-        resolution: { value: [window.innerWidth, window.innerHeight] },
+        resolution: { value: [canvas.offsetWidth || window.innerWidth, canvas.offsetHeight || window.innerHeight] },
         time: { value: 0.0 },
         xScale: { value: 1.0 },
         yScale: { value: 0.5 },
@@ -111,8 +111,8 @@ export function WebGLShader() {
 
     const handleResize = () => {
       if (!refs.renderer || !refs.uniforms) return
-      const width = window.innerWidth
-      const height = window.innerHeight
+      const width = canvas.offsetWidth || window.innerWidth
+      const height = canvas.offsetHeight || window.innerHeight
       refs.renderer.setSize(width, height, false)
       refs.uniforms.resolution.value = [width, height]
     }
@@ -138,7 +138,7 @@ export function WebGLShader() {
   return (
     <canvas
       ref={canvasRef}
-      className="fixed top-0 left-0 w-full h-full block"
+      className="absolute top-0 left-0 w-full h-full block"
     />
   )
 }
