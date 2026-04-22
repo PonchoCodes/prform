@@ -18,8 +18,8 @@ const config: Config = {
         },
       },
       fontFamily: {
-        sans: ["DM Sans", "Inter", "sans-serif"],
-        mono: ["JetBrains Mono", "monospace"],
+        sans: ["var(--font-geist-mono)", "Abc Diatype Unlicensed", "var(--font-geist)", "sans-serif"],
+        mono: ["var(--font-geist-mono)", "monospace"],
       },
       fontSize: {
         hero: ["88px", { lineHeight: "1", fontWeight: "900" }],
