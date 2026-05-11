@@ -1,28 +1,6 @@
 import { prisma } from "@/lib/prisma";
-
-export type WorkoutType =
-  | "easy" | "moderate" | "tempo" | "long_run"
-  | "track" | "race" | "rest" | "cross_train";
-
-export interface NormalizedWorkout {
-  date: Date;
-  type: WorkoutType;
-  distance: number;       // km
-  duration: number;       // minutes
-  averageHeartRate?: number;
-  source: "strava" | "manual" | "assumed";
-  isTentative: boolean;
-  stravaActivityId?: string;
-  manualOverride?: boolean;
-}
-
-export interface WorkoutConflict {
-  workoutId: string;
-  date: string;            // ISO date string YYYY-MM-DD
-  stravaName: string;
-  manualType: string;
-  conflictDismissed: boolean;
-}
+export type { WorkoutType, NormalizedWorkout, WorkoutConflict } from "@/lib/workoutTypes";
+import type { WorkoutType, NormalizedWorkout, WorkoutConflict } from "@/lib/workoutTypes";
 
 // ── Strava → WorkoutType classifier ──────────────────────────────────────────
 

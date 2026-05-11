@@ -1,14 +1,7 @@
-import type { NormalizedWorkout } from "@/lib/workoutDataSource";
-
-export type WorkoutType =
-  | "easy"
-  | "moderate"
-  | "tempo"
-  | "long_run"
-  | "track"
-  | "race"
-  | "rest"
-  | "cross_train";
+// Re-export shared pure types so callers have one import point.
+// workoutTypes.ts has NO server imports — safe for client component import chains.
+export type { WorkoutType, NormalizedWorkout } from "@/lib/workoutTypes";
+import type { WorkoutType, NormalizedWorkout } from "@/lib/workoutTypes";
 
 export interface MeetInput {
   date: Date;
@@ -24,9 +17,6 @@ export interface UserInput {
   currentBedTime: string;  // "HH:MM" 24h
   sport?: string;
 }
-
-// Re-export from workoutDataSource so callers have one import point
-export type { NormalizedWorkout } from "@/lib/workoutDataSource";
 
 export interface WindDownPhases {
   phase1: string; // "HH:MM" 24h, 2 hours before bed
