@@ -31,6 +31,8 @@ export async function POST(req: Request) {
       effort: body.effort ? parseInt(body.effort) : null,
       isTemplate: body.isTemplate ?? false,
       dayOfWeek: body.dayOfWeek ?? null,
+      isTentative: body.isTentative ?? false,
+      manualOverride: body.manualOverride ?? false,
     },
   });
   return NextResponse.json(workout);
@@ -48,6 +50,9 @@ export async function PUT(req: Request) {
       type: body.type,
       distance: body.distance ? parseFloat(body.distance) : null,
       effort: body.effort ? parseInt(body.effort) : null,
+      ...(body.manualOverride !== undefined && { manualOverride: body.manualOverride }),
+      ...(body.conflictDismissed !== undefined && { conflictDismissed: body.conflictDismissed }),
+      ...(body.isTentative !== undefined && { isTentative: body.isTentative }),
     },
   });
   return NextResponse.json(workout);

@@ -13,9 +13,11 @@ export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
   const code = searchParams.get("code");
   const error = searchParams.get("error");
+  // state carries the returnTo path set by /api/strava/connect
+  const returnTo = searchParams.get("state") ?? "/strava";
 
   if (error || !code) {
-    return NextResponse.redirect(new URL("/strava?error=access_denied", req.url));
+    return NextResponse.redirect(new URL(`/strava?error=access_denied`, req.url));
   }
 
   const tokenRes = await fetch("https://www.strava.com/oauth/token", {
@@ -46,5 +48,8 @@ export async function GET(req: NextRequest) {
     },
   });
 
-  return NextResponse.redirect(new URL("/strava?connected=1", req.url));
+  // Append connected=1 flag to whatever page the caller wanted to return to
+  const dest = new URL(returnTo, req.url);
+  dest.searchParams.set("connected", "1");
+  return NextResponse.redirect(dest);
 }

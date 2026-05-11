@@ -103,6 +103,28 @@ async function main() {
     ],
   });
 
+  // Planned future workouts (manual, tentative) — one week ahead
+  const plannedWorkouts = [];
+  for (const w of WORKOUT_SCHEDULE) {
+    if (w.type === "rest") continue;
+    const date = new Date(today);
+    const currentDow = (today.getDay() + 6) % 7;
+    let diff = w.dow - currentDow;
+    if (diff <= 0) diff += 7;
+    date.setDate(today.getDate() + diff);
+    plannedWorkouts.push({
+      userId: user.id,
+      date,
+      type: w.type,
+      distance: w.distance,
+      isTemplate: false,
+      isTentative: true,
+    });
+  }
+  if (plannedWorkouts.length > 0) {
+    await prisma.workout.createMany({ data: plannedWorkouts });
+  }
+
   console.log("✓ Seed complete. Demo: demo@prform.com / demo1234");
 }
 

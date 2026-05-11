@@ -228,7 +228,7 @@ export default function DashboardPage() {
 
   if (!data) return null;
 
-  const { plan, meets } = data;
+  const { plan, meets, conflicts } = data;
   const today = plan[0] as DailySleepPlan;
   const todayIndex = getTodayIndex();
 
@@ -390,6 +390,20 @@ export default function DashboardPage() {
       {/* Circadian Protocol — only shown during a PRC shift window */}
       {today.circadian && <CircadianProtocolSection circadian={today.circadian} />}
 
+      {/* Conflict banner — shown when a Strava activity and manual workout collide */}
+      {conflicts?.length > 0 && (
+        <div className="bg-amber-50 border-b border-amber-200 px-6 py-3">
+          <div className="max-w-[1200px] mx-auto flex items-center justify-between flex-wrap gap-2">
+            <p className="text-xs font-bold uppercase tracking-wider text-amber-800">
+              {conflicts.length} workout conflict{conflicts.length > 1 ? "s" : ""} — Strava and manual entries overlap.
+            </p>
+            <a href="/schedule" className="text-xs font-bold uppercase tracking-wider text-amber-900 underline">
+              Resolve in Schedule →
+            </a>
+          </div>
+        </div>
+      )}
+
       {/* This Week's Sleep Schedule */}
       <section className="px-6 py-10 border-b border-[#E5E5E5]">
         <div className="max-w-[1200px] mx-auto">
@@ -406,7 +420,11 @@ export default function DashboardPage() {
             <div className="flex gap-px min-w-[700px] bg-[#E5E5E5]">
               {week.map((day, i) => {
                 const isToday = i === 0;
-                if (!day) return (
+                const d = day as DailySleepPlan | null;
+                const source = d?.workoutSource;
+                const tentative = d?.isTentative;
+
+                if (!d) return (
                   <div key={i} className={`flex-1 p-4 min-w-[100px] ${isToday ? "bg-[#0A0A0A] text-white" : "bg-white"}`}>
                     <p className={`text-xs font-bold uppercase tracking-wider mb-3 ${isToday ? "text-[#E8FF00]" : "text-[#6B6B6B]"}`}>{DAYS[i]}</p>
                     <p className="text-xs text-[#6B6B6B]">Rest</p>
@@ -416,31 +434,63 @@ export default function DashboardPage() {
                   <FadeUp key={i} delay={i * 50} className="flex-1 min-w-[100px]">
                     <div className={`p-4 h-full ${isToday ? "bg-[#0A0A0A] text-white" : "bg-white"}`}>
                       <p className={`text-xs font-bold uppercase tracking-wider mb-3 ${isToday ? "text-[#E8FF00]" : "text-[#6B6B6B]"}`}>
-                        {isToday ? "Today" : DAYS[(new Date(day.date).getDay() + 6) % 7]}
+                        {isToday ? "Today" : DAYS[(new Date(d.date).getDay() + 6) % 7]}
                       </p>
                       <MonoClock
-                        time24={(day as DailySleepPlan).recommendedBedtime}
+                        time24={d.recommendedBedtime}
                         className={`text-base font-black block mb-1 ${isToday ? "text-[#E8FF00]" : ""}`}
                         animate={isToday}
                       />
                       <p className={`text-xs font-mono mb-2 ${isToday ? "text-[#AAAAAA]" : "text-[#6B6B6B]"}`}>
-                        Wake <MonoClock time24={(day as DailySleepPlan).recommendedWakeTime} className="inline" />
+                        Wake <MonoClock time24={d.recommendedWakeTime} className="inline" />
                       </p>
-                      <p className={`text-xs font-bold mb-3 ${isToday ? "text-[#CCCCCC]" : "text-[#6B6B6B]"}`}>
-                        {(day as DailySleepPlan).totalSleepHours}h
+                      <p className={`text-xs font-bold mb-2 ${isToday ? "text-[#CCCCCC]" : "text-[#6B6B6B]"}`}>
+                        {d.totalSleepHours}h
                       </p>
-                      <div className="flex items-center gap-1.5">
-                        <div className={`w-2 h-2 ${LOAD_COLORS[(day as DailySleepPlan).trainingLoadLevel]}`} />
+                      <div className="flex items-center gap-1.5 mb-2">
+                        <div className={`w-2 h-2 ${LOAD_COLORS[d.trainingLoadLevel]}`} />
                         <span className={`text-xs uppercase tracking-wider ${isToday ? "text-[#6B6B6B]" : "text-[#AAAAAA]"}`}>
-                          {(day as DailySleepPlan).trainingLoadLevel}
+                          {d.trainingLoadLevel}
                         </span>
                       </div>
+                      {/* Source badge */}
+                      {source && source !== "rest" && (
+                        <div className="flex items-center gap-1 mt-1">
+                          <div className={`w-1.5 h-1.5 rounded-full ${source === "strava" ? "bg-[#FC4C02]" : source === "manual" ? "bg-blue-400" : "bg-[#6B6B6B]"}`} />
+                          <span className={`text-[10px] font-mono uppercase ${isToday ? "text-[#6B6B6B]" : "text-[#AAAAAA]"}`}>
+                            {tentative ? (source === "assumed" ? "est. from load" : "tentative") : source}
+                          </span>
+                        </div>
+                      )}
                     </div>
                   </FadeUp>
                 );
               })}
             </div>
           </div>
+        </div>
+      </section>
+
+      {/* Plan Ahead card */}
+      <section className="px-6 py-10 border-b border-[#E5E5E5]">
+        <div className="max-w-[1200px] mx-auto">
+          <FadeUp>
+            <div className="border border-[#E5E5E5] p-6 flex items-center justify-between gap-6">
+              <div>
+                <p className="text-xs font-bold uppercase tracking-[0.3em] text-[#6B6B6B] mb-1">14-Day Outlook</p>
+                <h2 className="font-black text-xl uppercase">Plan Ahead</h2>
+                <p className="text-xs text-[#6B6B6B] mt-2 font-mono max-w-md">
+                  Add planned workouts to your schedule so PRform can optimise sleep targets before they happen.
+                </p>
+              </div>
+              <a
+                href="/schedule"
+                className="flex-shrink-0 inline-block border border-[#0A0A0A] text-[#0A0A0A] font-black text-xs uppercase tracking-widest px-6 py-3 hover:bg-[#0A0A0A] hover:text-white transition-colors"
+              >
+                Open Schedule →
+              </a>
+            </div>
+          </FadeUp>
         </div>
       </section>
 

@@ -1,3 +1,5 @@
+import type { NormalizedWorkout } from "@/lib/workoutDataSource";
+
 export type WorkoutType =
   | "easy"
   | "moderate"
@@ -7,11 +9,6 @@ export type WorkoutType =
   | "race"
   | "rest"
   | "cross_train";
-
-export interface WorkoutInput {
-  date: Date;
-  type: WorkoutType;
-}
 
 export interface MeetInput {
   date: Date;
@@ -27,6 +24,9 @@ export interface UserInput {
   currentBedTime: string;  // "HH:MM" 24h
   sport?: string;
 }
+
+// Re-export from workoutDataSource so callers have one import point
+export type { NormalizedWorkout } from "@/lib/workoutDataSource";
 
 export interface WindDownPhases {
   phase1: string; // "HH:MM" 24h, 2 hours before bed
@@ -71,6 +71,8 @@ export interface DailySleepPlan {
   circadian: CircadianPlan | null; // null when no meet within shift window
   fatigueSleepBoost: boolean;
   fatigueSleepBoostMinutes: number;
+  workoutSource: "strava" | "manual" | "assumed" | "rest";
+  isTentative: boolean;
 }
 
 // ── helpers ──────────────────────────────────────────────────────────────────
@@ -221,8 +223,8 @@ function computePRCPlan(
 
 export function calculateSleepPlan(
   user: UserInput,
-  workouts: WorkoutInput[],
   meets: MeetInput[],
+  workoutDataSource: NormalizedWorkout[],
   currentTSB?: number
 ): DailySleepPlan[] {
   const today = new Date();
@@ -231,8 +233,8 @@ export function calculateSleepPlan(
   const baseWakeMinutes = timeToMinutes(user.currentWakeTime);
   const baseMinutes = baseSleepMinutes(user.age, user.biologicalSex, user.sport);
 
-  const workoutMap = new Map<string, WorkoutInput>();
-  for (const w of workouts) {
+  const workoutMap = new Map<string, NormalizedWorkout>();
+  for (const w of workoutDataSource) {
     const d = new Date(w.date);
     d.setHours(0, 0, 0, 0);
     workoutMap.set(d.toISOString(), w);
@@ -255,15 +257,17 @@ export function calculateSleepPlan(
     date.setHours(0, 0, 0, 0);
 
     const dateKey = date.toISOString();
-    const workout = workoutMap.get(dateKey);
-    const workoutType: WorkoutType = (workout?.type as WorkoutType) ?? "rest";
+    const nw = workoutMap.get(dateKey);
+    const workoutType: WorkoutType = nw?.type ?? "rest";
+    const workoutSource = nw?.source ?? "rest";
+    const workoutTentative = nw?.isTentative ?? false;
 
     const yesterday = new Date(date);
     yesterday.setDate(date.getDate() - 1);
     yesterday.setHours(0, 0, 0, 0);
     const yesterdayWorkout = workoutMap.get(yesterday.toISOString());
     const dayAfterHardBonus =
-      yesterdayWorkout && isHardWorkout(yesterdayWorkout.type as WorkoutType) ? 15 : 0;
+      yesterdayWorkout && isHardWorkout(yesterdayWorkout.type) ? 15 : 0;
 
     let sleepNeed = baseMinutes + trainingLoadExtra(workoutType) + dayAfterHardBonus;
 
@@ -380,6 +384,8 @@ export function calculateSleepPlan(
       circadian,
       fatigueSleepBoost: isFatigueBoostDay,
       fatigueSleepBoostMinutes: fatigueBoostMinutes,
+      workoutSource: workoutSource as "strava" | "manual" | "assumed" | "rest",
+      isTentative: workoutTentative,
     });
   }
 

@@ -14,6 +14,8 @@ export default function ProfilePage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
+  const [stravaStatus, setStravaStatus] = useState<any>(null);
+  const [disconnecting, setDisconnecting] = useState(false);
 
   useEffect(() => {
     if (status === "unauthenticated") router.push("/login");
@@ -21,9 +23,14 @@ export default function ProfilePage() {
 
   useEffect(() => {
     if (status !== "authenticated") return;
-    fetch("/api/user/profile")
-      .then((r) => r.json())
-      .then((d) => { setProfile(d); setLoading(false); });
+    Promise.all([
+      fetch("/api/user/profile").then((r) => r.json()),
+      fetch("/api/strava/status").then((r) => r.json()),
+    ]).then(([profileData, stravaData]) => {
+      setProfile(profileData);
+      setStravaStatus(stravaData);
+      setLoading(false);
+    });
   }, [status]);
 
   const handleSave = async () => {
@@ -39,6 +46,13 @@ export default function ProfilePage() {
   };
 
   const update = (key: string, val: any) => setProfile((p: any) => ({ ...p, [key]: val }));
+
+  const handleDisconnectStrava = async () => {
+    setDisconnecting(true);
+    await fetch("/api/strava/status", { method: "DELETE" });
+    setStravaStatus((s: any) => ({ ...s, connected: false }));
+    setDisconnecting(false);
+  };
 
   if (loading || !profile) return (
     <div className="min-h-screen bg-white">
@@ -206,6 +220,66 @@ export default function ProfilePage() {
                   </button>
                 </div>
               ))}
+            </div>
+          </FadeUp>
+        </div>
+
+        {/* Data Source */}
+        <div className="max-w-[1200px] mx-auto px-6 pb-10">
+          <FadeUp delay={160}>
+            <h2 className="font-black text-xl uppercase mb-6 border-b border-[#E5E5E5] pb-3">Data Source</h2>
+            <div className="border border-[#E5E5E5] p-6">
+              <div className="flex items-center justify-between flex-wrap gap-4">
+                <div className="flex items-center gap-4">
+                  <div className="w-10 h-10 bg-[#FC4C02] flex items-center justify-center flex-shrink-0">
+                    <span className="text-white font-black text-lg">S</span>
+                  </div>
+                  <div>
+                    <p className="font-black text-sm uppercase tracking-wider">Strava</p>
+                    {stravaStatus?.connected ? (
+                      <>
+                        <p className="text-xs text-[#6B6B6B] font-mono">{stravaStatus.athleteName ?? "Connected"} · {stravaStatus.totalRuns ?? 0} runs synced</p>
+                        {stravaStatus.lastSyncedAt && (
+                          <p className="text-xs text-[#6B6B6B] font-mono">Last sync: {new Date(stravaStatus.lastSyncedAt).toLocaleDateString()}</p>
+                        )}
+                      </>
+                    ) : (
+                      <p className="text-xs text-[#6B6B6B] font-mono">Not connected — using manual schedule</p>
+                    )}
+                  </div>
+                </div>
+                <div className="flex items-center gap-3">
+                  {stravaStatus?.connected ? (
+                    <>
+                      <a
+                        href="/strava"
+                        className="text-xs font-bold uppercase tracking-wider border border-[#E5E5E5] px-4 py-2 hover:border-[#0A0A0A] transition-colors"
+                      >
+                        Manage →
+                      </a>
+                      <button
+                        onClick={handleDisconnectStrava}
+                        disabled={disconnecting}
+                        className="text-xs font-bold uppercase tracking-wider text-[#6B6B6B] px-4 py-2 border border-[#E5E5E5] hover:border-red-300 hover:text-red-600 transition-colors disabled:opacity-50"
+                      >
+                        {disconnecting ? "Disconnecting…" : "Disconnect"}
+                      </button>
+                    </>
+                  ) : (
+                    <a
+                      href="/api/strava/connect"
+                      className="inline-block bg-[#E8FF00] text-[#0A0A0A] font-black text-xs uppercase tracking-widest px-6 py-2 hover:bg-[#d4e800] transition-colors"
+                    >
+                      Connect Strava →
+                    </a>
+                  )}
+                </div>
+              </div>
+              {!stravaStatus?.connected && (
+                <p className="mt-4 text-xs text-[#6B6B6B] font-mono border-l-2 border-[#E8FF00] pl-3">
+                  Without Strava, PRform uses your weekly template + manually logged workouts. Connect Strava to unlock automatic activity sync and performance analysis.
+                </p>
+              )}
             </div>
           </FadeUp>
         </div>
