@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { aggressivenessForExperienceLevel } from "@/lib/sleepAlgorithm";
 
 export async function POST(req: Request) {
   const session = await getServerSession(authOptions);
@@ -23,17 +24,16 @@ export async function POST(req: Request) {
       restedFeeling,
       onboardingDone: true,
       sport,
+      planAggressiveness: aggressivenessForExperienceLevel(experienceLevel ?? ""),
     },
   });
 
-  // Delete existing template workouts
   await prisma.workout.deleteMany({ where: { userId, isTemplate: true } });
 
-  // Create week template workouts
   if (weekTemplate) {
     const workoutData = Object.entries(weekTemplate).map(([day, w]: [string, any]) => ({
       userId,
-      date: new Date(0), // placeholder for templates
+      date: new Date(0),
       type: w.type,
       distance: w.distance ? parseFloat(w.distance) : null,
       isTemplate: true,
@@ -42,7 +42,6 @@ export async function POST(req: Request) {
     await prisma.workout.createMany({ data: workoutData });
   }
 
-  // Delete existing meets and create new ones
   await prisma.meet.deleteMany({ where: { userId } });
   if (meets?.length) {
     await prisma.meet.createMany({

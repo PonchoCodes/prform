@@ -20,12 +20,27 @@ const WORKOUT_SCHEDULE: Array<{ dow: number; type: string; distance: number | nu
   { dow: 6, type: "cross_train", distance: null },
 ];
 
+function parseTimeMin(t: string): number {
+  const [h, m] = t.split(":").map(Number);
+  return h * 60 + m;
+}
+
+function minutesToTime(min: number): string {
+  const total = ((min % 1440) + 1440) % 1440;
+  return `${String(Math.floor(total / 60)).padStart(2, "0")}:${String(total % 60).padStart(2, "0")}`;
+}
+
+function computeSleepHours(bedtime: string, waketime: string): number {
+  return ((parseTimeMin(waketime) - parseTimeMin(bedtime) + 1440) % 1440) / 60;
+}
+
 async function main() {
   console.log("Seeding database...");
 
   const existing = await prisma.user.findUnique({ where: { email: "demo@prform.com" } });
   if (existing) {
     console.log("Demo user already exists. Deleting and re-seeding...");
+    await prisma.sleepLog.deleteMany({ where: { userId: existing.id } });
     await prisma.workout.deleteMany({ where: { userId: existing.id } });
     await prisma.meet.deleteMany({ where: { userId: existing.id } });
     await prisma.session.deleteMany({ where: { userId: existing.id } });
@@ -48,6 +63,8 @@ async function main() {
       restedFeeling: "sometimes",
       onboardingDone: true,
       sport: "track",
+      planAggressiveness: 85,         // collegiate default (post_collegiate would be 100 but demo is 85)
+      bedtimeAdjustmentMinutes: 0,
     },
   });
 
@@ -103,7 +120,7 @@ async function main() {
     ],
   });
 
-  // Planned future workouts (manual, tentative) — one week ahead
+  // Planned future workouts
   const plannedWorkouts = [];
   for (const w of WORKOUT_SCHEDULE) {
     if (w.type === "rest") continue;
@@ -125,7 +142,62 @@ async function main() {
     await prisma.workout.createMany({ data: plannedWorkouts });
   }
 
+  // ── SleepLog seed data ───────────────────────────────────────────────────────
+  // 14 nights: nights -13 through -1 (yesterday)
+  // Layout: nights -13 to -8: 6 hit nights, -7 to -6: 2 hit nights,
+  //         -5 to -4: 2 unlogged (no record), -3 to -2: 2 miss nights (early, before 4 consecutive),
+  //         actually let's do: -13 to -5 = 8 hit, -4 to -3 = unlogged, -2 to yesterday = 4 consecutive misses
+  // That gives consecutiveMisses = 4 (>= 3 triggers intervention on next dashboard load)
+
+  const recommendedBedtime = "22:30"; // user's base bedtime
+  const wakeTime = "06:00";
+  const sleepLogs = [];
+
+  // Nights -13 to -6: hit target (8 nights)
+  for (let i = 13; i >= 6; i--) {
+    const d = new Date(today);
+    d.setDate(today.getDate() - i);
+    d.setHours(0, 0, 0, 0);
+    sleepLogs.push({
+      userId: user.id,
+      date: d,
+      recommendedBedtime,
+      hitTarget: true,
+      actualBedtime: recommendedBedtime,
+      actualWakeTime: wakeTime,
+      actualSleepHours: computeSleepHours(recommendedBedtime, wakeTime),
+      source: "manual",
+    });
+  }
+
+  // Nights -5 and -4: UNLOGGED — skip (no record created)
+
+  // Nights -3 to yesterday (-1): 4 consecutive misses (~30 min late each)
+  const missedBedtimes = ["22:58", "23:05", "23:02", "23:10"];
+  for (let i = 0; i < 4; i++) {
+    const nightOffset = 4 - i; // 4, 3, 2, 1
+    const d = new Date(today);
+    d.setDate(today.getDate() - nightOffset);
+    d.setHours(0, 0, 0, 0);
+    const actualBedtime = missedBedtimes[i];
+    sleepLogs.push({
+      userId: user.id,
+      date: d,
+      recommendedBedtime,
+      hitTarget: false,
+      actualBedtime,
+      actualWakeTime: wakeTime,
+      actualSleepHours: computeSleepHours(actualBedtime, wakeTime),
+      source: "manual",
+    });
+  }
+
+  if (sleepLogs.length > 0) {
+    await prisma.sleepLog.createMany({ data: sleepLogs });
+  }
+
   console.log("✓ Seed complete. Demo: demo@prform.com / demo1234");
+  console.log(`  - ${sleepLogs.length} sleep logs created (8 hit, 4 consecutive misses, 2 unlogged)`);
 }
 
 main()

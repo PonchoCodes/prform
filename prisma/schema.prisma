@@ -38,10 +38,14 @@ model User {
   userMaxHR           Int?
   userThresholdHR     Int?
 
+  planAggressiveness       Int @default(85)
+  bedtimeAdjustmentMinutes Int @default(0)
+
   workouts         Workout[]
   meets            Meet[]
   sessions         Session[]
   stravaActivities StravaActivity[]
+  sleepLogs        SleepLog[]
 }
 
 model StravaActivity {
@@ -104,4 +108,20 @@ model Meet {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model SleepLog {
+  id                 String   @id @default(cuid())
+  userId             String
+  date               DateTime
+  recommendedBedtime String
+  hitTarget          Boolean?
+  actualBedtime      String?
+  actualWakeTime     String?
+  actualSleepHours   Float?
+  source             String   @default("manual")
+  createdAt          DateTime @default(now())
+  user               User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, date])
 }

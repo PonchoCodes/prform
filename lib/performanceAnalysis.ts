@@ -523,6 +523,7 @@ export interface ScatterPoint {
   activityName: string;
   paceMinKm: string;
   targetBedtime: string;  // HH:MM of PRform recommended bedtime for that day
+  confirmed: boolean;     // true = derived from an actual SleepLog record
 }
 
 export interface SleepPerfResult {
@@ -573,12 +574,25 @@ function minutesToTimeStr(m: number): string {
   return `${String(Math.floor(norm / 60)).padStart(2, "0")}:${String(norm % 60).padStart(2, "0")}`;
 }
 
+export interface SleepLogForCorrelation {
+  date: string;           // YYYY-MM-DD
+  actualBedtime?: string | null;
+  recommendedBedtime?: string | null;
+}
+
 export function calculateSleepPerformanceCorrelation(
   activities: StravaActivityInput[],
   user: UserForAnalysis,
   thresholdPaceMs: number,
+  sleepLogs?: SleepLogForCorrelation[],
 ): SleepPerfResult {
   const actualBedtimeMin = parseTimeToMinutes(user.currentBedTime ?? "22:30");
+
+  // Build a date → SleepLog lookup for confirmed nights
+  const logMap = new Map<string, SleepLogForCorrelation>();
+  for (const l of sleepLogs ?? []) {
+    if (l.actualBedtime) logMap.set(l.date, l);
+  }
 
   const allPaceScores = activities.map((a) =>
     thresholdPaceMs > 0 && a.averageSpeed > 0 ? thresholdPaceMs / a.averageSpeed : 1,
@@ -589,19 +603,38 @@ export function calculateSleepPerformanceCorrelation(
   );
 
   const scatterData: ScatterPoint[] = activities.map((act, i) => {
+    const dateStr = new Date(act.startDate).toISOString().slice(0, 10);
+    const confirmedLog = logMap.get(dateStr);
     const load = classifyActivityLoad(act);
     const recMin = computeRecommendedBedtimeMin(user, load);
-    let deviationMin = recMin - actualBedtimeMin;
+
+    let deviationMin: number;
+    let confirmed = false;
+
+    if (confirmedLog && confirmedLog.actualBedtime) {
+      // Use real bedtime deviation
+      const realActualMin = parseTimeToMinutes(confirmedLog.actualBedtime);
+      const realRecMin = confirmedLog.recommendedBedtime
+        ? parseTimeToMinutes(confirmedLog.recommendedBedtime)
+        : recMin;
+      deviationMin = realRecMin - realActualMin;
+      confirmed = true;
+    } else {
+      // Fall back to proxy
+      deviationMin = recMin - actualBedtimeMin;
+    }
+
     if (deviationMin > 720) deviationMin -= 1440;
     if (deviationMin < -720) deviationMin += 1440;
     const paceScore = stddev > 0 ? (allPaceScores[i] - mean) / stddev : 0;
     return {
       deviationMin: Math.round(deviationMin),
       paceScore: Math.round(paceScore * 100) / 100,
-      date: new Date(act.startDate).toISOString().slice(0, 10),
+      date: dateStr,
       activityName: act.name,
       paceMinKm: speedToMinKm(act.averageSpeed),
       targetBedtime: minutesToTimeStr(recMin),
+      confirmed,
     };
   });
 
@@ -645,6 +678,7 @@ export function analyzePerformance(
   activities: StravaActivityInput[],
   user: UserForAnalysis,
   windowDays: 30 | 60 | 90 = 90,
+  sleepLogs?: SleepLogForCorrelation[],
 ): PerformanceReport {
   const vdotResult = calculateVDOT(activities, windowDays);
   const thresholdPaceMs = vdotResult.paces?.thresholdPaceMs ?? 3.5; // ~4:45/km default
@@ -658,7 +692,7 @@ export function analyzePerformance(
     polarized: calculatePolarizedDistribution(windowActivities, user, thresholdPaceMs, Math.min(windowDays, 30)),
     vdot: vdotResult,
     decoupling: calculateDecoupling(windowActivities, Math.min(windowDays, 30)),
-    sleepPerf: calculateSleepPerformanceCorrelation(activities, user, thresholdPaceMs),
+    sleepPerf: calculateSleepPerformanceCorrelation(activities, user, thresholdPaceMs, sleepLogs),
     activityCount: windowActivities.length,
     totalSynced: activities.length,
     windowDays,

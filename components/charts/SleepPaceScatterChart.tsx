@@ -28,6 +28,7 @@ const CustomTooltip = ({ active, payload }: any) => {
       <p className="text-white">Score: {d.paceScore > 0 ? "+" : ""}{d.paceScore}</p>
       <p className="text-[#6B6B6B] mt-1">Deviation: {sign}{d.deviationMin} min</p>
       <p className="text-[#6B6B6B]">PRform target: {d.targetBedtime}</p>
+      <p className="text-[#6B6B6B] mt-1">{d.confirmed ? "● Confirmed" : "○ Estimated"}</p>
     </div>
   );
 };
@@ -50,6 +51,9 @@ function regressionLine(data: ScatterPoint[]): { x: number; y: number }[] {
 
 export function SleepPaceScatterChart({ data, correlation }: Props) {
   const regLine = regressionLine(data);
+  const confirmedData = data.filter((d) => d.confirmed);
+  const estimatedData = data.filter((d) => !d.confirmed);
+  const confirmedCount = confirmedData.length;
 
   return (
     <div>
@@ -61,7 +65,10 @@ export function SleepPaceScatterChart({ data, correlation }: Props) {
           Each dot is one of your runs. The X axis shows how far your estimated bedtime was from
           that day&apos;s PRform target — left is late, right is early.
           The Y axis is your pace score (z-score vs. your average).
-          The yellow line is the trend.
+          The yellow line is the trend.{" "}
+          {confirmedCount > 0 && (
+            <>Solid dots use your confirmed sleep times from your log ({confirmedCount} nights). Open dots use an estimate.</>
+          )}
         </p>
       </div>
 
@@ -110,14 +117,30 @@ export function SleepPaceScatterChart({ data, correlation }: Props) {
             <ReferenceLine y={0} stroke="#333" />
             <ReferenceLine x={0} stroke="#444" strokeDasharray="4 4" />
 
-            <Scatter
-              data={data}
-              fill="#0A0A0A"
-              stroke="#FFFFFF"
-              strokeWidth={1}
-              r={4}
-              isAnimationActive={false}
-            />
+            {/* Confirmed dots — solid fill */}
+            {confirmedData.length > 0 && (
+              <Scatter
+                data={confirmedData}
+                fill="#0A0A0A"
+                stroke="#FFFFFF"
+                strokeWidth={1.5}
+                r={4}
+                isAnimationActive={false}
+              />
+            )}
+
+            {/* Estimated dots — hollow */}
+            {estimatedData.length > 0 && (
+              <Scatter
+                data={estimatedData}
+                fill="#FFFFFF"
+                fillOpacity={0.15}
+                stroke="#FFFFFF"
+                strokeWidth={1}
+                r={4}
+                isAnimationActive={false}
+              />
+            )}
 
             {regLine.length === 2 && (
               <ReferenceLine
@@ -138,7 +161,11 @@ export function SleepPaceScatterChart({ data, correlation }: Props) {
         </span>
         <span className="flex items-center gap-1.5">
           <span className="inline-block w-2 h-2 border border-white bg-[#0A0A0A]" />
-          Run
+          Confirmed nights
+        </span>
+        <span className="flex items-center gap-1.5">
+          <span className="inline-block w-2 h-2 border border-white bg-transparent opacity-60" />
+          Estimated nights
         </span>
         <span className="ml-auto">r = {correlation}</span>
       </div>

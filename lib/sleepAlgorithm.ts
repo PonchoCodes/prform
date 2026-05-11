@@ -16,6 +16,15 @@ export interface UserInput {
   currentWakeTime: string; // "HH:MM" 24h
   currentBedTime: string;  // "HH:MM" 24h
   sport?: string;
+  planAggressiveness?: number;       // 50–100, default 85
+  bedtimeAdjustmentMinutes?: number; // -45 to +45, default 0
+}
+
+export interface SleepLogForPlan {
+  date: string;            // YYYY-MM-DD
+  hitTarget?: boolean | null;
+  actualBedtime?: string | null;
+  actualSleepHours?: number | null;
 }
 
 export interface WindDownPhases {
@@ -63,6 +72,10 @@ export interface DailySleepPlan {
   fatigueSleepBoostMinutes: number;
   workoutSource: "strava" | "manual" | "assumed" | "rest";
   isTentative: boolean;
+  // Sleep confirmation enrichment (null for future days or when unlogged)
+  actualBedtime: string | null;
+  actualSleepHours: number | null;
+  sleepConfirmed: boolean;
 }
 
 // ── helpers ──────────────────────────────────────────────────────────────────
@@ -88,11 +101,12 @@ function baseSleepMinutes(age: number, sex: string, sport?: string): number {
   return base * 60;
 }
 
-function trainingLoadExtra(type: WorkoutType): number {
-  if (type === "moderate") return 15;
-  if (type === "tempo" || type === "track") return 20;
-  if (type === "long_run") return 30;
-  return 0;
+function trainingLoadExtra(type: WorkoutType, aggFactor: number): number {
+  let base = 0;
+  if (type === "moderate") base = 15;
+  else if (type === "tempo" || type === "track") base = 20;
+  else if (type === "long_run") base = 30;
+  return Math.round(base * aggFactor);
 }
 
 function isHardWorkout(type: WorkoutType): boolean {
@@ -123,31 +137,26 @@ interface MeetShiftSchedule {
 function buildMeetShiftSchedule(
   meet: MeetInput & { date: Date },
   baseWakeMinutes: number,
+  aggFactor: number = 1,
 ): MeetShiftSchedule {
   let targetWakeMinutes: number;
 
   if (meet.raceTime) {
     const raceMin = timeToMinutes(meet.raceTime);
-    // Wake 2h before race start — enough time to warm up and reach alertness
     targetWakeMinutes = raceMin - 120;
   } else {
-    // No race time: apply a default advance scaled to priority
     const defaultAdv = meet.priority === "A" ? 30 : meet.priority === "B" ? 15 : 0;
     targetWakeMinutes = baseWakeMinutes - defaultAdv;
   }
 
-  // Positive = we need to advance (wake earlier). Cap at 90 min — beyond that
-  // requires weeks, not days.
-  const totalAdvanceMin = Math.max(0, Math.min(90, baseWakeMinutes - targetWakeMinutes));
+  const rawAdvanceMin = Math.max(0, Math.min(90, baseWakeMinutes - targetWakeMinutes));
+  const totalAdvanceMin = Math.round(rawAdvanceMin * aggFactor);
 
-  // Max shift per day by priority. PRC literature supports 15–90 min/day;
-  // these are sustainable rates that preserve sleep architecture.
   const maxDailyRate = meet.priority === "A" ? 30 : meet.priority === "B" ? 20 : 15;
 
   const shiftWindowDays =
     totalAdvanceMin > 0 ? Math.min(10, Math.ceil(totalAdvanceMin / maxDailyRate)) : 0;
 
-  // Spread evenly so the athlete's sleep shifts smoothly
   const actualDailyRateMin = shiftWindowDays > 0 ? totalAdvanceMin / shiftWindowDays : 0;
 
   return {
@@ -166,19 +175,11 @@ function computePRCPlan(
   cumulativeShiftMin: number,
   targetWakeTime: string,
 ): CircadianPlan {
-  // CBTmin: 2.5h before wake (midpoint of 2–3h empirical window)
-  // This is the PRC anchor — the circadian pacemaker's reference point
   const cbtMinutes = ((dayWakeMinutes - 150) % 1440 + 1440) % 1440;
-
-  // Advance window runs from CBTmin to +4h (where PRC advances are largest)
   const advanceEndMinutes = cbtMinutes + 240;
-
-  // Light exposure: 45 min starting at CBTmin (maximal advance zone)
   const lightStartMinutes = cbtMinutes;
   const lightEndMinutes = cbtMinutes + 45;
   const cbtHour = cbtMinutes / 60;
-
-  // Before 6 AM it's dark — prescribe a light therapy lamp instead of outdoor
   const useOutdoor = cbtHour >= 6.0;
 
   const lightExposure: LightExposure = {
@@ -191,7 +192,6 @@ function computePRCPlan(
       : "45 min at a 10,000 lux light therapy lamp — too early for outdoor sun.",
   };
 
-  // Light avoidance starts 3h before bed (melatonin onset window)
   const lightAvoidMinutes = ((dayBedMinutes - 180) % 1440 + 1440) % 1440;
 
   return {
@@ -215,8 +215,14 @@ export function calculateSleepPlan(
   user: UserInput,
   meets: MeetInput[],
   workoutDataSource: NormalizedWorkout[],
-  currentTSB?: number
+  currentTSB?: number,
+  opts?: { startDayOffset?: number; sleepLogs?: SleepLogForPlan[] }
 ): DailySleepPlan[] {
+  const startDayOffset = opts?.startDayOffset ?? 0;
+  const sleepLogs = opts?.sleepLogs ?? [];
+  const aggFactor = Math.min(100, Math.max(50, user.planAggressiveness ?? 85)) / 100;
+  const bedtimeAdj = Math.min(45, Math.max(-45, user.bedtimeAdjustmentMinutes ?? 0));
+
   const today = new Date();
   today.setHours(0, 0, 0, 0);
 
@@ -230,23 +236,32 @@ export function calculateSleepPlan(
     workoutMap.set(d.toISOString(), w);
   }
 
+  // Build SleepLog lookup map: YYYY-MM-DD → log
+  const sleepLogMap = new Map<string, SleepLogForPlan>();
+  for (const log of sleepLogs) {
+    sleepLogMap.set(log.date, log);
+  }
+
   const futureMeets = meets
     .map((m) => ({ ...m, date: new Date(m.date) }))
     .sort((a, b) => a.date.getTime() - b.date.getTime());
 
-  // Precompute PRC shift schedule for every upcoming meet
   const meetShiftSchedules = futureMeets.map((m) =>
-    buildMeetShiftSchedule(m, baseWakeMinutes)
+    buildMeetShiftSchedule(m, baseWakeMinutes, aggFactor)
   );
 
   const plans: DailySleepPlan[] = [];
+  // Loop from startDayOffset to 13 (inclusive)
+  const dayCount = 14 - startDayOffset;
 
-  for (let dayOffset = 0; dayOffset < 14; dayOffset++) {
+  for (let i = 0; i < dayCount; i++) {
+    const dayOffset = startDayOffset + i;
     const date = new Date(today);
     date.setDate(today.getDate() + dayOffset);
     date.setHours(0, 0, 0, 0);
 
     const dateKey = date.toISOString();
+    const dateStr = date.toISOString().slice(0, 10);
     const nw = workoutMap.get(dateKey);
     const workoutType: WorkoutType = nw?.type ?? "rest";
     const workoutSource = nw?.source ?? "rest";
@@ -256,15 +271,14 @@ export function calculateSleepPlan(
     yesterday.setDate(date.getDate() - 1);
     yesterday.setHours(0, 0, 0, 0);
     const yesterdayWorkout = workoutMap.get(yesterday.toISOString());
-    const dayAfterHardBonus =
-      yesterdayWorkout && isHardWorkout(yesterdayWorkout.type) ? 15 : 0;
+    const dayAfterHardBonusBase = yesterdayWorkout && isHardWorkout(yesterdayWorkout.type) ? 15 : 0;
+    const dayAfterHardBonus = Math.round(dayAfterHardBonusBase * aggFactor);
 
-    let sleepNeed = baseMinutes + trainingLoadExtra(workoutType) + dayAfterHardBonus;
+    let sleepNeed = baseMinutes + trainingLoadExtra(workoutType, aggFactor) + dayAfterHardBonus;
 
     const nextMeet = futureMeets.find((m) => m.date >= date) ?? null;
     const daysUntilNextMeet = nextMeet ? daysApart(date, nextMeet.date) : null;
 
-    // Fatigue sleep boost: add 15 min for 3 nights when meet is within 10 days and TSB < -5
     const isFatigueBoostDay =
       dayOffset < 3 &&
       daysUntilNextMeet !== null && daysUntilNextMeet <= 10 &&
@@ -272,23 +286,18 @@ export function calculateSleepPlan(
     const fatigueBoostMinutes = isFatigueBoostDay ? 15 : 0;
     sleepNeed += fatigueBoostMinutes;
 
-    // ── PRC-based shift: find the controlling meet for this day ──────────────
     let bestCumulative = 0;
     let bestDailyRate = 0;
     let controllingSchedule: MeetShiftSchedule | null = null;
 
     for (const mss of meetShiftSchedules) {
       const daysOut = daysApart(date, mss.meet.date);
-
-      // Include meet day itself (daysOut=0): athlete should be fully shifted
       if (daysOut < 0 || daysOut > mss.shiftWindowDays) continue;
 
       let cumulative: number;
       if (daysOut === 0) {
-        // Race day — fully shifted
         cumulative = mss.totalAdvanceMin;
       } else {
-        // Linear ramp: fully shifted at daysOut=1, starts at daysOut=shiftWindowDays
         cumulative = mss.totalAdvanceMin - (daysOut - 1) * mss.actualDailyRateMin;
         cumulative = Math.max(0, Math.round(cumulative));
       }
@@ -300,14 +309,14 @@ export function calculateSleepPlan(
       }
     }
 
-    // Shifted wake and bed times for this day
     const dayWakeMinutes = baseWakeMinutes - bestCumulative;
-    const bedtimeMinutes = dayWakeMinutes - sleepNeed;
+    const rawBedtimeMinutes = dayWakeMinutes - sleepNeed;
+    // Apply adaptive adjustment and round to nearest minute
+    const bedtimeMinutes = Math.round(rawBedtimeMinutes + bedtimeAdj);
     const recommendedBedtime = minutesToTime(bedtimeMinutes);
     const recommendedWakeTime = minutesToTime(dayWakeMinutes);
     const totalSleepHours = Math.round((sleepNeed / 60) * 10) / 10;
 
-    // Wind-down phases anchored to the shifted bedtime
     const windDown: WindDownPhases = {
       phase1: minutesToTime(bedtimeMinutes - 120),
       phase2: minutesToTime(bedtimeMinutes - 90),
@@ -315,7 +324,6 @@ export function calculateSleepPlan(
       phase4: minutesToTime(bedtimeMinutes - 15),
     };
 
-    // ── circadian plan ───────────────────────────────────────────────────────
     let circadian: CircadianPlan | null = null;
     if (controllingSchedule && bestCumulative > 0) {
       circadian = computePRCPlan(
@@ -327,12 +335,11 @@ export function calculateSleepPlan(
       );
     }
 
-    // ── recovery score ───────────────────────────────────────────────────────
     let recovery = 100;
     let consecutiveHard = 0;
-    for (let i = 0; i < dayOffset; i++) {
+    for (let j = 0; j < dayOffset; j++) {
       const d = new Date(today);
-      d.setDate(today.getDate() + i);
+      d.setDate(today.getDate() + j);
       d.setHours(0, 0, 0, 0);
       const w = workoutMap.get(d.toISOString());
       if (w && isHardWorkout(w.type as WorkoutType)) {
@@ -350,15 +357,31 @@ export function calculateSleepPlan(
     const deficit = Math.max(0, baselineSleep - totalSleepHours);
     recovery -= Math.round(deficit * 3);
 
-    for (let i = Math.max(0, dayOffset - 3); i < dayOffset; i++) {
+    for (let j = Math.max(0, dayOffset - 3); j < dayOffset; j++) {
       const d = new Date(today);
-      d.setDate(today.getDate() + i);
+      d.setDate(today.getDate() + j);
       d.setHours(0, 0, 0, 0);
       const w = workoutMap.get(d.toISOString());
       if (!w || w.type === "rest") recovery += 5;
     }
 
     recovery = Math.max(0, Math.min(100, recovery));
+
+    // Enrich with SleepLog data for past days
+    const sleepLog = sleepLogMap.get(dateStr);
+    let actualBedtime: string | null = null;
+    let actualSleepHoursOut: number | null = null;
+    let sleepConfirmed = false;
+
+    if (sleepLog && dayOffset <= 0) {
+      sleepConfirmed = true;
+      if (sleepLog.hitTarget === true) {
+        actualBedtime = recommendedBedtime;
+      } else if (sleepLog.actualBedtime) {
+        actualBedtime = sleepLog.actualBedtime;
+      }
+      actualSleepHoursOut = sleepLog.actualSleepHours ?? null;
+    }
 
     plans.push({
       date,
@@ -376,6 +399,9 @@ export function calculateSleepPlan(
       fatigueSleepBoostMinutes: fatigueBoostMinutes,
       workoutSource: workoutSource as "strava" | "manual" | "assumed" | "rest",
       isTentative: workoutTentative,
+      actualBedtime,
+      actualSleepHours: actualSleepHoursOut,
+      sleepConfirmed,
     });
   }
 
@@ -403,4 +429,14 @@ export function formatTime12h(time24: string): string {
   const period = h >= 12 ? "PM" : "AM";
   const hour12 = h % 12 || 12;
   return `${hour12}:${String(m).padStart(2, "0")} ${period}`;
+}
+
+export function aggressivenessForExperienceLevel(level: string): number {
+  switch (level) {
+    case "high_school": return 70;
+    case "collegiate": return 85;
+    case "post_collegiate": return 100;
+    case "masters": return 75;
+    default: return 85;
+  }
 }
