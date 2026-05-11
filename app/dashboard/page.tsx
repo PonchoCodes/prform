@@ -10,6 +10,7 @@ import { Badge } from "@/components/Badge";
 import { Navbar } from "@/components/Navbar";
 import type { DailySleepPlan, CircadianPlan } from "@/lib/sleepAlgorithm";
 import { formatTime12h } from "@/lib/sleepAlgorithm";
+import type { PerformanceReport } from "@/lib/performanceAnalysis";
 
 const DAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 
@@ -93,11 +94,98 @@ function CircadianProtocolSection({ circadian }: { circadian: CircadianPlan }) {
   );
 }
 
+function PerformanceSummary({ report }: { report: PerformanceReport }) {
+  const { pmc, polarized, vdot, decoupling, sleepPerf } = report;
+  return (
+    <div className="space-y-px bg-[#E5E5E5]">
+      {/* CTL / ATL / TSB */}
+      <div className="bg-white p-6">
+        <p className="text-xs font-bold uppercase tracking-[0.3em] text-[#6B6B6B] mb-4">Training Load</p>
+        <div className="grid grid-cols-3 gap-6">
+          {[["CTL", pmc.currentCTL, "Fitness"], ["ATL", pmc.currentATL, "Fatigue"], ["TSB", (pmc.currentTSB > 0 ? "+" : "") + pmc.currentTSB, "Form"]].map(([l, v, s]) => (
+            <div key={l as string}>
+              <p className="text-xs text-[#6B6B6B] uppercase tracking-wider mb-1">{l}</p>
+              <p className="font-mono font-black text-3xl leading-none">{v}</p>
+              <p className="text-xs text-[#6B6B6B] mt-1">{s}</p>
+            </div>
+          ))}
+        </div>
+        <p className="text-xs text-[#6B6B6B] mt-4 border-l-2 border-[#E8FF00] pl-3">{pmc.interpretation}</p>
+      </div>
+
+      {/* Zone distribution */}
+      <div className="bg-white p-6">
+        <p className="text-xs font-bold uppercase tracking-[0.3em] text-[#6B6B6B] mb-4">Intensity Distribution</p>
+        <div className="grid grid-cols-3 gap-4 mb-4">
+          {[["Z1", polarized.zone1Pct], ["Z2", polarized.zone2Pct], ["Z3", polarized.zone3Pct]].map(([z, p]) => (
+            <div key={z as string}>
+              <p className="text-xs text-[#6B6B6B] uppercase tracking-wider">{z}</p>
+              <p className="font-mono font-black text-2xl">{p}%</p>
+            </div>
+          ))}
+        </div>
+        <div className="w-full h-3 flex">
+          <div className="h-full bg-white border border-[#E5E5E5]" style={{ width: `${polarized.zone1Pct}%` }} />
+          <div className="h-full bg-[#6B6B6B]" style={{ width: `${polarized.zone2Pct}%` }} />
+          <div className="h-full bg-[#E8FF00]" style={{ width: `${polarized.zone3Pct}%` }} />
+        </div>
+      </div>
+
+      {/* VDOT */}
+      <div className="bg-white p-6">
+        <p className="text-xs font-bold uppercase tracking-[0.3em] text-[#6B6B6B] mb-2">VDOT</p>
+        {vdot.vdot ? (
+          <>
+            <p className="font-mono font-black text-5xl leading-none mb-2">{vdot.vdot}</p>
+            <p className="text-xs text-[#6B6B6B]">{vdot.diagnosis}</p>
+            {vdot.paces && (
+              <p className="font-mono text-xs text-[#6B6B6B] mt-2">
+                T-pace: <span className="text-[#0A0A0A] font-bold">{vdot.paces.thresholdPaceMinKm}/km</span>
+              </p>
+            )}
+          </>
+        ) : (
+          <p className="text-xs text-[#6B6B6B]">Sync a race or maximal effort to calculate VDOT.</p>
+        )}
+      </div>
+
+      {/* Decoupling */}
+      <div className="bg-white p-6">
+        <p className="text-xs font-bold uppercase tracking-[0.3em] text-[#6B6B6B] mb-2">Aerobic Efficiency</p>
+        <div className="flex items-end gap-3 mb-2">
+          <p className="font-mono font-black text-4xl leading-none">{decoupling.rollingAvgDecoupling}%</p>
+          <p className={`text-xs font-bold uppercase tracking-wider mb-1 ${decoupling.trend === "improving" ? "text-green-600" : decoupling.trend === "declining" ? "text-red-500" : "text-[#6B6B6B]"}`}>
+            {decoupling.trend === "improving" ? "↓ Improving" : decoupling.trend === "declining" ? "↑ Declining" : "→ Stable"}
+          </p>
+        </div>
+        <p className="text-xs text-[#6B6B6B]">Avg decoupling — lower is better</p>
+      </div>
+
+      {/* Sleep-pace headline */}
+      <div className="bg-white p-6">
+        <p className="text-xs font-bold uppercase tracking-[0.3em] text-[#6B6B6B] mb-2">Sleep × Pace</p>
+        <p className="font-mono font-black text-2xl leading-none mb-2">r = {sleepPerf.correlation}</p>
+        <p className="text-xs text-[#6B6B6B] leading-relaxed">{sleepPerf.insight}</p>
+      </div>
+
+      <div className="bg-white p-6">
+        <a href="/analysis" className="inline-block border border-[#0A0A0A] text-[#0A0A0A] font-black text-xs uppercase tracking-widest px-6 py-2 hover:bg-[#0A0A0A] hover:text-white transition-colors">
+          Full Analysis →
+        </a>
+      </div>
+    </div>
+  );
+}
+
 export default function DashboardPage() {
   const { data: session, status } = useSession();
   const router = useRouter();
   const [data, setData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const [activeTab, setActiveTab] = useState<"sleep" | "performance">("sleep");
+  const [stravaStatus, setStravaStatus] = useState<{ connected: boolean } | null>(null);
+  const [perfReport, setPerfReport] = useState<PerformanceReport | null>(null);
+  const [perfLoading, setPerfLoading] = useState(false);
 
   useEffect(() => {
     if (status === "unauthenticated") router.push("/login");
@@ -115,7 +203,20 @@ export default function DashboardPage() {
         setData(d);
         setLoading(false);
       });
+    fetch("/api/strava/status")
+      .then((r) => r.json())
+      .then((s) => setStravaStatus(s));
   }, [status, router]);
+
+  useEffect(() => {
+    if (activeTab !== "performance" || !stravaStatus?.connected) return;
+    if (perfReport) return;
+    setPerfLoading(true);
+    fetch("/api/analysis?days=90")
+      .then((r) => r.json())
+      .then((d) => { if (!d.error) setPerfReport(d); })
+      .finally(() => setPerfLoading(false));
+  }, [activeTab, stravaStatus, perfReport]);
 
   if (status === "loading" || loading) {
     return (
@@ -138,11 +239,81 @@ export default function DashboardPage() {
 
   const recoveryScore = today.recoveryScore;
   const recoveryLabel = recoveryScore >= 80 ? "Peak readiness. You are primed to run a PR." : recoveryScore >= 60 ? "Moderate fatigue accumulating. Follow your wind-down to protect meet-day performance." : "High fatigue. Prioritize rest to protect your PR window.";
+  const fatigueBanner = (today as any).fatigueSleepBoost;
 
   return (
     <div className="min-h-screen bg-white">
       <Navbar />
 
+      {/* Tab toggle */}
+      <div className="border-b border-[#E5E5E5] px-6">
+        <div className="max-w-[1200px] mx-auto flex">
+          {(["sleep", "performance"] as const).map((tab) => (
+            <button
+              key={tab}
+              onClick={() => setActiveTab(tab)}
+              className={`px-6 py-3 text-xs font-black uppercase tracking-widest transition-colors border-b-2 ${
+                activeTab === tab
+                  ? "border-[#0A0A0A] text-[#0A0A0A]"
+                  : "border-transparent text-[#6B6B6B] hover:text-[#0A0A0A]"
+              }`}
+            >
+              {tab}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Fatigue boost banner */}
+      {activeTab === "sleep" && fatigueBanner && (
+        <div className="bg-[#0A0A0A] text-white px-6 py-3">
+          <div className="max-w-[1200px] mx-auto">
+            <p className="text-xs font-bold uppercase tracking-wider text-[#E8FF00] mb-0.5">High Training Load Detected</p>
+            <p className="text-xs font-mono text-[#AAAAAA]">
+              Your training stress is elevated with {today.daysUntilNextMeet} days until {today.nextMeetName}.
+              PRform has added {(today as any).fatigueSleepBoostMinutes} minutes to your sleep target tonight to accelerate recovery.
+            </p>
+          </div>
+        </div>
+      )}
+
+      {/* Performance tab */}
+      {activeTab === "performance" && (
+        <div className="max-w-[1200px] mx-auto px-6 py-10">
+          {!stravaStatus?.connected ? (
+            <FadeUp>
+              <div className="border border-[#E5E5E5] p-10 text-center max-w-lg mx-auto">
+                <h2 className="font-black text-2xl uppercase mb-3">Connect Strava</h2>
+                <p className="text-sm text-[#6B6B6B] mb-6">Sync your runs to unlock performance analysis.</p>
+                <a
+                  href="/api/strava/connect"
+                  className="inline-block bg-[#E8FF00] text-[#0A0A0A] font-black text-xs uppercase tracking-widest px-8 py-3 hover:bg-[#d4e800] transition-colors"
+                >
+                  Connect Strava →
+                </a>
+              </div>
+            </FadeUp>
+          ) : perfLoading ? (
+            <p className="font-mono text-sm uppercase tracking-wider text-[#6B6B6B]">Computing performance…</p>
+          ) : perfReport ? (
+            <FadeUp>
+              <PerformanceSummary report={perfReport} />
+            </FadeUp>
+          ) : (
+            <FadeUp>
+              <div className="border border-[#E5E5E5] p-8 text-center">
+                <p className="text-sm text-[#6B6B6B] mb-4">Sync your Strava activities to generate performance data.</p>
+                <a href="/strava" className="inline-block border border-[#0A0A0A] font-black text-xs uppercase tracking-widest px-6 py-2 hover:bg-[#0A0A0A] hover:text-white transition-colors">
+                  Go to Strava →
+                </a>
+              </div>
+            </FadeUp>
+          )}
+        </div>
+      )}
+
+      {activeTab === "sleep" && (
+      <>
       {/* Hero Card */}
       <motion.section
         initial={{ opacity: 0 }}
@@ -326,6 +497,8 @@ export default function DashboardPage() {
           </FadeUp>
         </div>
       </section>
+      </>
+      )}
     </div>
   );
 }

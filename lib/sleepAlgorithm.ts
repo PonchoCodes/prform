@@ -69,6 +69,8 @@ export interface DailySleepPlan {
   recoveryScore: number;
   windDown: WindDownPhases;
   circadian: CircadianPlan | null; // null when no meet within shift window
+  fatigueSleepBoost: boolean;
+  fatigueSleepBoostMinutes: number;
 }
 
 // ── helpers ──────────────────────────────────────────────────────────────────
@@ -220,7 +222,8 @@ function computePRCPlan(
 export function calculateSleepPlan(
   user: UserInput,
   workouts: WorkoutInput[],
-  meets: MeetInput[]
+  meets: MeetInput[],
+  currentTSB?: number
 ): DailySleepPlan[] {
   const today = new Date();
   today.setHours(0, 0, 0, 0);
@@ -266,6 +269,14 @@ export function calculateSleepPlan(
 
     const nextMeet = futureMeets.find((m) => m.date >= date) ?? null;
     const daysUntilNextMeet = nextMeet ? daysApart(date, nextMeet.date) : null;
+
+    // Fatigue sleep boost: add 15 min for 3 nights when meet is within 10 days and TSB < -5
+    const isFatigueBoostDay =
+      dayOffset < 3 &&
+      daysUntilNextMeet !== null && daysUntilNextMeet <= 10 &&
+      typeof currentTSB === "number" && currentTSB < -5;
+    const fatigueBoostMinutes = isFatigueBoostDay ? 15 : 0;
+    sleepNeed += fatigueBoostMinutes;
 
     // ── PRC-based shift: find the controlling meet for this day ──────────────
     let bestCumulative = 0;
@@ -367,6 +378,8 @@ export function calculateSleepPlan(
       recoveryScore: recovery,
       windDown,
       circadian,
+      fatigueSleepBoost: isFatigueBoostDay,
+      fatigueSleepBoostMinutes: fatigueBoostMinutes,
     });
   }
 

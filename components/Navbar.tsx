@@ -11,6 +11,8 @@ export function Navbar() {
     { href: "/dashboard", label: "Dashboard" },
     { href: "/schedule", label: "Schedule" },
     { href: "/meets", label: "Meets" },
+    { href: "/strava", label: "Strava" },
+    { href: "/analysis", label: "Analysis" },
     { href: "/profile", label: "Profile" },
   ];
 

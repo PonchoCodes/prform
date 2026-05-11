@@ -30,9 +30,40 @@ model User {
   notifPhase3      Boolean @default(true)
   notifPhase4      Boolean @default(true)
 
-  workouts  Workout[]
-  meets     Meet[]
-  sessions  Session[]
+  stravaAccessToken   String?
+  stravaRefreshToken  String?
+  stravaTokenExpiry   DateTime?
+  stravaAthleteId     String?
+  stravaConnected     Boolean   @default(false)
+  userMaxHR           Int?
+  userThresholdHR     Int?
+
+  workouts         Workout[]
+  meets            Meet[]
+  sessions         Session[]
+  stravaActivities StravaActivity[]
+}
+
+model StravaActivity {
+  id              String   @id @default(cuid())
+  stravaId        String   @unique
+  userId          String
+  name            String
+  startDate       DateTime
+  distance        Float
+  movingTime      Int
+  elapsedTime     Int
+  totalElevGain   Float
+  averageSpeed    Float
+  maxSpeed        Float
+  averageHeartrate Float?
+  maxHeartrate    Float?
+  sufferScore     Int?
+  workoutType     Int?
+  averageCadence  Float?
+  externalId      String?
+  createdAt       DateTime @default(now())
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
 model Session {
