@@ -9,6 +9,7 @@ export type WorkoutType =
   | "cross_train";
 
 export interface NormalizedWorkout {
+  id?: string;           // DB id for manual one-off workouts; undefined for Strava/assumed
   date: Date;
   type: WorkoutType;
   distance: number;

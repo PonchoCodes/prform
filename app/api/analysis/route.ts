@@ -17,6 +17,7 @@ export async function GET(req: NextRequest) {
     where: { id: userId },
     select: {
       age: true,
+      biologicalSex: true,
       userMaxHR: true,
       userThresholdHR: true,
       currentBedTime: true,

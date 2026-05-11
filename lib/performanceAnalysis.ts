@@ -21,6 +21,7 @@ export interface StravaActivityInput {
 
 export interface UserForAnalysis {
   age?: number | null;
+  biologicalSex?: string | null;
   userMaxHR?: number | null;
   userThresholdHR?: number | null;
   currentBedTime?: string | null;
@@ -516,18 +517,18 @@ export function calculateDecoupling(
 // ── ALGORITHM 5: Sleep-Performance Correlation ────────────────────────────────
 
 export interface ScatterPoint {
-  sleepHours: number;
-  paceScore: number;
+  deviationMin: number;   // recommendedBedtime − actualBedtime (positive = went early = good)
+  paceScore: number;      // z-score relative to athlete's average
   date: string;
-  bin: "optimal" | "moderate" | "significant";
+  activityName: string;
+  paceMinKm: string;
+  targetBedtime: string;  // HH:MM of PRform recommended bedtime for that day
 }
 
 export interface SleepPerfResult {
   correlation: number;
   insight: string;
   scatterData: ScatterPoint[];
-  avgPaceByBin: { optimal: number | null; moderate: number | null; significant: number | null };
-  hasEnoughData: boolean;
 }
 
 function pearsonCorrelation(xs: number[], ys: number[]): number {
@@ -543,82 +544,83 @@ function pearsonCorrelation(xs: number[], ys: number[]): number {
   return den === 0 ? 0 : num / den;
 }
 
+function classifyActivityLoad(act: StravaActivityInput): "easy" | "moderate" | "tempo" | "long_run" {
+  const ss = act.sufferScore ?? 0;
+  if (act.workoutType === 1 || ss >= 75) return "long_run";
+  if (act.distance > 16000) return "long_run";
+  if (ss >= 50) return "tempo";
+  if (act.distance > 8000) return "moderate";
+  return "easy";
+}
+
+function computeRecommendedBedtimeMin(user: UserForAnalysis, load: "easy" | "moderate" | "tempo" | "long_run"): number {
+  const wakeMin = parseTimeToMinutes(user.currentWakeTime ?? "06:30");
+  const age = user.age ?? 25;
+  let baseSleepMin = age < 18 ? 9 * 60 : age < 26 ? 8.5 * 60 : 8 * 60;
+  if (user.biologicalSex === "female") baseSleepMin += 30;
+  const loadOffsets: Record<string, number> = { easy: 0, moderate: 15, tempo: 20, long_run: 30 };
+  return ((wakeMin - baseSleepMin - loadOffsets[load]) + 1440 * 2) % 1440;
+}
+
+function speedToMinKm(ms: number): string {
+  if (ms <= 0) return "--:--";
+  const s = 1000 / ms;
+  return `${Math.floor(s / 60)}:${String(Math.round(s % 60)).padStart(2, "0")}`;
+}
+
+function minutesToTimeStr(m: number): string {
+  const norm = ((m % 1440) + 1440) % 1440;
+  return `${String(Math.floor(norm / 60)).padStart(2, "0")}:${String(norm % 60).padStart(2, "0")}`;
+}
+
 export function calculateSleepPerformanceCorrelation(
   activities: StravaActivityInput[],
   user: UserForAnalysis,
   thresholdPaceMs: number,
 ): SleepPerfResult {
-  // Derive actual sleep hours from user baseline (proxy until wearable integration)
-  const bedTimeMin = parseTimeToMinutes(user.currentBedTime ?? "22:30");
-  const wakeTimeMin = parseTimeToMinutes(user.currentWakeTime ?? "06:30");
-  const baselineSleepHours = ((wakeTimeMin - bedTimeMin + 1440) % 1440) / 60;
+  const actualBedtimeMin = parseTimeToMinutes(user.currentBedTime ?? "22:30");
 
-  // For each activity, estimate pace score
   const allPaceScores = activities.map((a) =>
-    thresholdPaceMs > 0 ? thresholdPaceMs / a.averageSpeed : 1,
+    thresholdPaceMs > 0 && a.averageSpeed > 0 ? thresholdPaceMs / a.averageSpeed : 1,
   );
   const mean = allPaceScores.reduce((a, b) => a + b, 0) / (allPaceScores.length || 1);
   const stddev = Math.sqrt(
     allPaceScores.reduce((s, v) => s + (v - mean) ** 2, 0) / (allPaceScores.length || 1),
   );
 
-  // Since we don't have per-night sleep data yet, use baseline with slight variation
-  // based on day of week (weekend athletes sleep more)
-  const scatterData: ScatterPoint[] = [];
-
-  for (let i = 0; i < activities.length; i++) {
-    const act = activities[i];
-    const dow = new Date(act.startDate).getDay(); // 0=Sun
-    const isWeekend = dow === 0 || dow === 6;
-    const estimatedSleep = baselineSleepHours + (isWeekend ? 0.5 : 0);
-
+  const scatterData: ScatterPoint[] = activities.map((act, i) => {
+    const load = classifyActivityLoad(act);
+    const recMin = computeRecommendedBedtimeMin(user, load);
+    let deviationMin = recMin - actualBedtimeMin;
+    if (deviationMin > 720) deviationMin -= 1440;
+    if (deviationMin < -720) deviationMin += 1440;
     const paceScore = stddev > 0 ? (allPaceScores[i] - mean) / stddev : 0;
-    const deficit = 8 - estimatedSleep;
-    const bin: ScatterPoint["bin"] =
-      deficit < 0.5 ? "optimal" : deficit < 1.5 ? "moderate" : "significant";
-
-    scatterData.push({
-      sleepHours: Math.round(estimatedSleep * 10) / 10,
+    return {
+      deviationMin: Math.round(deviationMin),
       paceScore: Math.round(paceScore * 100) / 100,
       date: new Date(act.startDate).toISOString().slice(0, 10),
-      bin,
-    });
-  }
+      activityName: act.name,
+      paceMinKm: speedToMinKm(act.averageSpeed),
+      targetBedtime: minutesToTimeStr(recMin),
+    };
+  });
 
-  const hasEnoughData = scatterData.length >= 10;
-
-  const xs = scatterData.map((p) => p.sleepHours);
+  const xs = scatterData.map((p) => p.deviationMin);
   const ys = scatterData.map((p) => p.paceScore);
   const correlation = Math.round(pearsonCorrelation(xs, ys) * 100) / 100;
 
-  const binAvg = (bin: ScatterPoint["bin"]): number | null => {
-    const pts = scatterData.filter((p) => p.bin === bin);
-    if (pts.length === 0) return null;
-    return Math.round((pts.reduce((s, p) => s + p.paceScore, 0) / pts.length) * 100) / 100;
-  };
-
-  const avgOptimal = binAvg("optimal");
-  const avgModerate = binAvg("moderate");
-  const avgSignificant = binAvg("significant");
-
   let insight: string;
-  if (!hasEnoughData) {
-    insight = `Sync more runs to unlock sleep-pace correlation. ${scatterData.length} of 10 required runs synced.`;
-  } else if (avgOptimal !== null && avgSignificant !== null) {
-    const diffPct = Math.round(Math.abs(avgOptimal - avgSignificant) * 100);
-    const direction = avgOptimal > avgSignificant ? "faster" : "slower";
-    insight = `Across your last ${scatterData.length} runs, your pace was on average ${diffPct}% ${direction} on days when you met your sleep target vs. days when you had a deficit of more than 1 hour.`;
+  if (scatterData.length < 10) {
+    insight = `Sync ${10 - scatterData.length} more runs to unlock your sleep-pace pattern. ${scatterData.length} of 10 required.`;
+  } else if (Math.abs(correlation) < 0.3) {
+    insight = `No strong correlation detected across ${scatterData.length} runs (r = ${correlation}). Your pace is consistent regardless of when you go to bed relative to your PRform target — good mental consistency.`;
+  } else if (correlation > 0) {
+    insight = `Clear signal across ${scatterData.length} runs (r = ${correlation}): going to bed closer to your PRform target is associated with better pace scores. Bedtime discipline is directly translating to faster runs.`;
   } else {
-    insight = "Collecting sleep-pace data. Run consistently to build your correlation model.";
+    insight = `Inverse pattern across ${scatterData.length} runs (r = ${correlation}). Your PRform target bedtime may need adjustment, or there are confounding factors — consider logging how you feel on recovery days.`;
   }
 
-  return {
-    correlation,
-    insight,
-    scatterData,
-    avgPaceByBin: { optimal: avgOptimal, moderate: avgModerate, significant: avgSignificant },
-    hasEnoughData,
-  };
+  return { correlation, insight, scatterData };
 }
 
 function parseTimeToMinutes(time: string): number {
@@ -635,6 +637,7 @@ export interface PerformanceReport {
   decoupling: DecouplingResult;
   sleepPerf: SleepPerfResult;
   activityCount: number;
+  totalSynced: number;
   windowDays: number;
 }
 
@@ -657,6 +660,7 @@ export function analyzePerformance(
     decoupling: calculateDecoupling(windowActivities, Math.min(windowDays, 30)),
     sleepPerf: calculateSleepPerformanceCorrelation(activities, user, thresholdPaceMs),
     activityCount: windowActivities.length,
+    totalSynced: activities.length,
     windowDays,
   };
 }

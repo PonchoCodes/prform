@@ -7,6 +7,7 @@ import {
   Tooltip,
   ResponsiveContainer,
   ReferenceLine,
+  ReferenceArea,
 } from "recharts";
 import type { ScatterPoint } from "@/lib/performanceAnalysis";
 
@@ -15,95 +16,137 @@ interface Props {
   correlation: number;
 }
 
-const DOT_STYLES: Record<ScatterPoint["bin"], { fill: string; stroke: string }> = {
-  optimal: { fill: "#FFFFFF", stroke: "#0A0A0A" },
-  moderate: { fill: "#6B6B6B", stroke: "#6B6B6B" },
-  significant: { fill: "#D0D0D0", stroke: "#D0D0D0" },
-};
-
 const CustomTooltip = ({ active, payload }: any) => {
   if (!active || !payload?.length) return null;
   const d = payload[0]?.payload as ScatterPoint;
+  const sign = d.deviationMin >= 0 ? "+" : "";
   return (
-    <div className="bg-[#0A0A0A] border border-[#333] p-3 text-xs font-mono">
+    <div className="bg-[#0A0A0A] border border-[#333] p-3 text-xs font-mono min-w-[180px]">
       <p className="text-[#6B6B6B] mb-1">{d.date}</p>
-      <p className="text-white">{d.sleepHours}h sleep</p>
-      <p className="text-[#E8FF00]">Score: {d.paceScore > 0 ? "+" : ""}{d.paceScore}</p>
-      <p className="text-[#6B6B6B] capitalize">{d.bin} sleep</p>
+      <p className="text-white truncate max-w-[200px]">{d.activityName}</p>
+      <p className="text-[#E8FF00] mt-1">Pace: {d.paceMinKm}/km</p>
+      <p className="text-white">Score: {d.paceScore > 0 ? "+" : ""}{d.paceScore}</p>
+      <p className="text-[#6B6B6B] mt-1">Deviation: {sign}{d.deviationMin} min</p>
+      <p className="text-[#6B6B6B]">PRform target: {d.targetBedtime}</p>
     </div>
   );
 };
 
-// Simple linear regression line points
-function regressionPoints(data: ScatterPoint[]): { x: number; y: number }[] {
+function regressionLine(data: ScatterPoint[]): { x: number; y: number }[] {
   if (data.length < 2) return [];
-  const xs = data.map((d) => d.sleepHours);
+  const xs = data.map((d) => d.deviationMin);
   const ys = data.map((d) => d.paceScore);
   const n = xs.length;
   const mx = xs.reduce((a, b) => a + b, 0) / n;
   const my = ys.reduce((a, b) => a + b, 0) / n;
   const slope = xs.reduce((s, x, i) => s + (x - mx) * (ys[i] - my), 0) /
-    xs.reduce((s, x) => s + (x - mx) ** 2, 0);
+    (xs.reduce((s, x) => s + (x - mx) ** 2, 0) || 1);
   const intercept = my - slope * mx;
-  const minX = Math.min(...xs);
-  const maxX = Math.max(...xs);
   return [
-    { x: minX, y: slope * minX + intercept },
-    { x: maxX, y: slope * maxX + intercept },
+    { x: -120, y: slope * -120 + intercept },
+    { x: 60, y: slope * 60 + intercept },
   ];
 }
 
 export function SleepPaceScatterChart({ data, correlation }: Props) {
-  const optimal = data.filter((d) => d.bin === "optimal");
-  const moderate = data.filter((d) => d.bin === "moderate");
-  const significant = data.filter((d) => d.bin === "significant");
-  const regLine = regressionPoints(data);
+  const regLine = regressionLine(data);
 
   return (
     <div>
-      <ResponsiveContainer width="100%" height={280}>
-        <ScatterChart margin={{ top: 8, right: 16, left: 0, bottom: 8 }}>
-          <XAxis
-            dataKey="sleepHours"
-            type="number"
-            name="Sleep"
-            unit="h"
-            domain={["auto", "auto"]}
-            tick={{ fontFamily: "var(--font-geist-mono)", fontSize: 10, fill: "#6B6B6B" }}
-            axisLine={{ stroke: "#E5E5E5" }}
-            tickLine={false}
-            label={{ value: "Sleep (hrs)", position: "insideBottom", offset: -4, fontSize: 10, fill: "#6B6B6B", fontFamily: "var(--font-geist-mono)" }}
-          />
-          <YAxis
-            dataKey="paceScore"
-            type="number"
-            name="Pace Score"
-            tick={{ fontFamily: "var(--font-geist-mono)", fontSize: 10, fill: "#6B6B6B" }}
-            axisLine={false}
-            tickLine={false}
-            width={36}
-            label={{ value: "Score", angle: -90, position: "insideLeft", fontSize: 10, fill: "#6B6B6B", fontFamily: "var(--font-geist-mono)" }}
-          />
-          <Tooltip content={<CustomTooltip />} />
-          <ReferenceLine y={0} stroke="#E5E5E5" />
-          <Scatter name="Optimal" data={optimal} fill={DOT_STYLES.optimal.fill} stroke={DOT_STYLES.optimal.stroke} strokeWidth={1.5} r={5} isAnimationActive={false} />
-          <Scatter name="Moderate" data={moderate} fill={DOT_STYLES.moderate.fill} stroke={DOT_STYLES.moderate.stroke} r={5} isAnimationActive={false} />
-          <Scatter name="Significant" data={significant} fill={DOT_STYLES.significant.fill} stroke={DOT_STYLES.significant.stroke} r={5} isAnimationActive={false} />
-          {regLine.length === 2 && (
-            <ReferenceLine
-              segment={regLine as [{ x: number; y: number }, { x: number; y: number }]}
-              stroke="#E8FF00"
-              strokeWidth={2}
-              ifOverflow="extendDomain"
+      {/* HOW THIS WORKS explainer */}
+      <div className="border border-[#E5E5E5] p-4 mb-6 bg-[#FAFAFA]">
+        <p className="text-[10px] font-bold uppercase tracking-[0.3em] text-[#6B6B6B] mb-2">How This Works</p>
+        <p className="text-xs font-mono text-[#6B6B6B] leading-relaxed">
+          PRform calculates a target bedtime each day based on your training load and sleep need.
+          Each dot is one of your runs. The X axis shows how far your estimated bedtime was from
+          that day&apos;s PRform target — left is late, right is early.
+          The Y axis is your pace score (z-score vs. your average).
+          The yellow line is the trend.
+        </p>
+      </div>
+
+      <div className="bg-[#0A0A0A] p-4">
+        <ResponsiveContainer width="100%" height={300}>
+          <ScatterChart margin={{ top: 16, right: 24, left: 0, bottom: 24 }}>
+            {/* Background zones */}
+            <ReferenceArea x1={-120} x2={-30} fill="#1a0a0a" fillOpacity={0.6} />
+            <ReferenceArea x1={-30} x2={15} fill="#111111" fillOpacity={0} />
+            <ReferenceArea x1={15} x2={60} fill="#0a1a0a" fillOpacity={0.6} />
+
+            <XAxis
+              dataKey="deviationMin"
+              type="number"
+              domain={[-120, 60]}
+              ticks={[-120, -90, -60, -30, 0, 15, 30, 60]}
+              tick={{ fontFamily: "var(--font-geist-mono)", fontSize: 9, fill: "#6B6B6B" }}
+              axisLine={{ stroke: "#333" }}
+              tickLine={false}
+              label={{
+                value: "Bedtime vs. Target (min)  ← late · early →",
+                position: "insideBottom",
+                offset: -14,
+                fontSize: 9,
+                fill: "#6B6B6B",
+                fontFamily: "var(--font-geist-mono)",
+              }}
             />
-          )}
-        </ScatterChart>
-      </ResponsiveContainer>
-      <div className="flex gap-4 text-xs font-mono text-[#6B6B6B] mt-2">
-        <span><span className="inline-block w-2 h-2 border border-[#0A0A0A] bg-white mr-1" />Optimal sleep</span>
-        <span><span className="inline-block w-2 h-2 bg-[#6B6B6B] mr-1" />Moderate deficit</span>
-        <span><span className="inline-block w-2 h-2 bg-[#D0D0D0] mr-1" />Significant deficit</span>
+            <YAxis
+              dataKey="paceScore"
+              type="number"
+              tick={{ fontFamily: "var(--font-geist-mono)", fontSize: 9, fill: "#6B6B6B" }}
+              axisLine={false}
+              tickLine={false}
+              width={36}
+              label={{
+                value: "Pace Score",
+                angle: -90,
+                position: "insideLeft",
+                fontSize: 9,
+                fill: "#6B6B6B",
+                fontFamily: "var(--font-geist-mono)",
+              }}
+            />
+            <Tooltip content={<CustomTooltip />} cursor={{ stroke: "#333" }} />
+            <ReferenceLine y={0} stroke="#333" />
+            <ReferenceLine x={0} stroke="#444" strokeDasharray="4 4" />
+
+            <Scatter
+              data={data}
+              fill="#0A0A0A"
+              stroke="#FFFFFF"
+              strokeWidth={1}
+              r={4}
+              isAnimationActive={false}
+            />
+
+            {regLine.length === 2 && (
+              <ReferenceLine
+                segment={regLine as [{ x: number; y: number }, { x: number; y: number }]}
+                stroke="#E8FF00"
+                strokeWidth={2}
+                ifOverflow="extendDomain"
+              />
+            )}
+          </ScatterChart>
+        </ResponsiveContainer>
+      </div>
+
+      <div className="flex items-center gap-6 mt-3 text-[10px] font-mono text-[#6B6B6B]">
+        <span className="flex items-center gap-1.5">
+          <span className="inline-block w-3 h-[2px] bg-[#E8FF00]" />
+          Trend line
+        </span>
+        <span className="flex items-center gap-1.5">
+          <span className="inline-block w-2 h-2 border border-white bg-[#0A0A0A]" />
+          Run
+        </span>
         <span className="ml-auto">r = {correlation}</span>
+      </div>
+
+      <div className="flex gap-px mt-2 text-[9px] font-mono uppercase tracking-wider">
+        <div className="flex-1 bg-red-50 text-red-400 text-center py-0.5">← Late</div>
+        <div className="flex-1 bg-white border-x border-[#E5E5E5] text-[#6B6B6B] text-center py-0.5">On Target</div>
+        <div className="flex-1 bg-green-50 text-green-600 text-center py-0.5">Early →</div>
       </div>
     </div>
   );

@@ -143,6 +143,7 @@ export async function getWorkoutsForDateRange(
         const useManual = manualW && manualW.manualOverride;
         if (useManual) {
           result.push({
+            id: manualW.id,
             date,
             type: manualW.type as WorkoutType,
             distance: (manualW.distance ?? 0) * 1.60934, // miles → km
@@ -173,6 +174,7 @@ export async function getWorkoutsForDateRange(
         // FUTURE DATE
         if (manualW) {
           result.push({
+            id: manualW.id,
             date,
             type: manualW.type as WorkoutType,
             distance: (manualW.distance ?? 0) * 1.60934,
@@ -231,6 +233,7 @@ export async function getWorkoutsForDateRange(
 
       if (oneOff) {
         result.push({
+          id: oneOff.id,
           date,
           type: oneOff.type as WorkoutType,
           distance: (oneOff.distance ?? 0) * 1.60934,

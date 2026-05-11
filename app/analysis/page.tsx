@@ -84,7 +84,7 @@ export default function AnalysisPage() {
         <div className="max-w-[1200px] mx-auto">
           <p className="text-xs font-bold uppercase tracking-[0.3em] text-[#6B6B6B] mb-2">Performance Engine</p>
           <h1 className="font-black text-4xl md:text-5xl uppercase leading-none mb-6">Analysis</h1>
-          <div className="flex gap-px">
+          <div className="flex gap-px mb-3">
             {([30, 60, 90] as WindowDays[]).map((d) => (
               <button
                 key={d}
@@ -99,6 +99,11 @@ export default function AnalysisPage() {
               </button>
             ))}
           </div>
+          {report && !loading && (
+            <p className="text-[10px] font-mono text-[#6B6B6B]">
+              {report.totalSynced} total runs synced · {report.activityCount} in {window}d window
+            </p>
+          )}
         </div>
       </section>
 
@@ -133,7 +138,25 @@ export default function AnalysisPage() {
               </FadeUp>
 
               {report.activityCount < 5 ? (
-                <Placeholder message="Sync at least 5 runs to generate the Performance Management Chart." />
+                <div className="border border-[#E5E5E5] p-8 text-center">
+                  <p className="text-xs font-mono text-[#6B6B6B] mb-4">
+                    Only {report.activityCount} run{report.activityCount !== 1 ? "s" : ""} in the last {window}d window.
+                    {report.totalSynced >= 5 ? " Try a wider window:" : " Sync at least 5 runs to unlock this chart."}
+                  </p>
+                  {report.totalSynced >= 5 && (
+                    <div className="flex justify-center gap-px">
+                      {([30, 60, 90] as WindowDays[]).filter((d) => d > window).map((d) => (
+                        <button
+                          key={d}
+                          onClick={() => setWindow(d)}
+                          className="px-4 py-1.5 text-xs font-bold uppercase tracking-wider border border-[#0A0A0A] hover:bg-[#0A0A0A] hover:text-white transition-colors"
+                        >
+                          {d}d
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
               ) : (
                 <>
                   <FadeUp delay={60}>
@@ -266,14 +289,10 @@ export default function AnalysisPage() {
               </FadeUp>
 
               <FadeUp delay={60}>
-                {!report.sleepPerf.hasEnoughData ? (
-                  <Placeholder message={report.sleepPerf.insight} />
-                ) : (
-                  <SleepPaceScatterChart
-                    data={report.sleepPerf.scatterData}
-                    correlation={report.sleepPerf.correlation}
-                  />
-                )}
+                <SleepPaceScatterChart
+                  data={report.sleepPerf.scatterData}
+                  correlation={report.sleepPerf.correlation}
+                />
                 <Diagnosis text={report.sleepPerf.insight} />
               </FadeUp>
             </div>

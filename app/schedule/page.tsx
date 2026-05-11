@@ -11,6 +11,7 @@ type WorkoutType = "easy" | "moderate" | "tempo" | "long_run" | "track" | "race"
 type WorkoutSource = "strava" | "manual" | "assumed";
 
 interface NormalizedWorkout {
+  id?: string;
   date: string;
   type: WorkoutType;
   distance: number;
@@ -98,6 +99,9 @@ export default function SchedulePage() {
   const [showAddForm, setShowAddForm] = useState(false);
   const [addForm, setAddForm] = useState({ date: "", type: "easy" as WorkoutType, distance: "", duration: "" });
   const [saving, setSaving] = useState(false);
+  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [fadingId, setFadingId] = useState<string | null>(null);
 
   useEffect(() => {
     if (status === "unauthenticated") router.push("/login");
@@ -164,6 +168,18 @@ export default function SchedulePage() {
       body: JSON.stringify({ id: workoutId, conflictDismissed: true }),
     });
     setConflicts((prev) => prev.filter((c) => c.workoutId !== workoutId));
+  };
+
+  const handleDelete = async (id: string) => {
+    setDeletingId(id);
+    setFadingId(id);
+    await fetch(`/api/workouts/${id}`, { method: "DELETE" });
+    setTimeout(() => {
+      setWorkouts((prev) => prev.filter((w) => w.id !== id));
+      setFadingId(null);
+      setDeletingId(null);
+      setConfirmDeleteId(null);
+    }, 200);
   };
 
   if (loading) return (
@@ -305,22 +321,55 @@ export default function SchedulePage() {
                 <div className="space-y-px bg-[#E5E5E5]">
                   {plannedWorkouts.map((w, i) => (
                     <FadeUp key={`${w.date}-${i}`} delay={i * 30}>
-                      <div className="bg-white p-4 flex items-center justify-between gap-4">
-                        <div className="flex items-center gap-4 flex-1">
-                          <p className="font-mono text-sm text-[#6B6B6B] w-28">{formatDate(w.date)}</p>
-                          <span className={`text-xs font-bold uppercase tracking-wider px-2 py-1 ${LOAD_COLORS[w.type]}`}>
-                            {getWorkoutLabel(w.type, sport)}
-                          </span>
-                          {w.distance > 0 && (
-                            <span className="text-xs font-mono text-[#6B6B6B]">{(w.distance).toFixed(1)} km</span>
-                          )}
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <SourceDot source={w.source} />
-                          <span className="text-[10px] font-mono uppercase text-[#6B6B6B]">
-                            {w.isTentative && w.source === "assumed" ? "est. from load" : w.isTentative ? "planned" : w.source}
-                          </span>
-                        </div>
+                      <div
+                        className="bg-white p-4 flex items-center justify-between gap-4 transition-opacity duration-200"
+                        style={{ opacity: fadingId === w.id ? 0 : 1 }}
+                      >
+                        {confirmDeleteId === w.id ? (
+                          <div className="flex items-center gap-3 w-full">
+                            <span className="text-sm font-mono text-[#0A0A0A]">Remove this workout?</span>
+                            <button
+                              onClick={() => w.id && handleDelete(w.id)}
+                              disabled={deletingId === w.id}
+                              className="text-xs font-bold uppercase tracking-wider text-[#0A0A0A] hover:text-red-600 transition-colors"
+                            >
+                              YES
+                            </button>
+                            <span className="text-[#6B6B6B]">·</span>
+                            <button
+                              onClick={() => setConfirmDeleteId(null)}
+                              className="text-xs font-bold uppercase tracking-wider text-[#6B6B6B] hover:text-[#0A0A0A] transition-colors"
+                            >
+                              CANCEL
+                            </button>
+                          </div>
+                        ) : (
+                          <>
+                            <div className="flex items-center gap-4 flex-1">
+                              <p className="font-mono text-sm text-[#6B6B6B] w-28">{formatDate(w.date)}</p>
+                              <span className={`text-xs font-bold uppercase tracking-wider px-2 py-1 ${LOAD_COLORS[w.type]}`}>
+                                {getWorkoutLabel(w.type, sport)}
+                              </span>
+                              {w.distance > 0 && (
+                                <span className="text-xs font-mono text-[#6B6B6B]">{(w.distance).toFixed(1)} km</span>
+                              )}
+                            </div>
+                            <div className="flex items-center gap-3">
+                              <SourceDot source={w.source} />
+                              <span className="text-[10px] font-mono uppercase text-[#6B6B6B]">
+                                {w.isTentative && w.source === "assumed" ? "est. from load" : w.isTentative ? "planned" : w.source}
+                              </span>
+                              {w.id && w.source === "manual" && (
+                                <button
+                                  onClick={() => setConfirmDeleteId(w.id!)}
+                                  className="text-[10px] font-bold uppercase tracking-wider border border-[#E5E5E5] px-2 py-0.5 text-[#6B6B6B] hover:border-[#0A0A0A] hover:text-[#0A0A0A] transition-colors"
+                                >
+                                  Remove
+                                </button>
+                              )}
+                            </div>
+                          </>
+                        )}
                       </div>
                     </FadeUp>
                   ))}
@@ -348,26 +397,59 @@ export default function SchedulePage() {
                 <div className="space-y-px bg-[#E5E5E5]">
                   {pastWorkouts.map((w, i) => (
                     <FadeUp key={`${w.date}-${i}`} delay={i * 30}>
-                      <div className="bg-white p-4 flex items-center justify-between gap-4">
-                        <div className="flex items-center gap-4 flex-1">
-                          <p className="font-mono text-sm text-[#6B6B6B] w-28">{formatDate(w.date)}</p>
-                          <span className={`text-xs font-bold uppercase tracking-wider px-2 py-1 ${LOAD_COLORS[w.type]}`}>
-                            {getWorkoutLabel(w.type, sport)}
-                          </span>
-                          {w.distance > 0 && (
-                            <span className="text-xs font-mono text-[#6B6B6B]">{(w.distance).toFixed(1)} km</span>
-                          )}
-                          {w.duration > 0 && (
-                            <span className="text-xs font-mono text-[#6B6B6B]">{w.duration} min</span>
-                          )}
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <SourceDot source={w.source} />
-                          <span className="text-[10px] font-mono uppercase text-[#6B6B6B]">{w.source}</span>
-                          {w.manualOverride && (
-                            <span className="text-[10px] font-mono uppercase text-blue-500 ml-1">override</span>
-                          )}
-                        </div>
+                      <div
+                        className="bg-white p-4 flex items-center justify-between gap-4 transition-opacity duration-200"
+                        style={{ opacity: fadingId === w.id ? 0 : 1 }}
+                      >
+                        {confirmDeleteId === w.id ? (
+                          <div className="flex items-center gap-3 w-full">
+                            <span className="text-sm font-mono text-[#0A0A0A]">Remove this workout?</span>
+                            <button
+                              onClick={() => w.id && handleDelete(w.id)}
+                              disabled={deletingId === w.id}
+                              className="text-xs font-bold uppercase tracking-wider text-[#0A0A0A] hover:text-red-600 transition-colors"
+                            >
+                              YES
+                            </button>
+                            <span className="text-[#6B6B6B]">·</span>
+                            <button
+                              onClick={() => setConfirmDeleteId(null)}
+                              className="text-xs font-bold uppercase tracking-wider text-[#6B6B6B] hover:text-[#0A0A0A] transition-colors"
+                            >
+                              CANCEL
+                            </button>
+                          </div>
+                        ) : (
+                          <>
+                            <div className="flex items-center gap-4 flex-1">
+                              <p className="font-mono text-sm text-[#6B6B6B] w-28">{formatDate(w.date)}</p>
+                              <span className={`text-xs font-bold uppercase tracking-wider px-2 py-1 ${LOAD_COLORS[w.type]}`}>
+                                {getWorkoutLabel(w.type, sport)}
+                              </span>
+                              {w.distance > 0 && (
+                                <span className="text-xs font-mono text-[#6B6B6B]">{(w.distance).toFixed(1)} km</span>
+                              )}
+                              {w.duration > 0 && (
+                                <span className="text-xs font-mono text-[#6B6B6B]">{w.duration} min</span>
+                              )}
+                            </div>
+                            <div className="flex items-center gap-3">
+                              <SourceDot source={w.source} />
+                              <span className="text-[10px] font-mono uppercase text-[#6B6B6B]">{w.source}</span>
+                              {w.manualOverride && (
+                                <span className="text-[10px] font-mono uppercase text-blue-500">override</span>
+                              )}
+                              {w.id && w.source === "manual" && (
+                                <button
+                                  onClick={() => setConfirmDeleteId(w.id!)}
+                                  className="text-[10px] font-bold uppercase tracking-wider border border-[#E5E5E5] px-2 py-0.5 text-[#6B6B6B] hover:border-[#0A0A0A] hover:text-[#0A0A0A] transition-colors"
+                                >
+                                  Remove
+                                </button>
+                              )}
+                            </div>
+                          </>
+                        )}
                       </div>
                     </FadeUp>
                   ))}
