@@ -112,9 +112,6 @@ export default function StravaPage() {
         {!connected ? (
           <FadeUp>
             <div className="border border-[#E5E5E5] p-10 flex flex-col items-center text-center max-w-lg mx-auto">
-              <div className="w-12 h-12 bg-[#FC4C02] mb-6 flex items-center justify-center">
-                <span className="text-white font-black text-xl">S</span>
-              </div>
               <h2 className="font-black text-2xl uppercase mb-3">Connect Strava</h2>
               <p className="text-sm text-[#6B6B6B] mb-8">
                 Link your Strava account to sync your runs and unlock the performance analysis engine.

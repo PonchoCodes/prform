@@ -338,9 +338,6 @@ export default function ProfilePage() {
             <div className="border border-[#E5E5E5] p-6">
               <div className="flex items-center justify-between flex-wrap gap-4">
                 <div className="flex items-center gap-4">
-                  <div className="w-10 h-10 bg-[#FC4C02] flex items-center justify-center flex-shrink-0">
-                    <span className="text-white font-black text-lg">S</span>
-                  </div>
                   <div>
                     <p className="font-black text-sm uppercase tracking-wider">Strava</p>
                     {stravaStatus?.connected ? (

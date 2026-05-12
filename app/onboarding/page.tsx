@@ -341,9 +341,6 @@ export default function OnboardingPage() {
                 {/* Strava card */}
                 <div className={`border-2 p-6 mb-4 transition-colors ${stravaConnected ? "border-[#0A0A0A]" : "border-[#E5E5E5]"}`}>
                   <div className="flex items-center gap-4 mb-4">
-                    <div className="w-10 h-10 bg-[#FC4C02] flex items-center justify-center flex-shrink-0">
-                      <span className="text-white font-black text-lg">S</span>
-                    </div>
                     <div>
                       <p className="font-black text-sm uppercase tracking-wider">Strava</p>
                       <p className="text-xs text-[#6B6B6B] font-mono">Recommended — automatic sync</p>
