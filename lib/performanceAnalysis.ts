@@ -1,6 +1,8 @@
 // Performance analysis engine for PRform.
 // All algorithms: CTL/ATL/TSB, polarized zones, VDOT, aerobic decoupling, sleep-pace correlation.
 
+import { mpsToMinPerMile } from "@/lib/paceUtils";
+
 export interface StravaActivityInput {
   stravaId: string;
   name: string;
@@ -279,16 +281,8 @@ function calcVDOT(distanceM: number, timeSeconds: number): number {
   return vo2 / pctMax;
 }
 
-function secPerKmToString(secPerKm: number): string {
-  const min = Math.floor(secPerKm / 60);
-  const sec = Math.round(secPerKm % 60);
-  return `${min}:${String(sec).padStart(2, "0")}`;
-}
-
 function msToMinKm(ms: number): string {
-  if (ms <= 0) return "--:--";
-  const secPerKm = 1000 / ms;
-  return secPerKmToString(secPerKm);
+  return mpsToMinPerMile(ms);
 }
 
 function getPacesFromVDOT(vdot: number): PaceTable {
@@ -564,9 +558,7 @@ function computeRecommendedBedtimeMin(user: UserForAnalysis, load: "easy" | "mod
 }
 
 function speedToMinKm(ms: number): string {
-  if (ms <= 0) return "--:--";
-  const s = 1000 / ms;
-  return `${Math.floor(s / 60)}:${String(Math.round(s % 60)).padStart(2, "0")}`;
+  return mpsToMinPerMile(ms);
 }
 
 function minutesToTimeStr(m: number): string {
@@ -578,6 +570,8 @@ export interface SleepLogForCorrelation {
   date: string;           // YYYY-MM-DD
   actualBedtime?: string | null;
   recommendedBedtime?: string | null;
+  hitTarget?: boolean | null;
+  source?: string | null;
 }
 
 export function calculateSleepPerformanceCorrelation(
@@ -586,12 +580,10 @@ export function calculateSleepPerformanceCorrelation(
   thresholdPaceMs: number,
   sleepLogs?: SleepLogForCorrelation[],
 ): SleepPerfResult {
-  const actualBedtimeMin = parseTimeToMinutes(user.currentBedTime ?? "22:30");
-
-  // Build a date → SleepLog lookup for confirmed nights
+  // Build a date → SleepLog lookup
   const logMap = new Map<string, SleepLogForCorrelation>();
   for (const l of sleepLogs ?? []) {
-    if (l.actualBedtime) logMap.set(l.date, l);
+    logMap.set(l.date, l);
   }
 
   const allPaceScores = activities.map((a) =>
@@ -602,55 +594,65 @@ export function calculateSleepPerformanceCorrelation(
     allPaceScores.reduce((s, v) => s + (v - mean) ** 2, 0) / (allPaceScores.length || 1),
   );
 
-  const scatterData: ScatterPoint[] = activities.map((act, i) => {
-    const dateStr = new Date(act.startDate).toISOString().slice(0, 10);
-    const confirmedLog = logMap.get(dateStr);
+  const scatterData: ScatterPoint[] = [];
+  for (let i = 0; i < activities.length; i++) {
+    const act = activities[i];
+    // Look up sleep log for the night BEFORE the run
+    const runDate = new Date(act.startDate);
+    runDate.setDate(runDate.getDate() - 1);
+    const prevDateStr = runDate.toISOString().slice(0, 10);
+    const log = logMap.get(prevDateStr);
+
+    // Only include runs where sleep was confirmed with a real log
+    if (!log) continue;
+    if (log.hitTarget === null || log.hitTarget === undefined) continue;
+    if (log.source !== "manual" && log.source !== "wearable") continue;
+
     const load = classifyActivityLoad(act);
     const recMin = computeRecommendedBedtimeMin(user, load);
+    const realRecMin = log.recommendedBedtime
+      ? parseTimeToMinutes(log.recommendedBedtime)
+      : recMin;
 
-    let deviationMin: number;
-    let confirmed = false;
+    // If they hit target, actual = recommended; otherwise use logged actualBedtime
+    const actualMin = log.hitTarget
+      ? realRecMin
+      : (log.actualBedtime ? parseTimeToMinutes(log.actualBedtime) : realRecMin);
 
-    if (confirmedLog && confirmedLog.actualBedtime) {
-      // Use real bedtime deviation
-      const realActualMin = parseTimeToMinutes(confirmedLog.actualBedtime);
-      const realRecMin = confirmedLog.recommendedBedtime
-        ? parseTimeToMinutes(confirmedLog.recommendedBedtime)
-        : recMin;
-      deviationMin = realRecMin - realActualMin;
-      confirmed = true;
-    } else {
-      // Fall back to proxy
-      deviationMin = recMin - actualBedtimeMin;
-    }
-
+    let deviationMin = realRecMin - actualMin;
     if (deviationMin > 720) deviationMin -= 1440;
     if (deviationMin < -720) deviationMin += 1440;
+
     const paceScore = stddev > 0 ? (allPaceScores[i] - mean) / stddev : 0;
-    return {
+    scatterData.push({
       deviationMin: Math.round(deviationMin),
       paceScore: Math.round(paceScore * 100) / 100,
-      date: dateStr,
+      date: new Date(act.startDate).toISOString().slice(0, 10),
       activityName: act.name,
       paceMinKm: speedToMinKm(act.averageSpeed),
-      targetBedtime: minutesToTimeStr(recMin),
-      confirmed,
-    };
-  });
+      targetBedtime: minutesToTimeStr(realRecMin),
+      confirmed: true,
+    });
+  }
 
   const xs = scatterData.map((p) => p.deviationMin);
   const ys = scatterData.map((p) => p.paceScore);
-  const correlation = Math.round(pearsonCorrelation(xs, ys) * 100) / 100;
+  const correlation = scatterData.length >= 2
+    ? Math.round(pearsonCorrelation(xs, ys) * 100) / 100
+    : 0;
 
   let insight: string;
-  if (scatterData.length < 10) {
-    insight = `Sync ${10 - scatterData.length} more runs to unlock your sleep-pace pattern. ${scatterData.length} of 10 required.`;
+  if (scatterData.length === 0) {
+    insight = "Start logging your sleep each morning using the confirmation card on the dashboard. PRform will track whether hitting your sleep target makes you run faster.";
+  } else if (scatterData.length < 5) {
+    const needed = 5 - scatterData.length;
+    insight = `PRform only tracks runs where you've confirmed your sleep the night before. Log your sleep each morning to build your personal sleep-pace profile. You need ${needed} more confirmed night${needed !== 1 ? "s" : ""} to unlock your correlation.`;
   } else if (Math.abs(correlation) < 0.3) {
-    insight = `No strong correlation detected across ${scatterData.length} runs (r = ${correlation}). Your pace is consistent regardless of when you go to bed relative to your PRform target — good mental consistency.`;
+    insight = `No strong correlation detected across ${scatterData.length} confirmed nights (r = ${correlation}). Your pace is consistent regardless of when you go to bed relative to your PRform target — good mental consistency.`;
   } else if (correlation > 0) {
-    insight = `Clear signal across ${scatterData.length} runs (r = ${correlation}): going to bed closer to your PRform target is associated with better pace scores. Bedtime discipline is directly translating to faster runs.`;
+    insight = `Clear signal across ${scatterData.length} confirmed nights (r = ${correlation}): going to bed closer to your PRform target is associated with better pace scores. Bedtime discipline is directly translating to faster runs.`;
   } else {
-    insight = `Inverse pattern across ${scatterData.length} runs (r = ${correlation}). Your PRform target bedtime may need adjustment, or there are confounding factors — consider logging how you feel on recovery days.`;
+    insight = `Inverse pattern across ${scatterData.length} confirmed nights (r = ${correlation}). Your PRform target bedtime may need adjustment, or there are confounding factors — consider logging how you feel on recovery days.`;
   }
 
   return { correlation, insight, scatterData };

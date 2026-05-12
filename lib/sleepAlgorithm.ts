@@ -76,6 +76,7 @@ export interface DailySleepPlan {
   actualBedtime: string | null;
   actualSleepHours: number | null;
   sleepConfirmed: boolean;
+  recoverySleepNote: string;
 }
 
 // ── helpers ──────────────────────────────────────────────────────────────────
@@ -352,10 +353,39 @@ export function calculateSleepPlan(
 
     if (daysUntilNextMeet !== null && daysUntilNextMeet <= 3) recovery -= 10;
 
-    const baselineSleep =
-      ((baseWakeMinutes - timeToMinutes(user.currentBedTime) + 1440) % 1440) / 60;
-    const deficit = Math.max(0, baselineSleep - totalSleepHours);
-    recovery -= Math.round(deficit * 3);
+    // Sleep deficit penalty from last 3 confirmed nights
+    const sleepNeedHours = totalSleepHours;
+    let totalSleepDeficit = 0;
+    let loggedNightsCount = 0;
+    let sleepPenalty = 0;
+    for (let j = Math.max(0, dayOffset - 3); j < dayOffset; j++) {
+      const d = new Date(today);
+      d.setDate(today.getDate() + j);
+      const logDate = d.toISOString().slice(0, 10);
+      const log = sleepLogMap.get(logDate);
+      if (log && log.hitTarget !== null && log.hitTarget !== undefined) {
+        loggedNightsCount++;
+        if (log.hitTarget === false && log.actualSleepHours != null) {
+          const deficit = Math.max(0, sleepNeedHours - log.actualSleepHours);
+          totalSleepDeficit += deficit;
+        }
+      }
+    }
+    sleepPenalty = Math.round(totalSleepDeficit * 3);
+    recovery -= sleepPenalty;
+
+    // Streak bonus: 2 pts per consecutive confirmed night, max 10
+    let currentStreak = 0;
+    for (let j = dayOffset - 1; j >= 0; j--) {
+      const d = new Date(today);
+      d.setDate(today.getDate() + j);
+      const logDate = d.toISOString().slice(0, 10);
+      const log = sleepLogMap.get(logDate);
+      if (log?.hitTarget === true) currentStreak++;
+      else break;
+    }
+    const streakBonus = Math.min(currentStreak * 2, 10);
+    recovery += streakBonus;
 
     for (let j = Math.max(0, dayOffset - 3); j < dayOffset; j++) {
       const d = new Date(today);
@@ -366,6 +396,10 @@ export function calculateSleepPlan(
     }
 
     recovery = Math.max(0, Math.min(100, recovery));
+
+    const recoverySleepNote = loggedNightsCount > 0
+      ? `Based on ${loggedNightsCount} logged night${loggedNightsCount > 1 ? "s" : ""}.${streakBonus > 0 ? ` Streak bonus: +${streakBonus} pts.` : ""}${sleepPenalty > 0 ? ` Sleep deficit: -${sleepPenalty} pts.` : ""}`
+      : "Log your sleep each morning to improve the accuracy of your recovery score.";
 
     // Enrich with SleepLog data for past days
     const sleepLog = sleepLogMap.get(dateStr);
@@ -402,6 +436,7 @@ export function calculateSleepPlan(
       actualBedtime,
       actualSleepHours: actualSleepHoursOut,
       sleepConfirmed,
+      recoverySleepNote,
     });
   }
 

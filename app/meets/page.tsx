@@ -131,16 +131,16 @@ export default function MeetsPage() {
   const sortedMeets = [...meets].sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
 
   if (loading) return (
-    <div className="min-h-screen bg-white">
+    <div className="min-h-screen bg-white dark:bg-[#1a1a1a]">
       <Navbar />
       <div className="flex items-center justify-center h-64">
-        <p className="font-mono text-sm uppercase tracking-wider text-[#6B6B6B]">Loading…</p>
+        <p className="font-mono text-sm uppercase tracking-wider text-[#6B6B6B] dark:text-[#A0A0A0]">Loading…</p>
       </div>
     </div>
   );
 
   return (
-    <div className="min-h-screen bg-white">
+    <div className="min-h-screen bg-white dark:bg-[#1a1a1a]">
       <Navbar />
 
       <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.3 }}>
@@ -157,7 +157,7 @@ export default function MeetsPage() {
         </section>
 
         {showForm && (
-          <section className="px-6 py-6 border-b border-[#E5E5E5] bg-[#F9F9F9]">
+          <section className="px-6 py-6 border-b border-[#E5E5E5] dark:border-[#333] bg-[#F9F9F9] dark:bg-[#1a1a1a]">
             <div className="max-w-[1200px] mx-auto">
               <h3 className="font-black text-sm uppercase tracking-wider mb-4">
                 {editMeet ? "Edit Meet" : "New Meet"}
@@ -168,13 +168,13 @@ export default function MeetsPage() {
                   placeholder="Meet name"
                   value={form.name}
                   onChange={(e) => setForm({ ...form, name: e.target.value })}
-                  className="border border-[#E5E5E5] px-4 py-3 text-sm focus:outline-none focus:border-[#0A0A0A] bg-white"
+                  className="border border-[#E5E5E5] dark:border-[#444] px-4 py-3 text-sm focus:outline-none focus:border-[#0A0A0A] bg-white dark:bg-[#2a2a2a] dark:text-[#F5F5F5]"
                 />
                 <input
                   type="date"
                   value={form.date}
                   onChange={(e) => setForm({ ...form, date: e.target.value })}
-                  className="border border-[#E5E5E5] px-4 py-3 text-sm font-mono focus:outline-none focus:border-[#0A0A0A] bg-white"
+                  className="border border-[#E5E5E5] dark:border-[#444] px-4 py-3 text-sm font-mono focus:outline-none focus:border-[#0A0A0A] bg-white dark:bg-[#2a2a2a] dark:text-[#F5F5F5]"
                 />
                 <div>
                   <label className="block text-xs font-bold uppercase tracking-[0.3em] text-[#6B6B6B] mb-1">Race Time</label>
@@ -182,7 +182,7 @@ export default function MeetsPage() {
                     type="time"
                     value={form.raceTime}
                     onChange={(e) => setForm({ ...form, raceTime: e.target.value })}
-                    className="w-full border border-[#E5E5E5] px-4 py-3 text-sm font-mono focus:outline-none focus:border-[#0A0A0A] bg-white"
+                    className="w-full border border-[#E5E5E5] dark:border-[#444] px-4 py-3 text-sm font-mono focus:outline-none focus:border-[#0A0A0A] bg-white dark:bg-[#2a2a2a] dark:text-[#F5F5F5]"
                   />
                 </div>
                 <input
@@ -190,7 +190,7 @@ export default function MeetsPage() {
                   placeholder="Distances (e.g. 5K, 10K)"
                   value={form.distances}
                   onChange={(e) => setForm({ ...form, distances: e.target.value })}
-                  className="border border-[#E5E5E5] px-4 py-3 text-sm focus:outline-none focus:border-[#0A0A0A] bg-white"
+                  className="border border-[#E5E5E5] dark:border-[#444] px-4 py-3 text-sm focus:outline-none focus:border-[#0A0A0A] bg-white dark:bg-[#2a2a2a] dark:text-[#F5F5F5]"
                 />
                 <div className="flex gap-3">
                   {(["A", "B", "C"] as const).map((p) => (
@@ -239,9 +239,9 @@ export default function MeetsPage() {
 
                   return (
                     <FadeUp key={m.id}>
-                      <div className="bg-white">
+                      <div className="bg-white dark:bg-[#242424]">
                         <div
-                          className="p-5 flex items-center justify-between gap-4 cursor-pointer hover:bg-[#F9F9F9] transition-colors"
+                          className="p-5 flex items-center justify-between gap-4 cursor-pointer hover:bg-[#F9F9F9] dark:hover:bg-[#2a2a2a] transition-colors"
                           onClick={() => setExpandedId(isExpanded ? null : m.id)}
                         >
                           <div className="flex items-center gap-4 flex-1">
@@ -289,7 +289,7 @@ export default function MeetsPage() {
                             animate={{ height: "auto", opacity: 1 }}
                             exit={{ height: 0, opacity: 0 }}
                             transition={{ duration: 0.25 }}
-                            className="border-t border-[#E5E5E5] p-6"
+                            className="border-t border-[#E5E5E5] dark:border-[#333] p-6"
                           >
                             <p className="text-xs font-bold uppercase tracking-[0.3em] text-[#6B6B6B] mb-4">
                               Sleep Ramp: 10 Days to Race Day
@@ -322,18 +322,18 @@ export default function MeetsPage() {
                                   />
                                   <ReferenceLine
                                     y={rampData[9].bedtime}
-                                    stroke="#E8FF00"
+                                    stroke="#6B6B6B"
                                     strokeDasharray="4 4"
-                                    strokeOpacity={0.5}
-                                    label={{ value: "TARGET", position: "insideTopRight", fontSize: 9, fontFamily: "JetBrains Mono", fill: "#E8FF00" }}
+                                    strokeOpacity={0.7}
+                                    label={{ value: "TARGET", position: "insideTopRight", fontSize: 9, fontFamily: "JetBrains Mono", fill: "#6B6B6B" }}
                                   />
                                   <Line
                                     type="monotone"
                                     dataKey="bedtime"
-                                    stroke="#E8FF00"
+                                    stroke="#0A0A0A"
                                     strokeWidth={2}
-                                    dot={{ fill: "#0A0A0A", r: 3 }}
-                                    activeDot={{ r: 5, fill: "#E8FF00" }}
+                                    dot={{ fill: "#0A0A0A", stroke: "#FFFFFF", strokeWidth: 1, r: 3 }}
+                                    activeDot={{ r: 5, fill: "#FFFFFF", stroke: "#0A0A0A", strokeWidth: 2 }}
                                   />
                                 </LineChart>
                               </ResponsiveContainer>

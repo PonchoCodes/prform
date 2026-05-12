@@ -30,7 +30,10 @@ export const metadata: Metadata = {
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en" className={`${geistMono.variable} ${geist.variable}`}>
-      <body className="font-sans antialiased bg-white text-[#0A0A0A]">
+      <head>
+        <script dangerouslySetInnerHTML={{ __html: `(function(){var s=localStorage.getItem('prform-theme');var d=window.matchMedia('(prefers-color-scheme:dark)').matches;if(s==='dark'||(s!=='light'&&d))document.documentElement.classList.add('dark');})()` }} />
+      </head>
+      <body className="font-sans antialiased bg-white dark:bg-[#1a1a1a] text-[#0A0A0A] dark:text-[#F5F5F5]">
         <Providers>{children}</Providers>
       </body>
     </html>

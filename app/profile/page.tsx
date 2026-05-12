@@ -85,10 +85,10 @@ export default function ProfilePage() {
   };
 
   if (loading || !profile) return (
-    <div className="min-h-screen bg-white">
+    <div className="min-h-screen bg-white dark:bg-[#1a1a1a]">
       <Navbar />
       <div className="flex items-center justify-center h-64">
-        <p className="font-mono text-sm uppercase tracking-wider text-[#6B6B6B]">Loading…</p>
+        <p className="font-mono text-sm uppercase tracking-wider text-[#6B6B6B] dark:text-[#A0A0A0]">Loading…</p>
       </div>
     </div>
   );
@@ -100,7 +100,7 @@ export default function ProfilePage() {
   const tempoExtraCurrent = previewTempoExtra(agg);
 
   return (
-    <div className="min-h-screen bg-white">
+    <div className="min-h-screen bg-white dark:bg-[#1a1a1a]">
       <Navbar />
 
       <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.3 }}>
@@ -114,7 +114,7 @@ export default function ProfilePage() {
         <div className="max-w-[1200px] mx-auto px-6 py-10 grid grid-cols-1 md:grid-cols-2 gap-10">
           {/* Basic Info */}
           <FadeUp>
-            <h2 className="font-black text-xl uppercase mb-6 border-b border-[#E5E5E5] pb-3">Athlete Info</h2>
+            <h2 className="font-black text-xl uppercase mb-6 border-b border-[#E5E5E5] dark:border-[#333] pb-3">Athlete Info</h2>
             <div className="space-y-4">
               <div>
                 <label className="block text-xs font-bold uppercase tracking-wider mb-2">Name</label>
@@ -122,7 +122,7 @@ export default function ProfilePage() {
                   type="text"
                   value={profile.name ?? ""}
                   onChange={(e) => update("name", e.target.value)}
-                  className="w-full border border-[#E5E5E5] px-4 py-3 text-sm focus:outline-none focus:border-[#0A0A0A]"
+                  className="w-full border border-[#E5E5E5] dark:border-[#444] dark:bg-[#2a2a2a] dark:text-[#F5F5F5] px-4 py-3 text-sm focus:outline-none focus:border-[#0A0A0A] dark:focus:border-[#F5F5F5]"
                 />
               </div>
               <div>
@@ -131,7 +131,7 @@ export default function ProfilePage() {
                   type="number"
                   value={profile.age ?? ""}
                   onChange={(e) => update("age", parseInt(e.target.value))}
-                  className="w-full border border-[#E5E5E5] px-4 py-3 text-sm focus:outline-none focus:border-[#0A0A0A]"
+                  className="w-full border border-[#E5E5E5] dark:border-[#444] dark:bg-[#2a2a2a] dark:text-[#F5F5F5] px-4 py-3 text-sm focus:outline-none focus:border-[#0A0A0A] dark:focus:border-[#F5F5F5]"
                 />
               </div>
               <div>
@@ -142,7 +142,7 @@ export default function ProfilePage() {
                       key={s}
                       onClick={() => update("biologicalSex", s)}
                       className={`flex-1 py-3 text-xs font-bold uppercase tracking-wider border transition-colors ${
-                        profile.biologicalSex === s ? "bg-[#0A0A0A] text-white border-[#0A0A0A]" : "border-[#E5E5E5] hover:border-[#0A0A0A]"
+                        profile.biologicalSex === s ? "bg-[#0A0A0A] text-white border-[#0A0A0A]" : "border-[#E5E5E5] dark:border-[#444] hover:border-[#0A0A0A] dark:hover:border-[#F5F5F5]"
                       }`}
                     >
                       {s}
@@ -160,7 +160,7 @@ export default function ProfilePage() {
                       className={`flex-1 py-3 text-xs font-bold uppercase tracking-wider border transition-colors ${
                         profile.sport === s.value
                           ? "bg-[#0A0A0A] text-white border-[#0A0A0A]"
-                          : "border-[#E5E5E5] hover:border-[#0A0A0A]"
+                          : "border-[#E5E5E5] dark:border-[#444] hover:border-[#0A0A0A] dark:hover:border-[#F5F5F5]"
                       }`}
                     >
                       {s.label}
@@ -176,7 +176,7 @@ export default function ProfilePage() {
                       key={m}
                       onClick={() => update("weeklyMileage", m)}
                       className={`py-3 text-xs font-bold uppercase tracking-wider border transition-colors ${
-                        profile.weeklyMileage === m ? "bg-[#0A0A0A] text-white border-[#0A0A0A]" : "border-[#E5E5E5] hover:border-[#0A0A0A]"
+                        profile.weeklyMileage === m ? "bg-[#0A0A0A] text-white border-[#0A0A0A]" : "border-[#E5E5E5] dark:border-[#444] hover:border-[#0A0A0A] dark:hover:border-[#F5F5F5]"
                       }`}
                     >
                       {m} mi/wk
@@ -189,7 +189,7 @@ export default function ProfilePage() {
 
           {/* Sleep Settings */}
           <FadeUp delay={80}>
-            <h2 className="font-black text-xl uppercase mb-6 border-b border-[#E5E5E5] pb-3">Sleep Settings</h2>
+            <h2 className="font-black text-xl uppercase mb-6 border-b border-[#E5E5E5] dark:border-[#333] pb-3">Sleep Settings</h2>
             <div className="space-y-4">
               <div>
                 <label className="block text-xs font-bold uppercase tracking-wider mb-2">Wake Time</label>
@@ -197,7 +197,7 @@ export default function ProfilePage() {
                   type="time"
                   value={profile.currentWakeTime ?? "06:00"}
                   onChange={(e) => update("currentWakeTime", e.target.value)}
-                  className="w-full border border-[#E5E5E5] px-4 py-3 text-sm font-mono focus:outline-none focus:border-[#0A0A0A]"
+                  className="w-full border border-[#E5E5E5] dark:border-[#444] dark:bg-[#2a2a2a] dark:text-[#F5F5F5] px-4 py-3 text-sm font-mono focus:outline-none focus:border-[#0A0A0A] dark:focus:border-[#F5F5F5]"
                 />
               </div>
               <div>
@@ -206,7 +206,7 @@ export default function ProfilePage() {
                   type="time"
                   value={profile.currentBedTime ?? "22:00"}
                   onChange={(e) => update("currentBedTime", e.target.value)}
-                  className="w-full border border-[#E5E5E5] px-4 py-3 text-sm font-mono focus:outline-none focus:border-[#0A0A0A]"
+                  className="w-full border border-[#E5E5E5] dark:border-[#444] dark:bg-[#2a2a2a] dark:text-[#F5F5F5] px-4 py-3 text-sm font-mono focus:outline-none focus:border-[#0A0A0A] dark:focus:border-[#F5F5F5]"
                 />
               </div>
               <div>
@@ -221,7 +221,7 @@ export default function ProfilePage() {
                       key={r.value}
                       onClick={() => update("restedFeeling", r.value)}
                       className={`py-3 text-xs font-bold uppercase tracking-wider border transition-colors ${
-                        profile.restedFeeling === r.value ? "bg-[#0A0A0A] text-white border-[#0A0A0A]" : "border-[#E5E5E5] hover:border-[#0A0A0A]"
+                        profile.restedFeeling === r.value ? "bg-[#0A0A0A] text-white border-[#0A0A0A]" : "border-[#E5E5E5] dark:border-[#444] hover:border-[#0A0A0A] dark:hover:border-[#F5F5F5]"
                       }`}
                     >
                       {r.label}
@@ -240,7 +240,7 @@ export default function ProfilePage() {
                 { key: "notifPhase3", label: "30 min before: No Screens" },
                 { key: "notifPhase4", label: "15 min before: Lights Off" },
               ].map((phase) => (
-                <div key={phase.key} className="flex items-center justify-between border border-[#E5E5E5] p-4">
+                <div key={phase.key} className="flex items-center justify-between border border-[#E5E5E5] dark:border-[#333] p-4">
                   <p className="text-sm font-bold">{phase.label}</p>
                   <button
                     onClick={() => update(phase.key, !profile[phase.key])}
@@ -264,7 +264,7 @@ export default function ProfilePage() {
         <div className="max-w-[1200px] mx-auto px-6 pb-10">
           <FadeUp delay={120}>
             <h2 className="font-black text-xl uppercase mb-3 border-b border-[#E5E5E5] pb-3">Plan Aggressiveness</h2>
-            <p className="text-xs text-[#6B6B6B] font-mono mb-6 max-w-xl">
+            <p className="text-xs text-[#6B6B6B] dark:text-[#A0A0A0] font-mono mb-6 max-w-xl">
               Controls how much PRform shifts your bedtime before races and after hard workouts.
               Higher = closer to the scientific optimum. Lower = more compatible with a busy schedule.
             </p>
@@ -272,7 +272,7 @@ export default function ProfilePage() {
             <div className="flex items-center justify-center gap-4 mb-8">
               <button
                 onClick={() => update("planAggressiveness", Math.max(50, agg - 5))}
-                className="w-12 h-12 border border-[#E5E5E5] text-2xl font-black hover:border-[#0A0A0A] transition-colors"
+                className="w-12 h-12 border border-[#E5E5E5] dark:border-[#444] text-2xl font-black hover:border-[#0A0A0A] dark:hover:border-[#F5F5F5] transition-colors"
               >
                 −
               </button>
@@ -281,24 +281,24 @@ export default function ProfilePage() {
               </div>
               <button
                 onClick={() => update("planAggressiveness", Math.min(100, agg + 5))}
-                className="w-12 h-12 border border-[#E5E5E5] text-2xl font-black hover:border-[#0A0A0A] transition-colors"
+                className="w-12 h-12 border border-[#E5E5E5] dark:border-[#444] text-2xl font-black hover:border-[#0A0A0A] dark:hover:border-[#F5F5F5] transition-colors"
               >
                 +
               </button>
             </div>
 
             {/* Live preview */}
-            <div className="border border-[#E5E5E5] mb-6">
-              <div className="border-b border-[#E5E5E5] p-4">
+            <div className="border border-[#E5E5E5] dark:border-[#333] mb-6">
+              <div className="border-b border-[#E5E5E5] dark:border-[#333] p-4">
                 <p className="text-xs font-bold uppercase tracking-wider mb-2">Night Before an A Race</p>
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <p className="text-[10px] text-[#6B6B6B] uppercase tracking-wider mb-1">At {agg}%</p>
+                    <p className="text-[10px] text-[#6B6B6B] dark:text-[#A0A0A0] uppercase tracking-wider mb-1">At {agg}%</p>
                     <p className="font-mono font-black text-2xl">{formatTime12h(raceBedtimeCurrent)}</p>
                   </div>
                   <div>
-                    <p className="text-[10px] text-[#6B6B6B] uppercase tracking-wider mb-1">At 100%</p>
-                    <p className="font-mono text-2xl text-[#6B6B6B]">{formatTime12h(raceBedtime100)}</p>
+                    <p className="text-[10px] text-[#6B6B6B] dark:text-[#A0A0A0] uppercase tracking-wider mb-1">At 100%</p>
+                    <p className="font-mono text-2xl text-[#6B6B6B] dark:text-[#A0A0A0]">{formatTime12h(raceBedtime100)}</p>
                   </div>
                 </div>
               </div>
@@ -306,12 +306,12 @@ export default function ProfilePage() {
                 <p className="text-xs font-bold uppercase tracking-wider mb-2">After a Tempo Run</p>
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <p className="text-[10px] text-[#6B6B6B] uppercase tracking-wider mb-1">At {agg}%</p>
+                    <p className="text-[10px] text-[#6B6B6B] dark:text-[#A0A0A0] uppercase tracking-wider mb-1">At {agg}%</p>
                     <p className="font-mono font-black text-2xl">+{tempoExtraCurrent} min</p>
                   </div>
                   <div>
-                    <p className="text-[10px] text-[#6B6B6B] uppercase tracking-wider mb-1">At 100%</p>
-                    <p className="font-mono text-2xl text-[#6B6B6B]">+{tempoExtra100} min</p>
+                    <p className="text-[10px] text-[#6B6B6B] dark:text-[#A0A0A0] uppercase tracking-wider mb-1">At 100%</p>
+                    <p className="font-mono text-2xl text-[#6B6B6B] dark:text-[#A0A0A0]">+{tempoExtra100} min</p>
                   </div>
                 </div>
               </div>
@@ -324,7 +324,7 @@ export default function ProfilePage() {
             >
               {saved ? "✓ Saved" : saving ? "Saving…" : "Save Changes"}
             </button>
-            <p className="text-[10px] font-mono text-[#6B6B6B]">
+            <p className="text-[10px] font-mono text-[#6B6B6B] dark:text-[#A0A0A0]">
               PRform set this to {onboardingAgg}% based on your experience level.
               The scientific optimum is always 100%.
             </p>
@@ -334,28 +334,28 @@ export default function ProfilePage() {
         {/* Data Source */}
         <div className="max-w-[1200px] mx-auto px-6 pb-10">
           <FadeUp delay={160}>
-            <h2 className="font-black text-xl uppercase mb-6 border-b border-[#E5E5E5] pb-3">Data Source</h2>
-            <div className="border border-[#E5E5E5] p-6">
+            <h2 className="font-black text-xl uppercase mb-6 border-b border-[#E5E5E5] dark:border-[#333] pb-3">Data Source</h2>
+            <div className="border border-[#E5E5E5] dark:border-[#333] p-6">
               <div className="flex items-center justify-between flex-wrap gap-4">
                 <div className="flex items-center gap-4">
                   <div>
                     <p className="font-black text-sm uppercase tracking-wider">Strava</p>
                     {stravaStatus?.connected ? (
                       <>
-                        <p className="text-xs text-[#6B6B6B] font-mono">{stravaStatus.athleteName ?? "Connected"} · {stravaStatus.totalRuns ?? 0} runs synced</p>
+                        <p className="text-xs text-[#6B6B6B] dark:text-[#A0A0A0] font-mono">{stravaStatus.athleteName ?? "Connected"} · {stravaStatus.totalRuns ?? 0} runs synced</p>
                         {stravaStatus.lastSyncedAt && (
-                          <p className="text-xs text-[#6B6B6B] font-mono">Last sync: {new Date(stravaStatus.lastSyncedAt).toLocaleDateString()}</p>
+                          <p className="text-xs text-[#6B6B6B] dark:text-[#A0A0A0] font-mono">Last sync: {new Date(stravaStatus.lastSyncedAt).toLocaleDateString()}</p>
                         )}
                       </>
                     ) : (
-                      <p className="text-xs text-[#6B6B6B] font-mono">Not connected — using manual schedule</p>
+                      <p className="text-xs text-[#6B6B6B] dark:text-[#A0A0A0] font-mono">Not connected — using manual schedule</p>
                     )}
                   </div>
                 </div>
                 <div className="flex items-center gap-3">
                   {stravaStatus?.connected ? (
                     <>
-                      <a href="/strava" className="text-xs font-bold uppercase tracking-wider border border-[#E5E5E5] px-4 py-2 hover:border-[#0A0A0A] transition-colors">
+                      <a href="/strava" className="text-xs font-bold uppercase tracking-wider border border-[#E5E5E5] dark:border-[#444] px-4 py-2 hover:border-[#0A0A0A] dark:hover:border-[#F5F5F5] transition-colors">
                         Manage →
                       </a>
                       <button
@@ -378,7 +378,7 @@ export default function ProfilePage() {
                 </div>
               </div>
               {!stravaStatus?.connected && (
-                <p className="mt-4 text-xs text-[#6B6B6B] font-mono bg-[#F5F5F5] px-3 py-2">
+                <p className="mt-4 text-xs text-[#6B6B6B] dark:text-[#A0A0A0] font-mono bg-[#F5F5F5] dark:bg-[#2a2a2a] px-3 py-2">
                   Without Strava, PRform uses your weekly template + manually logged workouts. Connect Strava to unlock automatic activity sync and performance analysis.
                 </p>
               )}
@@ -389,13 +389,13 @@ export default function ProfilePage() {
         {/* Sleep history link */}
         <div className="max-w-[1200px] mx-auto px-6 pb-10">
           <FadeUp delay={180}>
-            <div className="border border-[#E5E5E5] p-6 flex items-center justify-between">
+            <div className="border border-[#E5E5E5] dark:border-[#333] p-6 flex items-center justify-between">
               <div>
-                <p className="text-xs font-bold uppercase tracking-[0.3em] text-[#6B6B6B] mb-1">Sleep Confirmation</p>
+                <p className="text-xs font-bold uppercase tracking-[0.3em] text-[#6B6B6B] dark:text-[#A0A0A0] mb-1">Sleep Confirmation</p>
                 <p className="font-black text-lg uppercase">Sleep History</p>
-                <p className="text-xs font-mono text-[#6B6B6B] mt-1">Review and log past nights. Track your consistency streak.</p>
+                <p className="text-xs font-mono text-[#6B6B6B] dark:text-[#A0A0A0] mt-1">Review and log past nights. Track your consistency streak.</p>
               </div>
-              <a href="/sleep-history" className="flex-shrink-0 inline-block border border-[#0A0A0A] text-[#0A0A0A] font-black text-xs uppercase tracking-widest px-6 py-2 hover:bg-[#0A0A0A] hover:text-white transition-colors">
+              <a href="/sleep-history" className="flex-shrink-0 inline-block border border-[#0A0A0A] dark:border-[#F5F5F5] text-[#0A0A0A] dark:text-[#F5F5F5] font-black text-xs uppercase tracking-widest px-6 py-2 hover:bg-[#0A0A0A] dark:hover:bg-[#F5F5F5] hover:text-white dark:hover:text-[#0A0A0A] transition-colors">
                 View History →
               </a>
             </div>

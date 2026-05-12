@@ -184,16 +184,16 @@ export default function SchedulePage() {
   };
 
   if (loading) return (
-    <div className="min-h-screen bg-white">
+    <div className="min-h-screen bg-white dark:bg-[#1a1a1a]">
       <Navbar />
       <div className="flex items-center justify-center h-64">
-        <p className="font-mono text-sm uppercase tracking-wider text-[#6B6B6B]">Loading…</p>
+        <p className="font-mono text-sm uppercase tracking-wider text-[#6B6B6B] dark:text-[#A0A0A0]">Loading…</p>
       </div>
     </div>
   );
 
   return (
-    <div className="min-h-screen bg-white">
+    <div className="min-h-screen bg-white dark:bg-[#1a1a1a]">
       <Navbar />
 
       <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.3 }}>
@@ -247,7 +247,7 @@ export default function SchedulePage() {
         )}
 
         {/* Tabs */}
-        <div className="border-b border-[#E5E5E5] px-6">
+        <div className="border-b border-[#E5E5E5] dark:border-[#333] px-6">
           <div className="max-w-[1200px] mx-auto flex">
             {(["planned", "past"] as const).map((t) => (
               <button
@@ -255,8 +255,8 @@ export default function SchedulePage() {
                 onClick={() => setTab(t)}
                 className={`px-6 py-3 text-xs font-black uppercase tracking-widest transition-colors border-b-2 ${
                   tab === t
-                    ? "border-[#0A0A0A] text-[#0A0A0A]"
-                    : "border-transparent text-[#6B6B6B] hover:text-[#0A0A0A]"
+                    ? "border-[#0A0A0A] dark:border-[#F5F5F5] text-[#0A0A0A] dark:text-[#F5F5F5]"
+                    : "border-transparent text-[#6B6B6B] dark:text-[#A0A0A0] hover:text-[#0A0A0A] dark:hover:text-[#F5F5F5]"
                 }`}
               >
                 {t === "planned" ? `Planned (${plannedWorkouts.length})` : `Past (${pastWorkouts.length})`}
@@ -281,19 +281,19 @@ export default function SchedulePage() {
 
               {showAddForm && (
                 <FadeUp>
-                  <div className="border border-[#E5E5E5] p-6 mb-6">
+                  <div className="border border-[#E5E5E5] dark:border-[#333] p-6 mb-6">
                     <h3 className="font-black text-sm uppercase tracking-wider mb-4">Add Planned Workout</h3>
                     <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                       <input
                         type="date"
                         value={addForm.date}
                         onChange={(e) => setAddForm({ ...addForm, date: e.target.value })}
-                        className="border border-[#E5E5E5] px-3 py-2 text-sm font-mono focus:outline-none focus:border-[#0A0A0A]"
+                        className="border border-[#E5E5E5] dark:border-[#444] dark:bg-[#2a2a2a] dark:text-[#F5F5F5] px-3 py-2 text-sm font-mono focus:outline-none focus:border-[#0A0A0A] dark:focus:border-[#F5F5F5]"
                       />
                       <select
                         value={addForm.type}
                         onChange={(e) => setAddForm({ ...addForm, type: e.target.value as WorkoutType })}
-                        className="border border-[#E5E5E5] px-3 py-2 text-xs font-bold uppercase focus:outline-none focus:border-[#0A0A0A] bg-white"
+                        className="border border-[#E5E5E5] dark:border-[#444] dark:bg-[#2a2a2a] dark:text-[#F5F5F5] px-3 py-2 text-xs font-bold uppercase focus:outline-none focus:border-[#0A0A0A] dark:focus:border-[#F5F5F5] bg-white"
                       >
                         {getWorkoutTypes(sport).map((t) => (
                           <option key={t.value} value={t.value}>{t.label}</option>
@@ -304,7 +304,7 @@ export default function SchedulePage() {
                         placeholder="Distance (mi)"
                         value={addForm.distance}
                         onChange={(e) => setAddForm({ ...addForm, distance: e.target.value })}
-                        className="border border-[#E5E5E5] px-3 py-2 text-sm focus:outline-none focus:border-[#0A0A0A]"
+                        className="border border-[#E5E5E5] dark:border-[#444] dark:bg-[#2a2a2a] dark:text-[#F5F5F5] px-3 py-2 text-sm focus:outline-none focus:border-[#0A0A0A] dark:focus:border-[#F5F5F5]"
                       />
                       <Button variant="secondary" size="sm" onClick={handleAddPlanned} disabled={!addForm.date || saving}>
                         {saving ? "Saving..." : "Save"}
@@ -315,31 +315,31 @@ export default function SchedulePage() {
               )}
 
               {plannedWorkouts.length === 0 ? (
-                <p className="text-[#6B6B6B] text-sm py-8 text-center border border-dashed border-[#E5E5E5]">
+                <p className="text-[#6B6B6B] dark:text-[#A0A0A0] text-sm py-8 text-center border border-dashed border-[#E5E5E5] dark:border-[#444]">
                   No planned workouts yet. Add one above or connect Strava to sync upcoming runs.
                 </p>
               ) : (
-                <div className="space-y-px bg-[#E5E5E5]">
+                <div className="space-y-px bg-[#E5E5E5] dark:bg-[#333]">
                   {plannedWorkouts.map((w, i) => (
                     <FadeUp key={`${w.date}-${i}`} delay={i * 30}>
                       <div
-                        className="bg-white p-4 flex items-center justify-between gap-4 transition-opacity duration-200"
+                        className="bg-white dark:bg-[#242424] p-4 flex items-center justify-between gap-4 transition-opacity duration-200"
                         style={{ opacity: fadingId === w.id ? 0 : 1 }}
                       >
                         {confirmDeleteId === w.id ? (
                           <div className="flex items-center gap-3 w-full">
-                            <span className="text-sm font-mono text-[#0A0A0A]">Remove this workout?</span>
+                            <span className="text-sm font-mono text-[#0A0A0A] dark:text-[#F5F5F5]">Remove this workout?</span>
                             <button
                               onClick={() => w.id && handleDelete(w.id)}
                               disabled={deletingId === w.id}
-                              className="text-xs font-bold uppercase tracking-wider text-[#0A0A0A] hover:text-red-600 transition-colors"
+                              className="text-xs font-bold uppercase tracking-wider text-[#0A0A0A] dark:text-[#F5F5F5] hover:text-red-600 transition-colors"
                             >
                               YES
                             </button>
-                            <span className="text-[#6B6B6B]">·</span>
+                            <span className="text-[#6B6B6B] dark:text-[#A0A0A0]">·</span>
                             <button
                               onClick={() => setConfirmDeleteId(null)}
-                              className="text-xs font-bold uppercase tracking-wider text-[#6B6B6B] hover:text-[#0A0A0A] transition-colors"
+                              className="text-xs font-bold uppercase tracking-wider text-[#6B6B6B] dark:text-[#A0A0A0] hover:text-[#0A0A0A] dark:hover:text-[#F5F5F5] transition-colors"
                             >
                               CANCEL
                             </button>
@@ -347,7 +347,7 @@ export default function SchedulePage() {
                         ) : (
                           <>
                             <div className="flex items-center gap-4 flex-1">
-                              <p className="font-mono text-sm text-[#6B6B6B] w-28">{formatDate(w.date)}</p>
+                              <p className="font-mono text-sm text-[#6B6B6B] dark:text-[#A0A0A0] w-28">{formatDate(w.date)}</p>
                               <span className={`text-xs font-bold uppercase tracking-wider px-2 py-1 ${LOAD_COLORS[w.type]}`}>
                                 {getWorkoutLabel(w.type, sport)}
                               </span>
@@ -363,7 +363,7 @@ export default function SchedulePage() {
                               {w.id && w.source === "manual" && (
                                 <button
                                   onClick={() => setConfirmDeleteId(w.id!)}
-                                  className="text-[10px] font-bold uppercase tracking-wider border border-[#E5E5E5] px-2 py-0.5 text-[#6B6B6B] hover:border-[#0A0A0A] hover:text-[#0A0A0A] transition-colors"
+                                  className="text-[10px] font-bold uppercase tracking-wider border border-[#E5E5E5] dark:border-[#444] px-2 py-0.5 text-[#6B6B6B] dark:text-[#A0A0A0] hover:border-[#0A0A0A] dark:hover:border-[#F5F5F5] hover:text-[#0A0A0A] dark:hover:text-[#F5F5F5] transition-colors"
                                 >
                                   Remove
                                 </button>
@@ -390,32 +390,32 @@ export default function SchedulePage() {
               </div>
 
               {pastWorkouts.length === 0 ? (
-                <p className="text-[#6B6B6B] text-sm py-8 text-center border border-dashed border-[#E5E5E5]">
+                <p className="text-[#6B6B6B] dark:text-[#A0A0A0] text-sm py-8 text-center border border-dashed border-[#E5E5E5] dark:border-[#444]">
                   No past activities found.{" "}
-                  <a href="/strava" className="font-bold text-[#0A0A0A]">Sync Strava →</a>
+                  <a href="/strava" className="font-bold text-[#0A0A0A] dark:text-[#F5F5F5]">Sync Strava →</a>
                 </p>
               ) : (
-                <div className="space-y-px bg-[#E5E5E5]">
+                <div className="space-y-px bg-[#E5E5E5] dark:bg-[#333]">
                   {pastWorkouts.map((w, i) => (
                     <FadeUp key={`${w.date}-${i}`} delay={i * 30}>
                       <div
-                        className="bg-white p-4 flex items-center justify-between gap-4 transition-opacity duration-200"
+                        className="bg-white dark:bg-[#242424] p-4 flex items-center justify-between gap-4 transition-opacity duration-200"
                         style={{ opacity: fadingId === w.id ? 0 : 1 }}
                       >
                         {confirmDeleteId === w.id ? (
                           <div className="flex items-center gap-3 w-full">
-                            <span className="text-sm font-mono text-[#0A0A0A]">Remove this workout?</span>
+                            <span className="text-sm font-mono text-[#0A0A0A] dark:text-[#F5F5F5]">Remove this workout?</span>
                             <button
                               onClick={() => w.id && handleDelete(w.id)}
                               disabled={deletingId === w.id}
-                              className="text-xs font-bold uppercase tracking-wider text-[#0A0A0A] hover:text-red-600 transition-colors"
+                              className="text-xs font-bold uppercase tracking-wider text-[#0A0A0A] dark:text-[#F5F5F5] hover:text-red-600 transition-colors"
                             >
                               YES
                             </button>
-                            <span className="text-[#6B6B6B]">·</span>
+                            <span className="text-[#6B6B6B] dark:text-[#A0A0A0]">·</span>
                             <button
                               onClick={() => setConfirmDeleteId(null)}
-                              className="text-xs font-bold uppercase tracking-wider text-[#6B6B6B] hover:text-[#0A0A0A] transition-colors"
+                              className="text-xs font-bold uppercase tracking-wider text-[#6B6B6B] dark:text-[#A0A0A0] hover:text-[#0A0A0A] dark:hover:text-[#F5F5F5] transition-colors"
                             >
                               CANCEL
                             </button>
@@ -423,7 +423,7 @@ export default function SchedulePage() {
                         ) : (
                           <>
                             <div className="flex items-center gap-4 flex-1">
-                              <p className="font-mono text-sm text-[#6B6B6B] w-28">{formatDate(w.date)}</p>
+                              <p className="font-mono text-sm text-[#6B6B6B] dark:text-[#A0A0A0] w-28">{formatDate(w.date)}</p>
                               <span className={`text-xs font-bold uppercase tracking-wider px-2 py-1 ${LOAD_COLORS[w.type]}`}>
                                 {getWorkoutLabel(w.type, sport)}
                               </span>
@@ -443,7 +443,7 @@ export default function SchedulePage() {
                               {w.id && w.source === "manual" && (
                                 <button
                                   onClick={() => setConfirmDeleteId(w.id!)}
-                                  className="text-[10px] font-bold uppercase tracking-wider border border-[#E5E5E5] px-2 py-0.5 text-[#6B6B6B] hover:border-[#0A0A0A] hover:text-[#0A0A0A] transition-colors"
+                                  className="text-[10px] font-bold uppercase tracking-wider border border-[#E5E5E5] dark:border-[#444] px-2 py-0.5 text-[#6B6B6B] dark:text-[#A0A0A0] hover:border-[#0A0A0A] dark:hover:border-[#F5F5F5] hover:text-[#0A0A0A] dark:hover:text-[#F5F5F5] transition-colors"
                                 >
                                   Remove
                                 </button>
@@ -459,7 +459,7 @@ export default function SchedulePage() {
 
               {/* Legend */}
               <div className="mt-6 flex items-center gap-6">
-                <p className="text-xs text-[#6B6B6B] uppercase tracking-wider">Source:</p>
+                <p className="text-xs text-[#6B6B6B] dark:text-[#A0A0A0] uppercase tracking-wider">Source:</p>
                 {(["strava", "manual", "assumed"] as WorkoutSource[]).map((s) => (
                   <div key={s} className="flex items-center gap-1.5">
                     <SourceDot source={s} />

@@ -20,23 +20,23 @@ export function PaceComplianceTable({ runs }: Props) {
     <div className="overflow-x-auto">
       <table className="w-full text-xs font-mono">
         <thead>
-          <tr className="border-b border-[#E5E5E5]">
-            <th className="text-left py-2 pr-4 font-bold uppercase tracking-wider text-[#6B6B6B]">Date</th>
-            <th className="text-left py-2 pr-4 font-bold uppercase tracking-wider text-[#6B6B6B]">Run</th>
-            <th className="text-left py-2 pr-4 font-bold uppercase tracking-wider text-[#6B6B6B]">Type</th>
-            <th className="text-left py-2 pr-4 font-bold uppercase tracking-wider text-[#6B6B6B]">Pace</th>
-            <th className="text-left py-2 font-bold uppercase tracking-wider text-[#6B6B6B]">Status</th>
+          <tr className="border-b border-[#E5E5E5] dark:border-[#333]">
+            <th className="text-left py-2 pr-4 font-bold uppercase tracking-wider text-[#6B6B6B] dark:text-[#A0A0A0]">Date</th>
+            <th className="text-left py-2 pr-4 font-bold uppercase tracking-wider text-[#6B6B6B] dark:text-[#A0A0A0]">Run</th>
+            <th className="text-left py-2 pr-4 font-bold uppercase tracking-wider text-[#6B6B6B] dark:text-[#A0A0A0]">Type</th>
+            <th className="text-left py-2 pr-4 font-bold uppercase tracking-wider text-[#6B6B6B] dark:text-[#A0A0A0]">Pace</th>
+            <th className="text-left py-2 font-bold uppercase tracking-wider text-[#6B6B6B] dark:text-[#A0A0A0]">Status</th>
           </tr>
         </thead>
         <tbody>
           {runs.map((run) => {
             const badge = BADGE[run.compliance];
             return (
-              <tr key={run.stravaId} className="border-b border-[#E5E5E5] hover:bg-[#F5F5F5] transition-colors">
-                <td className="py-2 pr-4 text-[#6B6B6B]">{run.date}</td>
+              <tr key={run.stravaId} className="border-b border-[#E5E5E5] dark:border-[#333] hover:bg-[#F5F5F5] dark:hover:bg-[#2a2a2a] transition-colors">
+                <td className="py-2 pr-4 text-[#6B6B6B] dark:text-[#A0A0A0]">{run.date}</td>
                 <td className="py-2 pr-4 max-w-[160px] truncate">{run.name}</td>
-                <td className="py-2 pr-4 text-[#6B6B6B] capitalize">{run.intendedType}</td>
-                <td className="py-2 pr-4 font-bold">{run.averagePaceMinKm}/km</td>
+                <td className="py-2 pr-4 text-[#6B6B6B] dark:text-[#A0A0A0] capitalize">{run.intendedType}</td>
+                <td className="py-2 pr-4 font-bold">{run.averagePaceMinKm}</td>
                 <td className="py-2">
                   <span className={`px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider ${badge.className}`}>
                     {badge.label}

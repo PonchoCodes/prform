@@ -10,7 +10,7 @@ export function IntensityDistributionBar({ zone1Pct, zone2Pct, zone3Pct }: Props
   return (
     <div className="w-full h-6 flex">
       <div
-        className="h-full bg-white border-r border-[#0A0A0A] transition-all duration-700"
+        className="h-full bg-white dark:bg-[#242424] border-r border-[#0A0A0A] transition-all duration-700"
         style={{ width: `${zone1Pct}%` }}
         title={`Zone 1: ${zone1Pct}%`}
       />

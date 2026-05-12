@@ -156,8 +156,8 @@ export default function OnboardingPage() {
   const progress = (step / 4) * 100;
 
   return (
-    <div className="min-h-screen bg-white flex flex-col">
-      <nav className="border-b border-[#E5E5E5] px-6 h-14 flex items-center justify-between">
+    <div className="min-h-screen bg-white dark:bg-[#1a1a1a] flex flex-col">
+      <nav className="border-b border-[#E5E5E5] dark:border-[#333] px-6 h-14 flex items-center justify-between">
         <span className="font-black text-xl uppercase tracking-tight">
           PR<span className="text-[#E8FF00] bg-[#0A0A0A] px-1">form</span>
         </span>
@@ -167,7 +167,7 @@ export default function OnboardingPage() {
       </nav>
 
       {/* Progress bar */}
-      <div className="h-1 bg-[#E5E5E5]">
+      <div className="h-1 bg-[#E5E5E5] dark:bg-[#333]">
         <div
           className="h-1 bg-[#E8FF00] transition-all duration-500"
           style={{ width: `${progress}%` }}
@@ -198,7 +198,7 @@ export default function OnboardingPage() {
                           className={`flex-1 py-3 text-xs font-bold uppercase tracking-wider border transition-colors ${
                             sport === s.value
                               ? "bg-[#0A0A0A] text-white border-[#0A0A0A]"
-                              : "border-[#E5E5E5] hover:border-[#0A0A0A]"
+                              : "border-[#E5E5E5] dark:border-[#444] hover:border-[#0A0A0A] dark:hover:border-[#F5F5F5]"
                           }`}
                         >
                           {s.label}
@@ -212,7 +212,7 @@ export default function OnboardingPage() {
                       type="number"
                       value={age}
                       onChange={(e) => setAge(e.target.value)}
-                      className="w-full border border-[#E5E5E5] px-4 py-3 text-sm focus:outline-none focus:border-[#0A0A0A]"
+                      className="w-full border border-[#E5E5E5] dark:border-[#444] dark:bg-[#2a2a2a] dark:text-[#F5F5F5] px-4 py-3 text-sm focus:outline-none focus:border-[#0A0A0A] dark:focus:border-[#F5F5F5]"
                       placeholder="Your age"
                       min={13}
                       max={80}
@@ -228,7 +228,7 @@ export default function OnboardingPage() {
                           className={`flex-1 py-3 text-xs font-bold uppercase tracking-wider border transition-colors ${
                             biologicalSex === s
                               ? "bg-[#0A0A0A] text-white border-[#0A0A0A]"
-                              : "border-[#E5E5E5] hover:border-[#0A0A0A]"
+                              : "border-[#E5E5E5] dark:border-[#444] hover:border-[#0A0A0A] dark:hover:border-[#F5F5F5]"
                           }`}
                         >
                           {s}
@@ -246,7 +246,7 @@ export default function OnboardingPage() {
                           className={`py-3 text-xs font-bold uppercase tracking-wider border transition-colors ${
                             weeklyMileage === m
                               ? "bg-[#0A0A0A] text-white border-[#0A0A0A]"
-                              : "border-[#E5E5E5] hover:border-[#0A0A0A]"
+                              : "border-[#E5E5E5] dark:border-[#444] hover:border-[#0A0A0A] dark:hover:border-[#F5F5F5]"
                           }`}
                         >
                           {m} mi/wk
@@ -269,7 +269,7 @@ export default function OnboardingPage() {
                           className={`py-3 text-xs font-bold uppercase tracking-wider border transition-colors ${
                             experienceLevel === e.value
                               ? "bg-[#0A0A0A] text-white border-[#0A0A0A]"
-                              : "border-[#E5E5E5] hover:border-[#0A0A0A]"
+                              : "border-[#E5E5E5] dark:border-[#444] hover:border-[#0A0A0A] dark:hover:border-[#F5F5F5]"
                           }`}
                         >
                           {e.label}
@@ -292,7 +292,7 @@ export default function OnboardingPage() {
                       type="time"
                       value={wakeTime}
                       onChange={(e) => setWakeTime(e.target.value)}
-                      className="w-full border border-[#E5E5E5] px-4 py-3 text-sm font-mono focus:outline-none focus:border-[#0A0A0A]"
+                      className="w-full border border-[#E5E5E5] dark:border-[#444] dark:bg-[#2a2a2a] dark:text-[#F5F5F5] px-4 py-3 text-sm font-mono focus:outline-none focus:border-[#0A0A0A] dark:focus:border-[#F5F5F5]"
                     />
                   </div>
                   <div>
@@ -301,7 +301,7 @@ export default function OnboardingPage() {
                       type="time"
                       value={bedTime}
                       onChange={(e) => setBedTime(e.target.value)}
-                      className="w-full border border-[#E5E5E5] px-4 py-3 text-sm font-mono focus:outline-none focus:border-[#0A0A0A]"
+                      className="w-full border border-[#E5E5E5] dark:border-[#444] dark:bg-[#2a2a2a] dark:text-[#F5F5F5] px-4 py-3 text-sm font-mono focus:outline-none focus:border-[#0A0A0A] dark:focus:border-[#F5F5F5]"
                     />
                   </div>
                   <div>
@@ -318,7 +318,7 @@ export default function OnboardingPage() {
                           className={`py-3 text-xs font-bold uppercase tracking-wider border transition-colors ${
                             restedFeeling === r.value
                               ? "bg-[#0A0A0A] text-white border-[#0A0A0A]"
-                              : "border-[#E5E5E5] hover:border-[#0A0A0A]"
+                              : "border-[#E5E5E5] dark:border-[#444] hover:border-[#0A0A0A] dark:hover:border-[#F5F5F5]"
                           }`}
                         >
                           {r.label}
@@ -334,16 +334,16 @@ export default function OnboardingPage() {
               <div>
                 <p className="text-xs font-bold uppercase tracking-[0.3em] text-[#6B6B6B] mb-2">Step 3 of 4</p>
                 <h1 className="font-black text-3xl uppercase mb-2">Connect Your Data</h1>
-                <p className="text-sm text-[#6B6B6B] mb-8">
+                <p className="text-sm text-[#6B6B6B] dark:text-[#A0A0A0] mb-8">
                   PRform uses your actual training data to optimise your sleep plan. Connect Strava for automatic tracking, or set a weekly template manually.
                 </p>
 
                 {/* Strava card */}
-                <div className={`border-2 p-6 mb-4 transition-colors ${stravaConnected ? "border-[#0A0A0A]" : "border-[#E5E5E5]"}`}>
+                <div className={`border-2 p-6 mb-4 transition-colors ${stravaConnected ? "border-[#0A0A0A] dark:border-[#F5F5F5]" : "border-[#E5E5E5] dark:border-[#444]"}`}>
                   <div className="flex items-center gap-4 mb-4">
                     <div>
                       <p className="font-black text-sm uppercase tracking-wider">Strava</p>
-                      <p className="text-xs text-[#6B6B6B] font-mono">Recommended — automatic sync</p>
+                      <p className="text-xs text-[#6B6B6B] dark:text-[#A0A0A0] font-mono">Recommended — automatic sync</p>
                     </div>
                     {stravaConnected && (
                       <div className="ml-auto bg-[#E8FF00] px-2 py-1 text-xs font-bold uppercase tracking-wider">
@@ -352,7 +352,7 @@ export default function OnboardingPage() {
                     )}
                   </div>
                   {stravaConnected ? (
-                    <p className="text-xs text-[#6B6B6B] font-mono">
+                    <p className="text-xs text-[#6B6B6B] dark:text-[#A0A0A0] font-mono">
                       {stravaAthleteId ? `Logged in as ${stravaAthleteId}.` : "Strava account linked."} Your runs will sync automatically.
                     </p>
                   ) : (
@@ -364,7 +364,7 @@ export default function OnboardingPage() {
                           style={{ height: "48px", width: "auto", cursor: "pointer" }}
                         />
                       </a>
-                      <p className="text-[10px] font-mono text-[#6B6B6B] mt-3">
+                      <p className="text-[10px] font-mono text-[#6B6B6B] dark:text-[#A0A0A0] mt-3">
                         By connecting Strava, you agree to our{" "}
                         <a href="/privacy" className="underline hover:text-[#0A0A0A]">Privacy Policy</a>{" "}
                         and the{" "}
@@ -377,22 +377,22 @@ export default function OnboardingPage() {
                 {/* Manual fallback toggle */}
                 <button
                   onClick={() => setShowManualSchedule((v) => !v)}
-                  className="w-full text-left border border-[#E5E5E5] p-4 text-xs font-bold uppercase tracking-wider text-[#6B6B6B] hover:border-[#0A0A0A] hover:text-[#0A0A0A] transition-colors flex items-center justify-between"
+                  className="w-full text-left border border-[#E5E5E5] dark:border-[#444] p-4 text-xs font-bold uppercase tracking-wider text-[#6B6B6B] dark:text-[#A0A0A0] hover:border-[#0A0A0A] dark:hover:border-[#F5F5F5] hover:text-[#0A0A0A] dark:hover:text-[#F5F5F5] transition-colors flex items-center justify-between"
                 >
                   <span>Set weekly schedule manually {stravaConnected ? "(optional override)" : ""}</span>
                   <span>{showManualSchedule ? "▲" : "▼"}</span>
                 </button>
 
                 {showManualSchedule && (
-                  <div className="border border-t-0 border-[#E5E5E5] p-4 space-y-3">
+                  <div className="border border-t-0 border-[#E5E5E5] dark:border-[#444] p-4 space-y-3">
                     {DAYS.map((day, i) => (
-                      <div key={day} className="border border-[#E5E5E5] p-4">
+                      <div key={day} className="border border-[#E5E5E5] dark:border-[#333] p-4">
                         <p className="text-xs font-bold uppercase tracking-wider mb-3">{day}</p>
                         <div className="flex gap-3">
                           <select
                             value={weekTemplate[i]?.type ?? "rest"}
                             onChange={(e) => updateDay(i, "type", e.target.value)}
-                            className="flex-1 border border-[#E5E5E5] px-3 py-2 text-xs font-bold uppercase focus:outline-none focus:border-[#0A0A0A] bg-white"
+                            className="flex-1 border border-[#E5E5E5] dark:border-[#444] dark:bg-[#2a2a2a] dark:text-[#F5F5F5] px-3 py-2 text-xs font-bold uppercase focus:outline-none focus:border-[#0A0A0A] dark:focus:border-[#F5F5F5] bg-white"
                           >
                             {getWorkoutTypes(sport).map((t) => (
                               <option key={t.value} value={t.value}>{t.label}</option>
@@ -404,7 +404,7 @@ export default function OnboardingPage() {
                               value={weekTemplate[i]?.distance ?? ""}
                               onChange={(e) => updateDay(i, "distance", e.target.value)}
                               placeholder="Miles"
-                              className="w-24 border border-[#E5E5E5] px-3 py-2 text-xs focus:outline-none focus:border-[#0A0A0A]"
+                              className="w-24 border border-[#E5E5E5] dark:border-[#444] dark:bg-[#2a2a2a] dark:text-[#F5F5F5] px-3 py-2 text-xs focus:outline-none focus:border-[#0A0A0A] dark:focus:border-[#F5F5F5]"
                             />
                           )}
                         </div>
@@ -421,7 +421,7 @@ export default function OnboardingPage() {
                 <h1 className="font-black text-3xl uppercase mb-8">Meet Schedule</h1>
                 <div className="space-y-4">
                   {meets.map((meet, i) => (
-                    <div key={i} className="border border-[#E5E5E5] p-4">
+                    <div key={i} className="border border-[#E5E5E5] dark:border-[#333] p-4">
                       <div className="flex items-center justify-between mb-3">
                         <p className="text-xs font-bold uppercase tracking-wider">Meet {i + 1}</p>
                         {meets.length > 1 && (
@@ -439,13 +439,13 @@ export default function OnboardingPage() {
                           placeholder="Meet name"
                           value={meet.name}
                           onChange={(e) => updateMeet(i, "name", e.target.value)}
-                          className="w-full border border-[#E5E5E5] px-4 py-2 text-sm focus:outline-none focus:border-[#0A0A0A]"
+                          className="w-full border border-[#E5E5E5] dark:border-[#444] dark:bg-[#2a2a2a] dark:text-[#F5F5F5] px-4 py-2 text-sm focus:outline-none focus:border-[#0A0A0A] dark:focus:border-[#F5F5F5]"
                         />
                         <input
                           type="date"
                           value={meet.date}
                           onChange={(e) => updateMeet(i, "date", e.target.value)}
-                          className="w-full border border-[#E5E5E5] px-4 py-2 text-sm font-mono focus:outline-none focus:border-[#0A0A0A]"
+                          className="w-full border border-[#E5E5E5] dark:border-[#444] dark:bg-[#2a2a2a] dark:text-[#F5F5F5] px-4 py-2 text-sm font-mono focus:outline-none focus:border-[#0A0A0A] dark:focus:border-[#F5F5F5]"
                         />
                         <div>
                           <label className="block text-xs font-bold uppercase tracking-[0.3em] text-[#6B6B6B] mb-1">Race Time</label>
@@ -453,7 +453,7 @@ export default function OnboardingPage() {
                             type="time"
                             value={meet.raceTime}
                             onChange={(e) => updateMeet(i, "raceTime", e.target.value)}
-                            className="w-full border border-[#E5E5E5] px-4 py-2 text-sm font-mono focus:outline-none focus:border-[#0A0A0A]"
+                            className="w-full border border-[#E5E5E5] dark:border-[#444] dark:bg-[#2a2a2a] dark:text-[#F5F5F5] px-4 py-2 text-sm font-mono focus:outline-none focus:border-[#0A0A0A] dark:focus:border-[#F5F5F5]"
                           />
                         </div>
                         <input
@@ -461,7 +461,7 @@ export default function OnboardingPage() {
                           placeholder="Distances (e.g. 5K, 10K)"
                           value={meet.distances}
                           onChange={(e) => updateMeet(i, "distances", e.target.value)}
-                          className="w-full border border-[#E5E5E5] px-4 py-2 text-sm focus:outline-none focus:border-[#0A0A0A]"
+                          className="w-full border border-[#E5E5E5] dark:border-[#444] dark:bg-[#2a2a2a] dark:text-[#F5F5F5] px-4 py-2 text-sm focus:outline-none focus:border-[#0A0A0A] dark:focus:border-[#F5F5F5]"
                         />
                         <div className="flex gap-2">
                           {(["A", "B", "C"] as const).map((p) => (
@@ -485,7 +485,7 @@ export default function OnboardingPage() {
                   ))}
                   <button
                     onClick={addMeet}
-                    className="w-full border border-dashed border-[#E5E5E5] py-3 text-xs font-bold uppercase tracking-wider text-[#6B6B6B] hover:border-[#0A0A0A] hover:text-[#0A0A0A] transition-colors"
+                    className="w-full border border-dashed border-[#E5E5E5] dark:border-[#444] py-3 text-xs font-bold uppercase tracking-wider text-[#6B6B6B] dark:text-[#A0A0A0] hover:border-[#0A0A0A] dark:hover:border-[#F5F5F5] hover:text-[#0A0A0A] dark:hover:text-[#F5F5F5] transition-colors"
                   >
                     + Add Meet
                   </button>

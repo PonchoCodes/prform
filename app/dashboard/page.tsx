@@ -12,6 +12,7 @@ import { Navbar } from "@/components/Navbar";
 import type { DailySleepPlan, CircadianPlan } from "@/lib/sleepAlgorithm";
 import { formatTime12h } from "@/lib/sleepAlgorithm";
 import type { PerformanceReport } from "@/lib/performanceAnalysis";
+import { DayDetailModal } from "@/components/DayDetailModal";
 
 const DAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 
@@ -321,20 +322,20 @@ function InterventionCard({
 
 function CircadianProtocolSection({ circadian }: { circadian: CircadianPlan }) {
   return (
-    <section className="border-b border-[#E5E5E5] px-6 py-10">
+    <section className="border-b border-[#E5E5E5] dark:border-[#333] px-6 py-10">
       <div className="max-w-[1200px] mx-auto">
         <FadeUp>
-          <p className="text-xs font-bold uppercase tracking-[0.3em] text-[#6B6B6B] mb-2">Phase Response Curve</p>
+          <p className="text-xs font-bold uppercase tracking-[0.3em] text-[#6B6B6B] dark:text-[#A0A0A0] mb-2">Phase Response Curve</p>
           <h2 className="font-black text-2xl uppercase mb-1">Circadian Protocol</h2>
-          <p className="text-xs text-[#6B6B6B] font-mono mb-8 max-w-xl">{circadian.mechanismNote}</p>
+          <p className="text-xs text-[#6B6B6B] dark:text-[#A0A0A0] font-mono mb-8 max-w-xl">{circadian.mechanismNote}</p>
         </FadeUp>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-px bg-[#E5E5E5]">
-          <FadeUp className="bg-white p-6">
-            <p className="text-xs font-bold uppercase tracking-[0.3em] text-[#6B6B6B] mb-3">CBTmin Anchor</p>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-px bg-[#E5E5E5] dark:bg-[#333]">
+          <FadeUp className="bg-white dark:bg-[#242424] p-6">
+            <p className="text-xs font-bold uppercase tracking-[0.3em] text-[#6B6B6B] dark:text-[#A0A0A0] mb-3">CBTmin Anchor</p>
             <p className="font-mono font-black text-5xl leading-none mb-2">{formatTime12h(circadian.cbtMin)}</p>
-            <p className="text-xs text-[#6B6B6B] uppercase tracking-wider mb-4">Core body temp minimum</p>
-            <div className="space-y-1 text-xs font-mono text-[#6B6B6B]">
+            <p className="text-xs text-[#6B6B6B] dark:text-[#A0A0A0] uppercase tracking-wider mb-4">Core body temp minimum</p>
+            <div className="space-y-1 text-xs font-mono text-[#6B6B6B] dark:text-[#A0A0A0]">
               <p><span className="text-[#E8FF00] bg-[#0A0A0A] px-1">ADVANCE ZONE</span> after {formatTime12h(circadian.advanceWindowStart)}</p>
               <p><span className="text-red-400 bg-[#0A0A0A] px-1">DELAY ZONE</span> before {formatTime12h(circadian.delayZoneEnd)}</p>
             </div>
@@ -352,21 +353,21 @@ function CircadianProtocolSection({ circadian }: { circadian: CircadianPlan }) {
             <p className="text-xs text-[#AAAAAA] font-mono leading-relaxed">{circadian.lightExposure.instruction}</p>
           </FadeUp>
 
-          <FadeUp delay={120} className="bg-white p-6">
-            <p className="text-xs font-bold uppercase tracking-[0.3em] text-[#6B6B6B] mb-3">Shift Progress</p>
+          <FadeUp delay={120} className="bg-white dark:bg-[#242424] p-6">
+            <p className="text-xs font-bold uppercase tracking-[0.3em] text-[#6B6B6B] dark:text-[#A0A0A0] mb-3">Shift Progress</p>
             <div className="flex items-end gap-2 mb-4">
               <p className="font-mono font-black text-5xl leading-none">{circadian.cumulativeShiftMin}</p>
-              <p className="text-[#6B6B6B] text-sm mb-1">min advanced</p>
+              <p className="text-[#6B6B6B] dark:text-[#A0A0A0] text-sm mb-1">min advanced</p>
             </div>
-            <div className="w-full h-1.5 bg-[#E5E5E5] mb-4">
+            <div className="w-full h-1.5 bg-[#E5E5E5] dark:bg-[#444] mb-4">
               <div
                 className="h-1.5 bg-[#E8FF00] transition-all duration-700"
                 style={{ width: `${Math.min(100, (circadian.cumulativeShiftMin / Math.max(circadian.cumulativeShiftMin, 90)) * 100)}%` }}
               />
             </div>
-            <div className="space-y-1 text-xs font-mono text-[#6B6B6B]">
+            <div className="space-y-1 text-xs font-mono text-[#6B6B6B] dark:text-[#A0A0A0]">
               <p>+{circadian.dailyShiftMin} min today &rarr; target {formatTime12h(circadian.targetWakeTime)} wake</p>
-              <p className="text-[#0A0A0A] font-bold uppercase tracking-wider mt-3">
+              <p className="text-[#0A0A0A] dark:text-[#F5F5F5] font-bold uppercase tracking-wider mt-3">
                 Dim lights after {formatTime12h(circadian.lightAvoidStart)}
               </p>
             </div>
@@ -382,74 +383,74 @@ function CircadianProtocolSection({ circadian }: { circadian: CircadianPlan }) {
 function PerformanceSummary({ report }: { report: PerformanceReport }) {
   const { pmc, polarized, vdot, decoupling, sleepPerf } = report;
   return (
-    <div className="space-y-px bg-[#E5E5E5]">
-      <div className="bg-white p-6">
-        <p className="text-xs font-bold uppercase tracking-[0.3em] text-[#6B6B6B] mb-4">Training Load</p>
+    <div className="space-y-px bg-[#E5E5E5] dark:bg-[#333]">
+      <div className="bg-white dark:bg-[#242424] p-6">
+        <p className="text-xs font-bold uppercase tracking-[0.3em] text-[#6B6B6B] dark:text-[#A0A0A0] mb-4">Training Load</p>
         <div className="grid grid-cols-3 gap-6">
           {[["CTL", pmc.currentCTL, "Fitness"], ["ATL", pmc.currentATL, "Fatigue"], ["TSB", (pmc.currentTSB > 0 ? "+" : "") + pmc.currentTSB, "Form"]].map(([l, v, s]) => (
             <div key={l as string}>
-              <p className="text-xs text-[#6B6B6B] uppercase tracking-wider mb-1">{l}</p>
+              <p className="text-xs text-[#6B6B6B] dark:text-[#A0A0A0] uppercase tracking-wider mb-1">{l}</p>
               <p className="font-mono font-black text-3xl leading-none">{v}</p>
-              <p className="text-xs text-[#6B6B6B] mt-1">{s}</p>
+              <p className="text-xs text-[#6B6B6B] dark:text-[#A0A0A0] mt-1">{s}</p>
             </div>
           ))}
         </div>
-        <p className="text-xs text-[#6B6B6B] mt-4 bg-[#F5F5F5] px-3 py-2">{pmc.interpretation}</p>
+        <p className="text-xs text-[#6B6B6B] dark:text-[#A0A0A0] mt-4 bg-[#F5F5F5] dark:bg-[#1a1a1a] px-3 py-2">{pmc.interpretation}</p>
       </div>
 
-      <div className="bg-white p-6">
-        <p className="text-xs font-bold uppercase tracking-[0.3em] text-[#6B6B6B] mb-4">Intensity Distribution</p>
+      <div className="bg-white dark:bg-[#242424] p-6">
+        <p className="text-xs font-bold uppercase tracking-[0.3em] text-[#6B6B6B] dark:text-[#A0A0A0] mb-4">Intensity Distribution</p>
         <div className="grid grid-cols-3 gap-4 mb-4">
           {[["Z1", polarized.zone1Pct], ["Z2", polarized.zone2Pct], ["Z3", polarized.zone3Pct]].map(([z, p]) => (
             <div key={z as string}>
-              <p className="text-xs text-[#6B6B6B] uppercase tracking-wider">{z}</p>
+              <p className="text-xs text-[#6B6B6B] dark:text-[#A0A0A0] uppercase tracking-wider">{z}</p>
               <p className="font-mono font-black text-2xl">{p}%</p>
             </div>
           ))}
         </div>
         <div className="w-full h-3 flex">
-          <div className="h-full bg-white border border-[#E5E5E5]" style={{ width: `${polarized.zone1Pct}%` }} />
+          <div className="h-full bg-white dark:bg-[#242424] border border-[#E5E5E5] dark:border-[#333]" style={{ width: `${polarized.zone1Pct}%` }} />
           <div className="h-full bg-[#6B6B6B]" style={{ width: `${polarized.zone2Pct}%` }} />
           <div className="h-full bg-[#E8FF00]" style={{ width: `${polarized.zone3Pct}%` }} />
         </div>
       </div>
 
-      <div className="bg-white p-6">
-        <p className="text-xs font-bold uppercase tracking-[0.3em] text-[#6B6B6B] mb-2">VDOT</p>
+      <div className="bg-white dark:bg-[#242424] p-6">
+        <p className="text-xs font-bold uppercase tracking-[0.3em] text-[#6B6B6B] dark:text-[#A0A0A0] mb-2">VDOT</p>
         {vdot.vdot ? (
           <>
             <p className="font-mono font-black text-5xl leading-none mb-2">{vdot.vdot}</p>
-            <p className="text-xs text-[#6B6B6B]">{vdot.diagnosis}</p>
+            <p className="text-xs text-[#6B6B6B] dark:text-[#A0A0A0]">{vdot.diagnosis}</p>
             {vdot.paces && (
-              <p className="font-mono text-xs text-[#6B6B6B] mt-2">
-                T-pace: <span className="text-[#0A0A0A] font-bold">{vdot.paces.thresholdPaceMinKm}/km</span>
+              <p className="font-mono text-xs text-[#6B6B6B] dark:text-[#A0A0A0] mt-2">
+                T-pace: <span className="text-[#0A0A0A] dark:text-[#F5F5F5] font-bold">{vdot.paces.thresholdPaceMinKm}</span>
               </p>
             )}
           </>
         ) : (
-          <p className="text-xs text-[#6B6B6B]">Sync a race or maximal effort to calculate VDOT.</p>
+          <p className="text-xs text-[#6B6B6B] dark:text-[#A0A0A0]">Sync a race or maximal effort to calculate VDOT.</p>
         )}
       </div>
 
-      <div className="bg-white p-6">
-        <p className="text-xs font-bold uppercase tracking-[0.3em] text-[#6B6B6B] mb-2">Aerobic Efficiency</p>
+      <div className="bg-white dark:bg-[#242424] p-6">
+        <p className="text-xs font-bold uppercase tracking-[0.3em] text-[#6B6B6B] dark:text-[#A0A0A0] mb-2">Aerobic Efficiency</p>
         <div className="flex items-end gap-3 mb-2">
           <p className="font-mono font-black text-4xl leading-none">{decoupling.rollingAvgDecoupling}%</p>
-          <p className="text-xs font-bold uppercase tracking-wider mb-1 text-[#6B6B6B]">
+          <p className="text-xs font-bold uppercase tracking-wider mb-1 text-[#6B6B6B] dark:text-[#A0A0A0]">
             {decoupling.trend === "improving" ? "↓ Improving" : decoupling.trend === "declining" ? "↑ Declining" : "→ Stable"}
           </p>
         </div>
-        <p className="text-xs text-[#6B6B6B]">Avg decoupling — lower is better</p>
+        <p className="text-xs text-[#6B6B6B] dark:text-[#A0A0A0]">Avg decoupling — lower is better</p>
       </div>
 
-      <div className="bg-white p-6">
-        <p className="text-xs font-bold uppercase tracking-[0.3em] text-[#6B6B6B] mb-2">Sleep × Pace</p>
+      <div className="bg-white dark:bg-[#242424] p-6">
+        <p className="text-xs font-bold uppercase tracking-[0.3em] text-[#6B6B6B] dark:text-[#A0A0A0] mb-2">Sleep × Pace</p>
         <p className="font-mono font-black text-2xl leading-none mb-2">r = {sleepPerf.correlation}</p>
-        <p className="text-xs text-[#6B6B6B] leading-relaxed">{sleepPerf.insight}</p>
+        <p className="text-xs text-[#6B6B6B] dark:text-[#A0A0A0] leading-relaxed">{sleepPerf.insight}</p>
       </div>
 
-      <div className="bg-white p-6">
-        <a href="/analysis" className="inline-block border border-[#0A0A0A] text-[#0A0A0A] font-black text-xs uppercase tracking-widest px-6 py-2 hover:bg-[#0A0A0A] hover:text-white transition-colors">
+      <div className="bg-white dark:bg-[#242424] p-6">
+        <a href="/analysis" className="inline-block border border-[#0A0A0A] dark:border-[#F5F5F5] text-[#0A0A0A] dark:text-[#F5F5F5] font-black text-xs uppercase tracking-widest px-6 py-2 hover:bg-[#0A0A0A] dark:hover:bg-[#F5F5F5] hover:text-white dark:hover:text-[#0A0A0A] transition-colors">
           Full Analysis →
         </a>
       </div>
@@ -464,8 +465,9 @@ export default function DashboardPage() {
   const router = useRouter();
   const [data, setData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState<"sleep" | "performance">("sleep");
-  const [stravaStatus, setStravaStatus] = useState<{ connected: boolean } | null>(null);
+  const [activeTab, setActiveTab] = useState<"sleep" | "history" | "performance">("sleep");
+  const [historyLogs, setHistoryLogs] = useState<any[] | null>(null);
+  const [stravaStatus, setStravaStatus] = useState<{ connected: boolean; recentActivities?: { name: string; startDate: string; distance: number; averageSpeed: number; averageHeartrate?: number | null }[] } | null>(null);
   const [perfReport, setPerfReport] = useState<PerformanceReport | null>(null);
   const [perfLoading, setPerfLoading] = useState(false);
 
@@ -473,6 +475,11 @@ export default function DashboardPage() {
   const [streakData, setStreakData] = useState<any>(null);
   const [morningCardDismissed, setMorningCardDismissed] = useState(false);
   const [interventionDismissed, setInterventionDismissed] = useState(false);
+
+  // Day card dismiss + modal state
+  const [dismissedDays, setDismissedDays] = useState<string[]>([]);
+  const [selectedDay, setSelectedDay] = useState<DailySleepPlan | null>(null);
+  const [selectedDayActivity, setSelectedDayActivity] = useState<any | null>(null);
 
   useEffect(() => {
     if (status === "unauthenticated") router.push("/login");
@@ -506,6 +513,33 @@ export default function DashboardPage() {
       .finally(() => setPerfLoading(false));
   }, [activeTab, stravaStatus, perfReport]);
 
+  useEffect(() => {
+    if (activeTab !== "history" || historyLogs) return;
+    const start = new Date();
+    start.setDate(start.getDate() - 14);
+    fetch(`/api/sleep-log?startDate=${start.toISOString().slice(0, 10)}`)
+      .then((r) => r.json())
+      .then((d) => setHistoryLogs(Array.isArray(d) ? d : []));
+  }, [activeTab, historyLogs]);
+
+  useEffect(() => {
+    try {
+      const stored = localStorage.getItem("prform-dismissed-days");
+      if (stored) setDismissedDays(JSON.parse(stored));
+    } catch {}
+  }, []);
+
+  const dismissDay = useCallback((dateStr: string) => {
+    const updated = [...dismissedDays, dateStr];
+    setDismissedDays(updated);
+    localStorage.setItem("prform-dismissed-days", JSON.stringify(updated));
+  }, [dismissedDays]);
+
+  const resetDismissed = useCallback(() => {
+    setDismissedDays([]);
+    localStorage.removeItem("prform-dismissed-days");
+  }, []);
+
   // Determine which card to show
   const yesterdayPlan = data?.yesterdayPlan as DailySleepPlan | undefined;
   const showMorning = !morningCardDismissed && yesterdayPlan && !yesterdayPlan.sleepConfirmed;
@@ -532,7 +566,7 @@ export default function DashboardPage() {
 
   if (status === "loading" || loading) {
     return (
-      <div className="min-h-screen bg-white flex items-center justify-center">
+      <div className="min-h-screen bg-white dark:bg-[#1a1a1a] flex items-center justify-center">
         <p className="font-mono text-sm uppercase tracking-wider text-[#6B6B6B]">Loading…</p>
       </div>
     );
@@ -557,20 +591,20 @@ export default function DashboardPage() {
   const planAgg = data.user?.planAggressiveness ?? 85;
 
   return (
-    <div className="min-h-screen bg-white">
+    <div className="min-h-screen bg-white dark:bg-[#1a1a1a]">
       <Navbar />
 
       {/* Tab toggle */}
-      <div className="border-b border-[#E5E5E5] px-6">
+      <div className="border-b border-[#E5E5E5] dark:border-[#333] px-6">
         <div className="max-w-[1200px] mx-auto flex">
-          {(["sleep", "performance"] as const).map((tab) => (
+          {(["sleep", "history", "performance"] as const).map((tab) => (
             <button
               key={tab}
-              onClick={() => setActiveTab(tab)}
+              onClick={() => setActiveTab(tab as any)}
               className={`px-6 py-3 text-xs font-black uppercase tracking-widest transition-colors border-b-2 ${
                 activeTab === tab
-                  ? "border-[#0A0A0A] text-[#0A0A0A]"
-                  : "border-transparent text-[#6B6B6B] hover:text-[#0A0A0A]"
+                  ? "border-[#0A0A0A] dark:border-[#F5F5F5] text-[#0A0A0A] dark:text-[#F5F5F5]"
+                  : "border-transparent text-[#6B6B6B] dark:text-[#A0A0A0] hover:text-[#0A0A0A] dark:hover:text-[#F5F5F5]"
               }`}
             >
               {tab}
@@ -597,9 +631,9 @@ export default function DashboardPage() {
         <div className="max-w-[1200px] mx-auto px-6 py-10">
           {!stravaStatus?.connected ? (
             <FadeUp>
-              <div className="border border-[#E5E5E5] p-10 text-center max-w-lg mx-auto">
+              <div className="border border-[#E5E5E5] dark:border-[#333] p-10 text-center max-w-lg mx-auto">
                 <h2 className="font-black text-2xl uppercase mb-3">Connect Strava</h2>
-                <p className="text-sm text-[#6B6B6B] mb-6">Sync your runs to unlock performance analysis.</p>
+                <p className="text-sm text-[#6B6B6B] dark:text-[#A0A0A0] mb-6">Sync your runs to unlock performance analysis.</p>
                 <a href="/api/strava/connect">
                   <img
                     src="/strava/btn_strava_connect.png"
@@ -617,9 +651,9 @@ export default function DashboardPage() {
             </FadeUp>
           ) : (
             <FadeUp>
-              <div className="border border-[#E5E5E5] p-8 text-center">
-                <p className="text-sm text-[#6B6B6B] mb-4">Sync your Strava activities to generate performance data.</p>
-                <a href="/strava" className="inline-block border border-[#0A0A0A] font-black text-xs uppercase tracking-widest px-6 py-2 hover:bg-[#0A0A0A] hover:text-white transition-colors">
+              <div className="border border-[#E5E5E5] dark:border-[#333] p-8 text-center">
+                <p className="text-sm text-[#6B6B6B] dark:text-[#A0A0A0] mb-4">Sync your Strava activities to generate performance data.</p>
+                <a href="/strava" className="inline-block border border-[#0A0A0A] dark:border-[#F5F5F5] dark:text-[#F5F5F5] font-black text-xs uppercase tracking-widest px-6 py-2 hover:bg-[#0A0A0A] dark:hover:bg-[#F5F5F5] hover:text-white dark:hover:text-[#0A0A0A] transition-colors">
                   Go to Strava →
                 </a>
               </div>
@@ -630,6 +664,73 @@ export default function DashboardPage() {
               <a href="https://www.strava.com" target="_blank" rel="noopener noreferrer" className="font-mono text-[10px] text-[#6B6B6B] no-underline hover:text-[#0A0A0A]">Powered by Strava</a>
             </p>
           )}
+        </div>
+      )}
+
+      {activeTab === "history" && (
+        <div className="max-w-[1200px] mx-auto px-6 py-10">
+          <FadeUp>
+            <p className="text-xs font-bold uppercase tracking-[0.3em] text-[#6B6B6B] dark:text-[#A0A0A0] mb-2">Sleep Log</p>
+            <div className="flex items-center justify-between mb-6">
+              <h2 className="font-black text-2xl uppercase">Last 14 Nights</h2>
+              {streakData && (
+                <div className="flex gap-6 text-right">
+                  <div>
+                    <p className="font-mono font-black text-2xl">{streakData.currentStreak ?? 0}</p>
+                    <p className="text-[10px] uppercase tracking-wider text-[#6B6B6B] dark:text-[#A0A0A0]">Night Streak</p>
+                  </div>
+                  <div>
+                    <p className="font-mono font-black text-2xl">{streakData.last7Rate ?? 0}%</p>
+                    <p className="text-[10px] uppercase tracking-wider text-[#6B6B6B] dark:text-[#A0A0A0]">Last 7 Days</p>
+                  </div>
+                </div>
+              )}
+            </div>
+          </FadeUp>
+
+          {!historyLogs ? (
+            <p className="font-mono text-sm text-[#6B6B6B] dark:text-[#A0A0A0]">Loading…</p>
+          ) : historyLogs.length === 0 ? (
+            <div className="border border-dashed border-[#E5E5E5] dark:border-[#444] p-8 text-center">
+              <p className="text-sm text-[#6B6B6B] dark:text-[#A0A0A0]">No sleep logs yet. Confirm last night&apos;s sleep from the card on the Sleep tab.</p>
+            </div>
+          ) : (
+            <div className="border border-[#E5E5E5] dark:border-[#333]">
+              <div className="grid grid-cols-4 gap-px bg-[#E5E5E5] dark:bg-[#333] text-[10px] font-bold uppercase tracking-wider text-[#6B6B6B] dark:text-[#A0A0A0]">
+                <div className="bg-white dark:bg-[#242424] px-4 py-2">Date</div>
+                <div className="bg-white dark:bg-[#242424] px-4 py-2">Target</div>
+                <div className="bg-white dark:bg-[#242424] px-4 py-2">Actual</div>
+                <div className="bg-white dark:bg-[#242424] px-4 py-2">Status</div>
+              </div>
+              {historyLogs.slice().reverse().map((log: any) => {
+                const dateStr = new Date(log.date).toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" });
+                const hitTarget = log.hitTarget;
+                const statusLabel = hitTarget === true ? "HIT" : hitTarget === false ? "MISSED" : "UNLOGGED";
+                const statusClass = hitTarget === true
+                  ? "bg-[#0A0A0A] dark:bg-[#F5F5F5] text-white dark:text-[#0A0A0A]"
+                  : hitTarget === false
+                  ? "border border-[#0A0A0A] dark:border-[#F5F5F5] text-[#0A0A0A] dark:text-[#F5F5F5]"
+                  : "bg-[#F5F5F5] dark:bg-[#2a2a2a] text-[#6B6B6B] dark:text-[#A0A0A0]";
+                return (
+                  <div key={log.id} className="grid grid-cols-4 gap-px bg-[#E5E5E5] dark:bg-[#333] border-t border-[#E5E5E5] dark:border-[#333]">
+                    <div className="bg-white dark:bg-[#242424] px-4 py-3 font-mono text-xs text-[#6B6B6B] dark:text-[#A0A0A0]">{dateStr}</div>
+                    <div className="bg-white dark:bg-[#242424] px-4 py-3 font-mono text-xs">{log.recommendedBedtime ? formatTime12h(log.recommendedBedtime) : "—"}</div>
+                    <div className="bg-white dark:bg-[#242424] px-4 py-3 font-mono text-xs text-[#6B6B6B] dark:text-[#A0A0A0]">{log.actualBedtime ? formatTime12h(log.actualBedtime) : log.hitTarget === true ? formatTime12h(log.recommendedBedtime) : "—"}</div>
+                    <div className="bg-white dark:bg-[#242424] px-4 py-3">
+                      <span className={`px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider ${statusClass}`}>{statusLabel}</span>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+
+          <div className="flex justify-end mt-4">
+            <a href="/schedule/history"
+              className="text-[10px] font-mono uppercase tracking-wider border border-[#E5E5E5] dark:border-[#333] px-3 py-1.5 text-[#6B6B6B] dark:text-[#A0A0A0] hover:border-[#0A0A0A] dark:hover:border-[#F5F5F5] transition-colors">
+              VIEW ALL →
+            </a>
+          </div>
         </div>
       )}
 
@@ -716,10 +817,10 @@ export default function DashboardPage() {
           </motion.section>
 
           {/* Wind-Down Timeline */}
-          <section className="border-b border-[#E5E5E5] px-6 py-10">
+          <section className="border-b border-[#E5E5E5] dark:border-[#333] px-6 py-10">
             <div className="max-w-[1200px] mx-auto">
               <FadeUp>
-                <p className="text-xs font-bold uppercase tracking-[0.3em] text-[#6B6B6B] mb-2">Tonight&apos;s Wind-Down</p>
+                <p className="text-xs font-bold uppercase tracking-[0.3em] text-[#6B6B6B] dark:text-[#A0A0A0] mb-2">Tonight&apos;s Wind-Down</p>
                 <h2 className="font-black text-2xl uppercase mb-6">3-Hour Protocol</h2>
               </FadeUp>
               <FadeUp delay={80}>
@@ -745,86 +846,135 @@ export default function DashboardPage() {
           )}
 
           {/* This Week's Sleep Schedule */}
-          <section className="px-6 py-10 border-b border-[#E5E5E5]">
+          <section className="px-6 py-10 border-b border-[#E5E5E5] dark:border-[#333]">
             <div className="max-w-[1200px] mx-auto">
               <FadeUp>
-                <p className="text-xs font-bold uppercase tracking-[0.3em] text-[#6B6B6B] mb-2">This Week</p>
+                <p className="text-xs font-bold uppercase tracking-[0.3em] text-[#6B6B6B] dark:text-[#A0A0A0] mb-2">This Week</p>
                 <div className="flex items-center gap-3 mb-6">
                   <h2 className="font-black text-2xl uppercase">Sleep Schedule</h2>
-                  <span className="text-xs font-bold uppercase tracking-wider text-[#6B6B6B] border border-[#E5E5E5] px-2 py-1">
+                  <span className="text-xs font-bold uppercase tracking-wider text-[#6B6B6B] dark:text-[#A0A0A0] border border-[#E5E5E5] dark:border-[#333] px-2 py-1">
                     {data.user?.sport === "swimming" ? "Swimming" : "Track & Field"}
                   </span>
                 </div>
               </FadeUp>
-              <div className="overflow-x-auto">
-                <div className="flex gap-px min-w-[700px] bg-[#E5E5E5]">
-                  {week.map((day, i) => {
-                    const isToday = i === 0;
-                    const d = day as DailySleepPlan | null;
-                    const source = d?.workoutSource;
-                    const tentative = d?.isTentative;
+              {(() => {
+                const activityByDate: Record<string, { name: string; distance: number; averageSpeed: number; averageHeartrate?: number | null }> = {};
+                if (stravaStatus?.recentActivities) {
+                  for (const act of stravaStatus.recentActivities) {
+                    const d = new Date(act.startDate).toISOString().slice(0, 10);
+                    if (!activityByDate[d]) activityByDate[d] = act;
+                  }
+                }
+                const visibleWeek = week.filter((day) => {
+                  if (!day) return true;
+                  const dateStr = new Date((day as DailySleepPlan).date).toISOString().slice(0, 10);
+                  return !dismissedDays.includes(dateStr);
+                });
+                return (
+                  <>
+                    <div className="overflow-x-auto">
+                      <div className="flex gap-px min-w-[700px] bg-[#E5E5E5] dark:bg-[#333]">
+                        {visibleWeek.map((day, i) => {
+                          const d = day as DailySleepPlan | null;
+                          const cardDate = d ? new Date(d.date) : null;
+                          const isToday = cardDate ? cardDate.toDateString() === new Date().toDateString() : false;
+                          const source = d?.workoutSource;
+                          const tentative = d?.isTentative;
+                          const dateStr = d ? new Date(d.date).toISOString().slice(0, 10) : null;
 
-                    if (!d) return (
-                      <div key={i} className={`flex-1 p-4 min-w-[100px] ${isToday ? "bg-[#0A0A0A] text-white" : "bg-white"}`}>
-                        <p className={`text-xs font-bold uppercase tracking-wider mb-3 ${isToday ? "text-[#E8FF00]" : "text-[#6B6B6B]"}`}>{DAYS[i]}</p>
-                        <p className="text-xs text-[#6B6B6B]">Rest</p>
-                      </div>
-                    );
-                    return (
-                      <FadeUp key={i} delay={i * 50} className="flex-1 min-w-[100px]">
-                        <div className={`p-4 h-full ${isToday ? "bg-[#0A0A0A] text-white" : "bg-white"}`}>
-                          <p className={`text-xs font-bold uppercase tracking-wider mb-3 ${isToday ? "text-[#E8FF00]" : "text-[#6B6B6B]"}`}>
-                            {isToday ? "Today" : DAYS[(new Date(d.date).getDay() + 6) % 7]}
-                          </p>
-                          <MonoClock
-                            time24={d.recommendedBedtime}
-                            className={`text-base font-black block mb-1 ${isToday ? "text-[#E8FF00]" : ""}`}
-                            animate={isToday}
-                          />
-                          <p className={`text-xs font-mono mb-2 ${isToday ? "text-[#AAAAAA]" : "text-[#6B6B6B]"}`}>
-                            Wake <MonoClock time24={d.recommendedWakeTime} className="inline" />
-                          </p>
-                          <p className={`text-xs font-bold mb-2 ${isToday ? "text-[#CCCCCC]" : "text-[#6B6B6B]"}`}>
-                            {d.totalSleepHours}h
-                          </p>
-                          <div className="flex items-center gap-1.5 mb-2">
-                            <div className={`w-2 h-2 ${LOAD_COLORS[d.trainingLoadLevel]}`} />
-                            <span className={`text-xs uppercase tracking-wider ${isToday ? "text-[#6B6B6B]" : "text-[#AAAAAA]"}`}>
-                              {d.trainingLoadLevel}
-                            </span>
-                          </div>
-                          {source && source !== "rest" && (
-                            <div className="flex items-center gap-1 mt-1">
-                              <div className={`w-1.5 h-1.5 ${source === "strava" ? "bg-[#FC4C02]" : source === "manual" ? "bg-[#0A0A0A]" : "bg-[#E5E5E5]"}`} />
-                              <span className={`text-[10px] font-mono uppercase ${isToday ? "text-[#6B6B6B]" : "text-[#AAAAAA]"}`}>
-                                {tentative ? (source === "assumed" ? "est. from load" : "tentative") : source}
-                              </span>
+                          if (!d) return (
+                            <div key={i} className={`flex-1 p-4 min-w-[100px] ${isToday ? "bg-[#0A0A0A] text-white" : "bg-white dark:bg-[#242424]"}`}>
+                              <p className={`text-xs font-bold uppercase tracking-wider mb-3 ${isToday ? "text-[#E8FF00]" : "text-[#6B6B6B] dark:text-[#A0A0A0]"}`}>{isToday ? "TODAY" : DAYS[i]}</p>
+                              <p className="text-xs text-[#6B6B6B] dark:text-[#A0A0A0]">Rest</p>
                             </div>
-                          )}
-                        </div>
-                      </FadeUp>
-                    );
-                  })}
-                </div>
-              </div>
+                          );
+                          return (
+                            <FadeUp key={dateStr ?? i} delay={i * 50} className="flex-1 min-w-[100px]">
+                              <div
+                                className={`relative group p-4 h-full cursor-pointer border-2 transition-colors duration-150 ${
+                                  isToday
+                                    ? "bg-[#0A0A0A] text-white border-transparent hover:border-[#E8FF00]"
+                                    : "bg-white dark:bg-[#242424] border-transparent hover:border-[#0A0A0A] dark:hover:border-[#F5F5F5]"
+                                }`}
+                                onClick={() => {
+                                  setSelectedDay(d);
+                                  setSelectedDayActivity(dateStr ? (activityByDate[dateStr] ?? null) : null);
+                                }}
+                              >
+                                <button
+                                  className="absolute top-1 right-1 opacity-0 group-hover:opacity-100 transition-opacity w-5 h-5 flex items-center justify-center text-xs text-[#6B6B6B] hover:text-[#0A0A0A] dark:hover:text-[#F5F5F5]"
+                                  onClick={(e) => { e.stopPropagation(); if (dateStr) dismissDay(dateStr); }}
+                                  title="Dismiss"
+                                >
+                                  ×
+                                </button>
+                                <p className={`text-xs font-bold uppercase tracking-wider mb-3 ${isToday ? "text-[#E8FF00]" : "text-[#6B6B6B] dark:text-[#A0A0A0]"}`}>
+                                  {isToday ? "TODAY" : DAYS[(new Date(d.date).getDay() + 6) % 7]}
+                                </p>
+                                <MonoClock
+                                  time24={d.recommendedBedtime}
+                                  className={`text-base font-black block mb-1 ${isToday ? "text-[#E8FF00]" : ""}`}
+                                  animate={isToday}
+                                />
+                                <p className={`text-xs font-mono mb-2 ${isToday ? "text-[#AAAAAA]" : "text-[#6B6B6B] dark:text-[#A0A0A0]"}`}>
+                                  Wake <MonoClock time24={d.recommendedWakeTime} className="inline" />
+                                </p>
+                                <p className={`text-xs font-bold mb-2 ${isToday ? "text-[#CCCCCC]" : "text-[#6B6B6B] dark:text-[#A0A0A0]"}`}>
+                                  {d.totalSleepHours}h
+                                </p>
+                                <div className="flex items-center gap-1.5 mb-2">
+                                  <div className={`w-2 h-2 ${LOAD_COLORS[d.trainingLoadLevel]}`} />
+                                  <span className={`text-xs uppercase tracking-wider ${isToday ? "text-[#6B6B6B]" : "text-[#AAAAAA] dark:text-[#555]"}`}>
+                                    {d.trainingLoadLevel}
+                                  </span>
+                                </div>
+                                {source && source !== "rest" && (
+                                  <div className="flex items-center gap-1 mt-1">
+                                    <div className={`w-1.5 h-1.5 ${source === "strava" ? "bg-[#FC4C02]" : source === "manual" ? "bg-[#0A0A0A]" : "bg-[#E5E5E5]"}`} />
+                                    <span className={`text-[10px] font-mono uppercase ${isToday ? "text-[#6B6B6B]" : "text-[#AAAAAA] dark:text-[#555]"}`}>
+                                      {tentative ? (source === "assumed" ? "est. from load" : "tentative") : source}
+                                    </span>
+                                  </div>
+                                )}
+                              </div>
+                            </FadeUp>
+                          );
+                        })}
+                      </div>
+                    </div>
+                    <div className="flex justify-between items-center mt-3">
+                      {dismissedDays.length > 0 ? (
+                        <p className="text-[10px] font-mono text-[#6B6B6B] dark:text-[#A0A0A0]">
+                          {dismissedDays.length} card{dismissedDays.length > 1 ? "s" : ""} hidden ·{" "}
+                          <button onClick={resetDismissed} className="underline hover:text-[#0A0A0A] dark:hover:text-[#F5F5F5]">RESET</button>
+                        </p>
+                      ) : <span />}
+                      <a href="/schedule/history"
+                        className="text-[10px] font-mono uppercase tracking-wider border border-[#E5E5E5] dark:border-[#333] px-3 py-1.5 text-[#6B6B6B] dark:text-[#A0A0A0] hover:border-[#0A0A0A] dark:hover:border-[#F5F5F5] transition-colors">
+                        VIEW ALL →
+                      </a>
+                    </div>
+                  </>
+                );
+              })()}
             </div>
           </section>
 
           {/* Plan Ahead card */}
-          <section className="px-6 py-10 border-b border-[#E5E5E5]">
+          <section className="px-6 py-10 border-b border-[#E5E5E5] dark:border-[#333]">
             <div className="max-w-[1200px] mx-auto">
               <FadeUp>
-                <div className="border border-[#E5E5E5] p-6 flex items-center justify-between gap-6">
+                <div className="border border-[#E5E5E5] dark:border-[#333] p-6 flex items-center justify-between gap-6">
                   <div>
-                    <p className="text-xs font-bold uppercase tracking-[0.3em] text-[#6B6B6B] mb-1">14-Day Outlook</p>
+                    <p className="text-xs font-bold uppercase tracking-[0.3em] text-[#6B6B6B] dark:text-[#A0A0A0] mb-1">14-Day Outlook</p>
                     <h2 className="font-black text-xl uppercase">Plan Ahead</h2>
-                    <p className="text-xs text-[#6B6B6B] mt-2 font-mono max-w-md">
+                    <p className="text-xs text-[#6B6B6B] dark:text-[#A0A0A0] mt-2 font-mono max-w-md">
                       Add planned workouts to your schedule so PRform can optimise sleep targets before they happen.
                     </p>
                   </div>
                   <a
                     href="/schedule"
-                    className="flex-shrink-0 inline-block border border-[#0A0A0A] text-[#0A0A0A] font-black text-xs uppercase tracking-widest px-6 py-3 hover:bg-[#0A0A0A] hover:text-white transition-colors"
+                    className="flex-shrink-0 inline-block border border-[#0A0A0A] dark:border-[#F5F5F5] text-[#0A0A0A] dark:text-[#F5F5F5] font-black text-xs uppercase tracking-widest px-6 py-3 hover:bg-[#0A0A0A] dark:hover:bg-[#F5F5F5] hover:text-white dark:hover:text-[#0A0A0A] transition-colors"
                   >
                     Open Schedule →
                   </a>
@@ -834,61 +984,74 @@ export default function DashboardPage() {
           </section>
 
           {/* Recovery Score */}
-          <section className="px-6 py-10 border-b border-[#E5E5E5]">
+          <section className="px-6 py-10 border-b border-[#E5E5E5] dark:border-[#333]">
             <div className="max-w-[1200px] mx-auto grid grid-cols-1 md:grid-cols-2 gap-10">
               <FadeUp>
-                <p className="text-xs font-bold uppercase tracking-[0.3em] text-[#6B6B6B] mb-2">Recovery</p>
+                <p className="text-xs font-bold uppercase tracking-[0.3em] text-[#6B6B6B] dark:text-[#A0A0A0] mb-2">Recovery</p>
                 <h2 className="font-black text-2xl uppercase mb-6">Recovery Score</h2>
                 <div className="flex items-end gap-4 mb-4">
                   <span className="font-mono font-black text-8xl leading-none">{recoveryScore}</span>
-                  <span className="text-[#6B6B6B] text-sm uppercase tracking-wider mb-2">/ 100</span>
+                  <span className="text-[#6B6B6B] dark:text-[#A0A0A0] text-sm uppercase tracking-wider mb-2">/ 100</span>
                 </div>
-                <div className="w-full h-2 bg-[#E5E5E5] mb-4">
+                <div className="w-full h-2 bg-[#E5E5E5] dark:bg-[#444] mb-4">
                   <div
                     className="h-2 bg-[#0A0A0A] transition-all duration-700"
                     style={{ width: `${recoveryScore}%` }}
                   />
                 </div>
-                <p className="text-sm text-[#6B6B6B]">{recoveryLabel}</p>
+                <p className="text-sm text-[#6B6B6B] dark:text-[#A0A0A0]">{recoveryLabel}</p>
+                {today.recoverySleepNote && (
+                  <p className="text-[10px] font-mono text-[#6B6B6B] dark:text-[#A0A0A0] mt-2">{today.recoverySleepNote}</p>
+                )}
                 {planAgg < 100 && (
-                  <p className="text-[10px] font-mono text-[#6B6B6B] mt-3 pl-3">
+                  <p className="text-[10px] font-mono text-[#6B6B6B] dark:text-[#A0A0A0] mt-3 pl-3">
                     Plan running at {planAgg}% aggressiveness. Your theoretical maximum recovery score at 100% would be{" "}
                     {Math.min(100, Math.round(recoveryScore * (1 + (100 - planAgg) / 200)))}.
                   </p>
                 )}
-                <p className="text-[10px] font-mono text-[#6B6B6B] mt-2">
-                  <a href="/sleep-history" className="underline hover:text-[#0A0A0A]">View sleep history →</a>
+                <p className="text-[10px] font-mono text-[#6B6B6B] dark:text-[#A0A0A0] mt-2">
+                  <a href="/sleep-history" className="underline hover:text-[#0A0A0A] dark:hover:text-[#F5F5F5]">View sleep history →</a>
                 </p>
               </FadeUp>
 
               <FadeUp delay={80}>
-                <p className="text-xs font-bold uppercase tracking-[0.3em] text-[#6B6B6B] mb-2">Upcoming</p>
+                <p className="text-xs font-bold uppercase tracking-[0.3em] text-[#6B6B6B] dark:text-[#A0A0A0] mb-2">Upcoming</p>
                 <h2 className="font-black text-2xl uppercase mb-6">Meets</h2>
                 {meets?.length ? (
                   <div className="space-y-3">
                     {meets.slice(0, 4).map((m: any) => {
                       const daysOut = Math.round((new Date(m.date).getTime() - Date.now()) / 86400000);
                       return (
-                        <div key={m.id} className="border border-[#E5E5E5] p-4 flex items-center justify-between hover:border-[#0A0A0A] transition-colors">
+                        <div key={m.id} className="border border-[#E5E5E5] dark:border-[#333] p-4 flex items-center justify-between hover:border-[#0A0A0A] dark:hover:border-[#F5F5F5] transition-colors">
                           <div>
                             <p className="font-bold text-sm">{m.name}</p>
-                            <p className="text-xs text-[#6B6B6B] mt-0.5">{formatDate(m.date)}</p>
+                            <p className="text-xs text-[#6B6B6B] dark:text-[#A0A0A0] mt-0.5">{formatDate(m.date)}</p>
                           </div>
                           <div className="flex items-center gap-3">
                             <Badge label={m.priority} variant={m.priority as "A" | "B" | "C"} />
                             <span className="font-mono font-bold text-xl">{daysOut}</span>
-                            <span className="text-xs text-[#6B6B6B] uppercase">days</span>
+                            <span className="text-xs text-[#6B6B6B] dark:text-[#A0A0A0] uppercase">days</span>
                           </div>
                         </div>
                       );
                     })}
                   </div>
                 ) : (
-                  <p className="text-[#6B6B6B] text-sm">No meets scheduled. <a href="/meets" className="font-bold text-[#0A0A0A] link-wipe">Add a meet →</a></p>
+                  <p className="text-[#6B6B6B] dark:text-[#A0A0A0] text-sm">No meets scheduled. <a href="/meets" className="font-bold text-[#0A0A0A] dark:text-[#F5F5F5] link-wipe">Add a meet →</a></p>
                 )}
               </FadeUp>
             </div>
           </section>
+
+          <AnimatePresence>
+            {selectedDay && (
+              <DayDetailModal
+                day={selectedDay}
+                activity={selectedDayActivity ?? undefined}
+                onClose={() => { setSelectedDay(null); setSelectedDayActivity(null); }}
+              />
+            )}
+          </AnimatePresence>
         </>
       )}
       <Footer />

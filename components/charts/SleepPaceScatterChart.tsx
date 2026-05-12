@@ -10,6 +10,7 @@ import {
   ReferenceArea,
 } from "recharts";
 import type { ScatterPoint } from "@/lib/performanceAnalysis";
+import { useDarkMode } from "@/hooks/useDarkMode";
 
 interface Props {
   data: ScatterPoint[];
@@ -24,7 +25,7 @@ const CustomTooltip = ({ active, payload }: any) => {
     <div className="bg-[#0A0A0A] border border-[#333] p-3 text-xs font-mono min-w-[180px]">
       <p className="text-[#6B6B6B] mb-1">{d.date}</p>
       <p className="text-white truncate max-w-[200px]">{d.activityName}</p>
-      <p className="text-[#E8FF00] mt-1">Pace: {d.paceMinKm}/km</p>
+      <p className="text-[#E8FF00] mt-1">Pace: {d.paceMinKm}</p>
       <p className="text-white">Score: {d.paceScore > 0 ? "+" : ""}{d.paceScore}</p>
       <p className="text-[#6B6B6B] mt-1">Deviation: {sign}{d.deviationMin} min</p>
       <p className="text-[#6B6B6B]">PRform target: {d.targetBedtime}</p>
@@ -50,6 +51,10 @@ function regressionLine(data: ScatterPoint[]): { x: number; y: number }[] {
 }
 
 export function SleepPaceScatterChart({ data, correlation }: Props) {
+  const isDark = useDarkMode();
+  const axisColor = isDark ? "#A0A0A0" : "#6B6B6B";
+  const gridColor = isDark ? "#333" : "#333";
+  const bgColor = isDark ? "#242424" : "#0A0A0A";
   const regLine = regressionLine(data);
   const confirmedData = data.filter((d) => d.confirmed);
   const estimatedData = data.filter((d) => !d.confirmed);
@@ -58,7 +63,7 @@ export function SleepPaceScatterChart({ data, correlation }: Props) {
   return (
     <div>
       {/* HOW THIS WORKS explainer */}
-      <div className="border border-[#E5E5E5] p-4 mb-6 bg-[#FAFAFA]">
+      <div className="border border-[#E5E5E5] dark:border-[#333] p-4 mb-6 bg-[#FAFAFA] dark:bg-[#1a1a1a]">
         <p className="text-[10px] font-bold uppercase tracking-[0.3em] text-[#6B6B6B] mb-2">How This Works</p>
         <p className="text-xs font-mono text-[#6B6B6B] leading-relaxed">
           PRform calculates a target bedtime each day based on your training load and sleep need.
@@ -72,7 +77,7 @@ export function SleepPaceScatterChart({ data, correlation }: Props) {
         </p>
       </div>
 
-      <div className="bg-[#0A0A0A] p-4">
+      <div className="p-4" style={{ background: bgColor }}>
         <ResponsiveContainer width="100%" height={300}>
           <ScatterChart margin={{ top: 16, right: 24, left: 0, bottom: 24 }}>
             {/* Background zones */}
@@ -85,22 +90,22 @@ export function SleepPaceScatterChart({ data, correlation }: Props) {
               type="number"
               domain={[-120, 60]}
               ticks={[-120, -90, -60, -30, 0, 15, 30, 60]}
-              tick={{ fontFamily: "var(--font-geist-mono)", fontSize: 9, fill: "#6B6B6B" }}
-              axisLine={{ stroke: "#333" }}
+              tick={{ fontFamily: "var(--font-geist-mono)", fontSize: 9, fill: axisColor }}
+              axisLine={{ stroke: gridColor }}
               tickLine={false}
               label={{
                 value: "Bedtime vs. Target (min)  ← late · early →",
                 position: "insideBottom",
                 offset: -14,
                 fontSize: 9,
-                fill: "#6B6B6B",
+                fill: axisColor,
                 fontFamily: "var(--font-geist-mono)",
               }}
             />
             <YAxis
               dataKey="paceScore"
               type="number"
-              tick={{ fontFamily: "var(--font-geist-mono)", fontSize: 9, fill: "#6B6B6B" }}
+              tick={{ fontFamily: "var(--font-geist-mono)", fontSize: 9, fill: axisColor }}
               axisLine={false}
               tickLine={false}
               width={36}
@@ -109,7 +114,7 @@ export function SleepPaceScatterChart({ data, correlation }: Props) {
                 angle: -90,
                 position: "insideLeft",
                 fontSize: 9,
-                fill: "#6B6B6B",
+                fill: axisColor,
                 fontFamily: "var(--font-geist-mono)",
               }}
             />

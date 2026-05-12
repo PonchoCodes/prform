@@ -25,16 +25,16 @@ function Stat({ label, value, sub }: { label: string; value: string | number; su
 
 function Diagnosis({ text }: { text: string }) {
   return (
-    <div className="bg-[#F5F5F5] px-4 py-3 mt-4">
-      <p className="text-sm text-[#6B6B6B] leading-relaxed">{text}</p>
+    <div className="bg-[#F5F5F5] dark:bg-[#1a1a1a] px-4 py-3 mt-4">
+      <p className="text-sm text-[#6B6B6B] dark:text-[#A0A0A0] leading-relaxed">{text}</p>
     </div>
   );
 }
 
 function Placeholder({ message }: { message: string }) {
   return (
-    <div className="border border-[#E5E5E5] p-8 text-center">
-      <p className="text-xs font-mono text-[#6B6B6B]">{message}</p>
+    <div className="border border-[#E5E5E5] dark:border-[#333] p-8 text-center">
+      <p className="text-xs font-mono text-[#6B6B6B] dark:text-[#A0A0A0]">{message}</p>
     </div>
   );
 }
@@ -70,14 +70,14 @@ export default function AnalysisPage() {
 
   if (status === "loading") {
     return (
-      <div className="min-h-screen bg-white flex items-center justify-center">
-        <p className="font-mono text-sm uppercase tracking-wider text-[#6B6B6B]">Loading…</p>
+      <div className="min-h-screen bg-white dark:bg-[#1a1a1a] flex items-center justify-center">
+        <p className="font-mono text-sm uppercase tracking-wider text-[#6B6B6B] dark:text-[#A0A0A0]">Loading…</p>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-white">
+    <div className="min-h-screen bg-white dark:bg-[#1a1a1a]">
       <Navbar />
 
       {/* Header */}
@@ -131,7 +131,7 @@ export default function AnalysisPage() {
       {report && !loading && (
         <>
           {/* SECTION 1: PMC */}
-          <section className="px-6 py-10 border-b border-[#E5E5E5]">
+          <section className="px-6 py-10 border-b border-[#E5E5E5] dark:border-[#333]">
             <div className="max-w-[1200px] mx-auto">
               <FadeUp>
                 <p className="text-xs font-bold uppercase tracking-[0.3em] text-[#6B6B6B] mb-2">Banister Impulse-Response</p>
@@ -168,13 +168,13 @@ export default function AnalysisPage() {
 
                   <FadeUp delay={120}>
                     <div className="grid grid-cols-3 gap-px bg-[#E5E5E5]">
-                      <div className="bg-white p-6">
+                      <div className="bg-white dark:bg-[#242424] p-6">
                         <Stat label="CTL" value={report.pmc.currentCTL} sub="Chronic Training Load (fitness)" />
                       </div>
-                      <div className="bg-white p-6">
+                      <div className="bg-white dark:bg-[#242424] p-6">
                         <Stat label="ATL" value={report.pmc.currentATL} sub="Acute Training Load (fatigue)" />
                       </div>
-                      <div className={`p-6 ${report.pmc.currentTSB >= 0 ? "bg-white" : "bg-white"}`}>
+                      <div className="bg-white dark:bg-[#242424] p-6">
                         <Stat
                           label="TSB"
                           value={(report.pmc.currentTSB > 0 ? "+" : "") + report.pmc.currentTSB}
@@ -190,7 +190,7 @@ export default function AnalysisPage() {
           </section>
 
           {/* SECTION 2: Polarized Distribution */}
-          <section className="px-6 py-10 border-b border-[#E5E5E5]">
+          <section className="px-6 py-10 border-b border-[#E5E5E5] dark:border-[#333]">
             <div className="max-w-[1200px] mx-auto">
               <FadeUp>
                 <p className="text-xs font-bold uppercase tracking-[0.3em] text-[#6B6B6B] mb-2">Seiler Polarized Model</p>
@@ -231,7 +231,7 @@ export default function AnalysisPage() {
           </section>
 
           {/* SECTION 3: VDOT */}
-          <section className="px-6 py-10 border-b border-[#E5E5E5]">
+          <section className="px-6 py-10 border-b border-[#E5E5E5] dark:border-[#333]">
             <div className="max-w-[1200px] mx-auto">
               <FadeUp>
                 <p className="text-xs font-bold uppercase tracking-[0.3em] text-[#6B6B6B] mb-2">Daniels Running Formula</p>
@@ -249,7 +249,7 @@ export default function AnalysisPage() {
                       <Diagnosis text={report.vdot.diagnosis} />
 
                       {report.vdot.paces && (
-                        <div className="mt-6 border border-[#E5E5E5]">
+                        <div className="mt-6 border border-[#E5E5E5] dark:border-[#333]">
                           {[
                             ["Easy", report.vdot.paces.easyPaceMinKm],
                             ["Marathon", report.vdot.paces.marathonPaceMinKm],
@@ -257,9 +257,9 @@ export default function AnalysisPage() {
                             ["Interval", report.vdot.paces.intervalPaceMinKm],
                             ["Rep", report.vdot.paces.repPaceMinKm],
                           ].map(([label, pace]) => (
-                            <div key={label} className="flex justify-between items-center px-4 py-2 border-b border-[#E5E5E5] last:border-0">
-                              <span className="text-xs font-bold uppercase tracking-wider text-[#6B6B6B]">{label}</span>
-                              <span className="font-mono font-black text-lg">{pace}/km</span>
+                            <div key={label} className="flex justify-between items-center px-4 py-2 border-b border-[#E5E5E5] dark:border-[#333] last:border-0">
+                              <span className="text-xs font-bold uppercase tracking-wider text-[#6B6B6B] dark:text-[#A0A0A0]">{label}</span>
+                              <span className="font-mono font-black text-lg">{pace}</span>
                             </div>
                           ))}
                         </div>
@@ -299,7 +299,7 @@ export default function AnalysisPage() {
             </div>
           </section>
 
-          <section className="px-6 py-4 border-t border-[#E5E5E5]">
+          <section className="px-6 py-4 border-t border-[#E5E5E5] dark:border-[#333]">
             <div className="max-w-[1200px] mx-auto">
               <a href="https://www.strava.com" target="_blank" rel="noopener noreferrer" className="font-mono text-[10px] text-[#6B6B6B] no-underline hover:text-[#0A0A0A]">Powered by Strava</a>
             </div>

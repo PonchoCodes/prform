@@ -57,6 +57,8 @@ export async function GET(req: NextRequest) {
     date: new Date(l.date).toISOString().slice(0, 10),
     actualBedtime: l.actualBedtime,
     recommendedBedtime: l.recommendedBedtime,
+    hitTarget: l.hitTarget,
+    source: l.source,
   }));
 
   const report = analyzePerformance(activityInputs, user, windowDays, sleepLogsForCorrelation);

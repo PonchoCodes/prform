@@ -10,12 +10,10 @@ function formatDate(d: string | Date) {
   return new Date(d).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
 }
 
+import { mpsToMinPerMile } from "@/lib/paceUtils";
+
 function formatPace(speedMs: number): string {
-  if (!speedMs || speedMs <= 0) return "--";
-  const secPerKm = 1000 / speedMs;
-  const min = Math.floor(secPerKm / 60);
-  const sec = Math.round(secPerKm % 60);
-  return `${min}:${String(sec).padStart(2, "0")}/km`;
+  return mpsToMinPerMile(speedMs);
 }
 
 function formatDist(m: number): string {
@@ -72,8 +70,8 @@ export default function StravaPage() {
 
   if (status === "loading" || !statusData) {
     return (
-      <div className="min-h-screen bg-white flex items-center justify-center">
-        <p className="font-mono text-sm uppercase tracking-wider text-[#6B6B6B]">Loading…</p>
+      <div className="min-h-screen bg-white dark:bg-[#1a1a1a] flex items-center justify-center">
+        <p className="font-mono text-sm uppercase tracking-wider text-[#6B6B6B] dark:text-[#A0A0A0]">Loading…</p>
       </div>
     );
   }
@@ -81,7 +79,7 @@ export default function StravaPage() {
   const connected = statusData.connected;
 
   return (
-    <div className="min-h-screen bg-white">
+    <div className="min-h-screen bg-white dark:bg-[#1a1a1a]">
       <Navbar />
 
       <section className="bg-[#0A0A0A] text-white px-6 py-10 border-b border-[#222]">
@@ -111,9 +109,9 @@ export default function StravaPage() {
       <div className="max-w-[1200px] mx-auto px-6 py-10">
         {!connected ? (
           <FadeUp>
-            <div className="border border-[#E5E5E5] p-10 flex flex-col items-center text-center max-w-lg mx-auto">
+            <div className="border border-[#E5E5E5] dark:border-[#333] p-10 flex flex-col items-center text-center max-w-lg mx-auto">
               <h2 className="font-black text-2xl uppercase mb-3">Connect Strava</h2>
-              <p className="text-sm text-[#6B6B6B] mb-8">
+              <p className="text-sm text-[#6B6B6B] dark:text-[#A0A0A0] mb-8">
                 Link your Strava account to sync your runs and unlock the performance analysis engine.
               </p>
               <a href="/api/strava/connect">
@@ -128,19 +126,19 @@ export default function StravaPage() {
         ) : (
           <>
             <FadeUp>
-              <div className="border border-[#E5E5E5] p-6 mb-6">
+              <div className="border border-[#E5E5E5] dark:border-[#333] p-6 mb-6">
                 <div className="flex items-center justify-between flex-wrap gap-4">
                   <div>
                     <p className="text-xs font-bold uppercase tracking-[0.3em] text-[#6B6B6B] mb-1">Connected Account</p>
                     <p className="font-black text-xl">{statusData.athleteName ?? "Strava Athlete"}</p>
-                    <p className="font-mono text-sm text-[#6B6B6B] mt-1">
+                    <p className="font-mono text-sm text-[#6B6B6B] dark:text-[#A0A0A0] mt-1">
                       {statusData.totalRuns} runs synced
                     </p>
-                    <p className="font-mono text-xs text-[#6B6B6B] mt-0.5">
+                    <p className="font-mono text-xs text-[#6B6B6B] dark:text-[#A0A0A0] mt-0.5">
                       Auto-sync: {statusData.webhookActive ? "active" : "inactive — new runs sync manually"}
                     </p>
                     {statusData.lastSyncedAt && (
-                      <p className="font-mono text-xs text-[#6B6B6B] mt-0.5">
+                      <p className="font-mono text-xs text-[#6B6B6B] dark:text-[#A0A0A0] mt-0.5">
                         Last sync: {new Date(statusData.lastSyncedAt).toLocaleString()}
                       </p>
                     )}
@@ -156,55 +154,55 @@ export default function StravaPage() {
                     <button
                       onClick={handleDisconnect}
                       disabled={disconnecting}
-                      className="border border-[#E5E5E5] text-[#6B6B6B] font-bold text-xs uppercase tracking-widest px-6 py-2 hover:border-[#0A0A0A] hover:text-[#0A0A0A] transition-colors disabled:opacity-50"
+                      className="border border-[#E5E5E5] dark:border-[#444] text-[#6B6B6B] dark:text-[#A0A0A0] font-bold text-xs uppercase tracking-widest px-6 py-2 hover:border-[#0A0A0A] dark:hover:border-[#F5F5F5] hover:text-[#0A0A0A] dark:hover:text-[#F5F5F5] transition-colors disabled:opacity-50"
                     >
                       Disconnect
                     </button>
                   </div>
                 </div>
                 {syncResult && (
-                  <p className="mt-4 font-mono text-xs text-[#6B6B6B] bg-[#F5F5F5] px-3 py-2">{syncResult}</p>
+                  <p className="mt-4 font-mono text-xs text-[#6B6B6B] dark:text-[#A0A0A0] bg-[#F5F5F5] dark:bg-[#2a2a2a] px-3 py-2">{syncResult}</p>
                 )}
-                <div className="mt-4 pt-4 border-t border-[#E5E5E5]">
+                <div className="mt-4 pt-4 border-t border-[#E5E5E5] dark:border-[#333]">
                   <button
                     onClick={() => handleSync(true)}
                     disabled={syncing}
-                    className="border border-[#E5E5E5] text-[#6B6B6B] font-bold text-xs uppercase tracking-widest px-6 py-2 hover:border-[#0A0A0A] hover:text-[#0A0A0A] transition-colors disabled:opacity-50"
+                    className="border border-[#E5E5E5] dark:border-[#444] text-[#6B6B6B] dark:text-[#A0A0A0] font-bold text-xs uppercase tracking-widest px-6 py-2 hover:border-[#0A0A0A] dark:hover:border-[#F5F5F5] hover:text-[#0A0A0A] dark:hover:text-[#F5F5F5] transition-colors disabled:opacity-50"
                   >
                     Sync Full History (last 12 months)
                   </button>
-                  <p className="font-mono text-[10px] text-[#6B6B6B] mt-2">This may take a moment and uses more API requests.</p>
+                  <p className="font-mono text-[10px] text-[#6B6B6B] dark:text-[#A0A0A0] mt-2">This may take a moment and uses more API requests.</p>
                 </div>
               </div>
             </FadeUp>
 
             <FadeUp delay={80}>
               <p className="text-xs font-bold uppercase tracking-[0.3em] text-[#6B6B6B] mb-4">Recent Activities</p>
-              <div className="border border-[#E5E5E5]">
-                <div className="grid grid-cols-6 gap-px bg-[#E5E5E5] text-xs font-bold uppercase tracking-wider text-[#6B6B6B]">
-                  <div className="bg-white px-4 py-2">Date</div>
-                  <div className="bg-white px-4 py-2 col-span-2">Name</div>
-                  <div className="bg-white px-4 py-2">Distance</div>
-                  <div className="bg-white px-4 py-2">Pace</div>
-                  <div className="bg-white px-4 py-2">Avg HR</div>
+              <div className="border border-[#E5E5E5] dark:border-[#333]">
+                <div className="grid grid-cols-6 gap-px bg-[#E5E5E5] dark:bg-[#333] text-xs font-bold uppercase tracking-wider text-[#6B6B6B] dark:text-[#A0A0A0]">
+                  <div className="bg-white dark:bg-[#242424] px-4 py-2">Date</div>
+                  <div className="bg-white dark:bg-[#242424] px-4 py-2 col-span-2">Name</div>
+                  <div className="bg-white dark:bg-[#242424] px-4 py-2">Distance</div>
+                  <div className="bg-white dark:bg-[#242424] px-4 py-2">Pace</div>
+                  <div className="bg-white dark:bg-[#242424] px-4 py-2">Avg HR</div>
                 </div>
                 {statusData.recentActivities?.length ? (
                   statusData.recentActivities.map((act: any) => (
-                    <div key={act.stravaId} className="grid grid-cols-6 gap-px bg-[#E5E5E5] border-t border-[#E5E5E5]">
-                      <div className="bg-white px-4 py-3 font-mono text-xs text-[#6B6B6B]">{formatDate(act.startDate)}</div>
-                      <div className="bg-white px-4 py-3 font-mono text-xs col-span-2 truncate">{act.name}</div>
-                      <div className="bg-white px-4 py-3 font-mono text-xs">{formatDist(act.distance)}</div>
-                      <div className="bg-white px-4 py-3 font-mono text-xs">{formatPace(act.averageSpeed)}</div>
-                      <div className="bg-white px-4 py-3 font-mono text-xs">{act.averageHeartrate ? `${Math.round(act.averageHeartrate)} bpm` : "—"}</div>
+                    <div key={act.stravaId} className="grid grid-cols-6 gap-px bg-[#E5E5E5] dark:bg-[#333] border-t border-[#E5E5E5] dark:border-[#333]">
+                      <div className="bg-white dark:bg-[#242424] px-4 py-3 font-mono text-xs text-[#6B6B6B] dark:text-[#A0A0A0]">{formatDate(act.startDate)}</div>
+                      <div className="bg-white dark:bg-[#242424] px-4 py-3 font-mono text-xs col-span-2 truncate">{act.name}</div>
+                      <div className="bg-white dark:bg-[#242424] px-4 py-3 font-mono text-xs">{formatDist(act.distance)}</div>
+                      <div className="bg-white dark:bg-[#242424] px-4 py-3 font-mono text-xs">{formatPace(act.averageSpeed)}</div>
+                      <div className="bg-white dark:bg-[#242424] px-4 py-3 font-mono text-xs">{act.averageHeartrate ? `${Math.round(act.averageHeartrate)} bpm` : "—"}</div>
                     </div>
                   ))
                 ) : (
-                  <div className="bg-white px-4 py-6 text-center text-xs text-[#6B6B6B] font-mono">
+                  <div className="bg-white dark:bg-[#242424] px-4 py-6 text-center text-xs text-[#6B6B6B] dark:text-[#A0A0A0] font-mono">
                     No activities yet. Click &ldquo;Sync Now&rdquo; to import your runs.
                   </div>
                 )}
-                <div className="bg-white px-4 py-3 border-t border-[#E5E5E5]">
-                  <a href="https://www.strava.com" target="_blank" rel="noopener noreferrer" className="font-mono text-[10px] text-[#6B6B6B] no-underline hover:text-[#0A0A0A]">Powered by Strava</a>
+                <div className="bg-white dark:bg-[#242424] px-4 py-3 border-t border-[#E5E5E5] dark:border-[#333]">
+                  <a href="https://www.strava.com" target="_blank" rel="noopener noreferrer" className="font-mono text-[10px] text-[#6B6B6B] dark:text-[#A0A0A0] no-underline hover:text-[#0A0A0A] dark:hover:text-[#F5F5F5]">Powered by Strava</a>
                 </div>
               </div>
             </FadeUp>
@@ -212,7 +210,7 @@ export default function StravaPage() {
             <FadeUp delay={160} className="mt-8">
               <a
                 href="/analysis"
-                className="inline-block border border-[#0A0A0A] text-[#0A0A0A] font-black text-xs uppercase tracking-widest px-8 py-3 hover:bg-[#0A0A0A] hover:text-white transition-colors"
+                className="inline-block border border-[#0A0A0A] dark:border-[#F5F5F5] text-[#0A0A0A] dark:text-[#F5F5F5] font-black text-xs uppercase tracking-widest px-8 py-3 hover:bg-[#0A0A0A] dark:hover:bg-[#F5F5F5] hover:text-white dark:hover:text-[#0A0A0A] transition-colors"
               >
                 View Performance Analysis →
               </a>
