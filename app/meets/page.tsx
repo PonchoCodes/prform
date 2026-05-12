@@ -7,6 +7,7 @@ import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContai
 import { formatTime12h } from "@/lib/sleepAlgorithm";
 import { FadeUp } from "@/components/FadeUp";
 import { Navbar } from "@/components/Navbar";
+import { Footer } from "@/components/Footer";
 import { Badge } from "@/components/Badge";
 import { Button } from "@/components/Button";
 
@@ -133,7 +134,7 @@ export default function MeetsPage() {
     <div className="min-h-screen bg-white">
       <Navbar />
       <div className="flex items-center justify-center h-64">
-        <p className="font-mono text-sm uppercase tracking-wider text-[#6B6B6B]">Loading...</p>
+        <p className="font-mono text-sm uppercase tracking-wider text-[#6B6B6B]">Loading…</p>
       </div>
     </div>
   );
@@ -351,6 +352,7 @@ export default function MeetsPage() {
           </div>
         </section>
       </motion.div>
+      <Footer />
     </div>
   );
 }

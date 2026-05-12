@@ -24,24 +24,26 @@ export function Navbar() {
         </Link>
 
         {session ? (
-          <div className="flex items-center gap-6">
-            {navLinks.map((link) => (
-              <Link
-                key={link.href}
-                href={link.href}
-                className={`link-wipe text-sm font-bold uppercase tracking-wider ${
-                  pathname === link.href ? "text-[#0A0A0A]" : "text-[#6B6B6B] hover:text-[#0A0A0A]"
-                }`}
+          <div className="overflow-x-auto -mr-6">
+            <div className="flex items-center gap-4 md:gap-6 pr-6 min-w-max">
+              {navLinks.map((link) => (
+                <Link
+                  key={link.href}
+                  href={link.href}
+                  className={`link-wipe text-xs md:text-sm font-bold uppercase tracking-wider ${
+                    pathname === link.href ? "text-[#0A0A0A]" : "text-[#6B6B6B] hover:text-[#0A0A0A]"
+                  }`}
+                >
+                  {link.label}
+                </Link>
+              ))}
+              <button
+                onClick={() => signOut({ callbackUrl: "/" })}
+                className="text-xs md:text-sm font-bold uppercase tracking-wider text-[#6B6B6B] hover:text-[#0A0A0A] link-wipe"
               >
-                {link.label}
-              </Link>
-            ))}
-            <button
-              onClick={() => signOut({ callbackUrl: "/" })}
-              className="text-sm font-bold uppercase tracking-wider text-[#6B6B6B] hover:text-[#0A0A0A] link-wipe"
-            >
-              Sign Out
-            </button>
+                Sign Out
+              </button>
+            </div>
           </div>
         ) : (
           <div className="flex items-center gap-4">

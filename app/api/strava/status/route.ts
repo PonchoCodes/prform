@@ -14,6 +14,7 @@ export async function GET() {
     select: {
       stravaConnected: true,
       stravaAthleteId: true,
+      stravaWebhookSubscriptionId: true,
       name: true,
     },
   });
@@ -47,6 +48,7 @@ export async function GET() {
     totalRuns,
     lastSyncedAt: lastActivity?.createdAt ?? null,
     recentActivities,
+    webhookActive: !!user?.stravaWebhookSubscriptionId,
   });
 }
 

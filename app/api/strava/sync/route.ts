@@ -1,4 +1,4 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
@@ -18,11 +18,14 @@ async function fetchActivitiesPage(token: string, page: number, after?: number):
   return res.json();
 }
 
-export async function POST() {
+export async function POST(req: NextRequest) {
   const session = await getServerSession(authOptions);
   if (!session?.user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const userId = (session.user as any).id;
+
+  const { searchParams } = new URL(req.url);
+  const fullHistory = searchParams.get("fullHistory") === "true";
 
   let token: string;
   try {
@@ -38,12 +41,19 @@ export async function POST() {
     select: { startDate: true },
   });
 
-  const afterTimestamp = lastActivity
-    ? Math.floor(lastActivity.startDate.getTime() / 1000)
-    : undefined;
+  let afterTimestamp: number | undefined;
+  if (lastActivity) {
+    afterTimestamp = Math.floor(lastActivity.startDate.getTime() / 1000);
+  } else if (fullHistory) {
+    // Up to 365 days
+    afterTimestamp = Math.floor((Date.now() - 365 * 24 * 60 * 60 * 1000) / 1000);
+  } else {
+    // Default initial sync: last 30 days only
+    afterTimestamp = Math.floor((Date.now() - 30 * 24 * 60 * 60 * 1000) / 1000);
+  }
 
   const allActivities: any[] = [];
-  const maxPages = afterTimestamp ? 4 : 4; // 4 pages × 50 = 200 max for initial sync
+  const maxPages = fullHistory ? 8 : 4;
 
   for (let page = 1; page <= maxPages; page++) {
     const batch = await fetchActivitiesPage(token, page, afterTimestamp);

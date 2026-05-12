@@ -359,12 +359,21 @@ export default function OnboardingPage() {
                       {stravaAthleteId ? `Logged in as ${stravaAthleteId}.` : "Strava account linked."} Your runs will sync automatically.
                     </p>
                   ) : (
-                    <a
-                      href="/api/strava/connect?returnTo=/onboarding"
-                      className="inline-block bg-[#E8FF00] text-[#0A0A0A] font-black text-xs uppercase tracking-widest px-6 py-2 hover:bg-[#d4e800] transition-colors"
-                    >
-                      Connect Strava →
-                    </a>
+                    <div>
+                      <a href="/api/strava/connect?returnTo=/onboarding">
+                        <img
+                          src="/strava/btn_strava_connect.png"
+                          alt="Connect with Strava"
+                          style={{ height: "48px", width: "auto", cursor: "pointer" }}
+                        />
+                      </a>
+                      <p className="text-[10px] font-mono text-[#6B6B6B] mt-3">
+                        By connecting Strava, you agree to our{" "}
+                        <a href="/privacy" className="underline hover:text-[#0A0A0A]">Privacy Policy</a>{" "}
+                        and the{" "}
+                        <a href="https://www.strava.com/legal/api" target="_blank" rel="noopener noreferrer" className="underline hover:text-[#0A0A0A]">Strava API Agreement</a>.
+                      </p>
+                    </div>
                   )}
                 </div>
 

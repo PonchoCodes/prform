@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
 import { Navbar } from "@/components/Navbar";
 import { FadeUp } from "@/components/FadeUp";
+import { Footer } from "@/components/Footer";
 
 function formatDate(d: string | Date) {
   return new Date(d).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
@@ -51,10 +52,11 @@ export default function StravaPage() {
 
   useEffect(loadStatus, [status]);
 
-  const handleSync = async () => {
+  const handleSync = async (fullHistory = false) => {
     setSyncing(true);
     setSyncResult(null);
-    const res = await fetch("/api/strava/sync", { method: "POST" });
+    const url = fullHistory ? "/api/strava/sync?fullHistory=true" : "/api/strava/sync";
+    const res = await fetch(url, { method: "POST" });
     const data = await res.json();
     setSyncResult(data.synced != null ? `Synced ${data.synced} new runs.` : "Sync failed.");
     setSyncing(false);
@@ -63,7 +65,7 @@ export default function StravaPage() {
 
   const handleDisconnect = async () => {
     setDisconnecting(true);
-    await fetch("/api/strava/status", { method: "DELETE" });
+    await fetch("/api/strava/disconnect", { method: "DELETE" });
     setDisconnecting(false);
     loadStatus();
   };
@@ -71,7 +73,7 @@ export default function StravaPage() {
   if (status === "loading" || !statusData) {
     return (
       <div className="min-h-screen bg-white flex items-center justify-center">
-        <p className="font-mono text-sm uppercase tracking-wider text-[#6B6B6B]">Loading...</p>
+        <p className="font-mono text-sm uppercase tracking-wider text-[#6B6B6B]">Loading…</p>
       </div>
     );
   }
@@ -99,8 +101,8 @@ export default function StravaPage() {
       )}
 
       {connectionError && (
-        <div className="bg-red-100 px-6 py-3">
-          <p className="max-w-[1200px] mx-auto text-xs font-bold uppercase tracking-wider text-red-700">
+        <div className="bg-[#0A0A0A] px-6 py-3">
+          <p className="max-w-[1200px] mx-auto text-xs font-bold uppercase tracking-wider text-white">
             Connection failed ({connectionError}). Please try again.
           </p>
         </div>
@@ -117,11 +119,12 @@ export default function StravaPage() {
               <p className="text-sm text-[#6B6B6B] mb-8">
                 Link your Strava account to sync your runs and unlock the performance analysis engine.
               </p>
-              <a
-                href="/api/strava/connect"
-                className="inline-block bg-[#E8FF00] text-[#0A0A0A] font-black text-sm uppercase tracking-widest px-8 py-3 hover:bg-[#d4e800] transition-colors"
-              >
-                Connect Strava
+              <a href="/api/strava/connect">
+                <img
+                  src="/strava/btn_strava_connect.png"
+                  alt="Connect with Strava"
+                  style={{ height: "48px", width: "auto", cursor: "pointer" }}
+                />
               </a>
             </div>
           </FadeUp>
@@ -136,6 +139,9 @@ export default function StravaPage() {
                     <p className="font-mono text-sm text-[#6B6B6B] mt-1">
                       {statusData.totalRuns} runs synced
                     </p>
+                    <p className="font-mono text-xs text-[#6B6B6B] mt-0.5">
+                      Auto-sync: {statusData.webhookActive ? "active" : "inactive — new runs sync manually"}
+                    </p>
                     {statusData.lastSyncedAt && (
                       <p className="font-mono text-xs text-[#6B6B6B] mt-0.5">
                         Last sync: {new Date(statusData.lastSyncedAt).toLocaleString()}
@@ -144,16 +150,11 @@ export default function StravaPage() {
                   </div>
                   <div className="flex items-center gap-3">
                     <button
-                      onClick={handleSync}
+                      onClick={() => handleSync(false)}
                       disabled={syncing}
-                      className="bg-[#E8FF00] text-[#0A0A0A] font-black text-xs uppercase tracking-widest px-6 py-2 hover:bg-[#d4e800] transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                      className="bg-[#E8FF00] text-[#0A0A0A] font-black text-xs uppercase tracking-widest px-6 py-2 hover:bg-[#d4e800] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                     >
-                      {syncing ? (
-                        <>
-                          <span className="inline-block w-3 h-3 border-2 border-[#0A0A0A] border-t-transparent rounded-full animate-spin" />
-                          Syncing…
-                        </>
-                      ) : "Sync Now"}
+                      {syncing ? "Syncing…" : "Sync Now"}
                     </button>
                     <button
                       onClick={handleDisconnect}
@@ -165,8 +166,18 @@ export default function StravaPage() {
                   </div>
                 </div>
                 {syncResult && (
-                  <p className="mt-4 font-mono text-xs text-[#6B6B6B] border-l-2 border-[#E8FF00] pl-3">{syncResult}</p>
+                  <p className="mt-4 font-mono text-xs text-[#6B6B6B] bg-[#F5F5F5] px-3 py-2">{syncResult}</p>
                 )}
+                <div className="mt-4 pt-4 border-t border-[#E5E5E5]">
+                  <button
+                    onClick={() => handleSync(true)}
+                    disabled={syncing}
+                    className="border border-[#E5E5E5] text-[#6B6B6B] font-bold text-xs uppercase tracking-widest px-6 py-2 hover:border-[#0A0A0A] hover:text-[#0A0A0A] transition-colors disabled:opacity-50"
+                  >
+                    Sync Full History (last 12 months)
+                  </button>
+                  <p className="font-mono text-[10px] text-[#6B6B6B] mt-2">This may take a moment and uses more API requests.</p>
+                </div>
               </div>
             </FadeUp>
 
@@ -195,6 +206,9 @@ export default function StravaPage() {
                     No activities yet. Click &ldquo;Sync Now&rdquo; to import your runs.
                   </div>
                 )}
+                <div className="bg-white px-4 py-3 border-t border-[#E5E5E5]">
+                  <a href="https://www.strava.com" target="_blank" rel="noopener noreferrer" className="font-mono text-[10px] text-[#6B6B6B] no-underline hover:text-[#0A0A0A]">Powered by Strava</a>
+                </div>
               </div>
             </FadeUp>
 
@@ -209,6 +223,7 @@ export default function StravaPage() {
           </>
         )}
       </div>
+      <Footer />
     </div>
   );
 }

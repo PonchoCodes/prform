@@ -34,8 +34,9 @@ model User {
   stravaRefreshToken  String?
   stravaTokenExpiry   DateTime?
   stravaAthleteId     String?
-  stravaConnected     Boolean   @default(false)
-  userMaxHR           Int?
+  stravaConnected              Boolean   @default(false)
+  stravaWebhookSubscriptionId  String?
+  userMaxHR                    Int?
   userThresholdHR     Int?
 
   planAggressiveness       Int @default(85)

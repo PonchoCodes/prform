@@ -16,6 +16,10 @@ export function MonoClock({ time24, className = "", accent = false, animate = fa
 
   useEffect(() => {
     if (!animate || animatedRef.current) return;
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+      setDisplayed(formatTime12h(time24));
+      return;
+    }
 
     const observer = new IntersectionObserver(
       ([entry]) => {

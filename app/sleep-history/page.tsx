@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
 import { Navbar } from "@/components/Navbar";
 import { FadeUp } from "@/components/FadeUp";
+import { Footer } from "@/components/Footer";
 import { formatTime12h } from "@/lib/sleepAlgorithm";
 
 function parseTimeMin(t: string): number {
@@ -56,7 +57,7 @@ function DeviationBadge({ log }: { log: SleepLog }) {
     const sign = dev > 0 ? "+" : "-";
     if (abs < 1) return <span className="text-xs font-mono text-[#6B6B6B]">On time</span>;
     return (
-      <span className={`text-xs font-mono font-bold ${dev > 0 ? "text-red-500" : "text-green-600"}`}>
+      <span className={`text-xs font-mono font-bold ${dev > 0 ? "text-[#0A0A0A]" : "text-[#6B6B6B]"}`}>
         {sign}{abs} min
       </span>
     );
@@ -351,6 +352,7 @@ export default function SleepHistoryPage() {
           </div>
         </FadeUp>
       </div>
+      <Footer />
     </div>
   );
 }

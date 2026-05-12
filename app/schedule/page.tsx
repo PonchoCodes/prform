@@ -6,6 +6,7 @@ import { motion } from "framer-motion";
 import { FadeUp } from "@/components/FadeUp";
 import { Navbar } from "@/components/Navbar";
 import { Button } from "@/components/Button";
+import { Footer } from "@/components/Footer";
 
 type WorkoutType = "easy" | "moderate" | "tempo" | "long_run" | "track" | "race" | "rest" | "cross_train";
 type WorkoutSource = "strava" | "manual" | "assumed";
@@ -62,23 +63,23 @@ function getWorkoutTypes(sport: string): { value: WorkoutType; label: string }[]
 }
 
 const LOAD_COLORS: Record<string, string> = {
-  easy: "bg-green-100 text-green-800",
-  moderate: "bg-blue-100 text-blue-800",
-  tempo: "bg-orange-100 text-orange-800",
-  long_run: "bg-purple-100 text-purple-800",
-  track: "bg-red-100 text-red-800",
+  easy: "bg-[#F5F5F5] text-[#6B6B6B]",
+  moderate: "bg-[#E5E5E5] text-[#0A0A0A]",
+  tempo: "bg-[#6B6B6B] text-white",
+  long_run: "bg-[#E5E5E5] text-[#0A0A0A]",
+  track: "bg-[#0A0A0A] text-white",
   race: "bg-[#E8FF00] text-[#0A0A0A]",
-  cross_train: "bg-teal-100 text-teal-800",
-  rest: "bg-gray-100 text-gray-500",
+  cross_train: "bg-[#F5F5F5] text-[#6B6B6B]",
+  rest: "bg-[#F5F5F5] text-[#6B6B6B]",
 };
 
 function SourceDot({ source }: { source: WorkoutSource }) {
   const colors: Record<WorkoutSource, string> = {
     strava: "bg-[#FC4C02]",
-    manual: "bg-blue-400",
-    assumed: "bg-[#6B6B6B]",
+    manual: "bg-[#0A0A0A]",
+    assumed: "bg-[#E5E5E5]",
   };
-  return <span className={`inline-block w-2 h-2 rounded-full mr-1.5 ${colors[source]}`} />;
+  return <span className={`inline-block w-2 h-2 mr-1.5 ${colors[source]}`} />;
 }
 
 function formatDate(d: string): string {
@@ -186,7 +187,7 @@ export default function SchedulePage() {
     <div className="min-h-screen bg-white">
       <Navbar />
       <div className="flex items-center justify-center h-64">
-        <p className="font-mono text-sm uppercase tracking-wider text-[#6B6B6B]">Loading...</p>
+        <p className="font-mono text-sm uppercase tracking-wider text-[#6B6B6B]">Loading…</p>
       </div>
     </div>
   );
@@ -208,17 +209,17 @@ export default function SchedulePage() {
 
         {/* Conflict strips */}
         {conflicts.length > 0 && (
-          <div className="border-b border-amber-200 bg-amber-50 px-6 py-4">
+          <div className="border-b border-[#222] bg-[#0A0A0A] px-6 py-4">
             <div className="max-w-[1200px] mx-auto">
-              <p className="text-xs font-bold uppercase tracking-[0.3em] text-amber-800 mb-3">
+              <p className="text-xs font-bold uppercase tracking-[0.3em] text-[#E8FF00] mb-3">
                 Workout Conflicts — Strava and manual entries overlap
               </p>
               <div className="space-y-2">
                 {conflicts.map((c) => (
-                  <div key={c.workoutId} className="bg-white border border-amber-200 p-4 flex items-center justify-between gap-4">
+                  <div key={c.workoutId} className="bg-[#1a1a1a] border border-[#333] p-4 flex items-center justify-between gap-4">
                     <div>
                       <p className="text-xs font-mono text-[#6B6B6B]">{formatDate(c.date)}</p>
-                      <p className="text-sm font-bold mt-0.5">
+                      <p className="text-sm font-bold mt-0.5 text-white">
                         Strava: <span className="font-mono">{c.stravaName}</span>
                         <span className="text-[#6B6B6B] mx-2">vs</span>
                         Manual: <span className="font-mono uppercase">{c.manualType}</span>
@@ -227,13 +228,13 @@ export default function SchedulePage() {
                     <div className="flex gap-2 flex-shrink-0">
                       <button
                         onClick={() => handleOverride(c.workoutId)}
-                        className="text-xs font-bold uppercase tracking-wider border border-[#0A0A0A] px-3 py-1.5 hover:bg-[#0A0A0A] hover:text-white transition-colors"
+                        className="text-xs font-bold uppercase tracking-wider border border-white text-white px-3 py-1.5 hover:bg-white hover:text-[#0A0A0A] transition-colors"
                       >
                         Use Manual
                       </button>
                       <button
                         onClick={() => handleDismissConflict(c.workoutId)}
-                        className="text-xs font-bold uppercase tracking-wider border border-[#E5E5E5] px-3 py-1.5 text-[#6B6B6B] hover:border-[#0A0A0A] hover:text-[#0A0A0A] transition-colors"
+                        className="text-xs font-bold uppercase tracking-wider border border-[#444] px-3 py-1.5 text-[#6B6B6B] hover:border-white hover:text-white transition-colors"
                       >
                         Use Strava
                       </button>
@@ -437,7 +438,7 @@ export default function SchedulePage() {
                               <SourceDot source={w.source} />
                               <span className="text-[10px] font-mono uppercase text-[#6B6B6B]">{w.source}</span>
                               {w.manualOverride && (
-                                <span className="text-[10px] font-mono uppercase text-blue-500">override</span>
+                                <span className="text-[10px] font-mono uppercase text-[#6B6B6B]">override</span>
                               )}
                               {w.id && w.source === "manual" && (
                                 <button
@@ -470,6 +471,7 @@ export default function SchedulePage() {
           </section>
         )}
       </motion.div>
+      <Footer />
     </div>
   );
 }

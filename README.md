@@ -73,6 +73,28 @@ Open [http://localhost:3000](http://localhost:3000)
 
 ---
 
+## Strava Setup
+
+**Step 1:** Create a Strava API application at https://www.strava.com/settings/api
+
+**Step 2:** Set Authorization Callback Domain to your domain (or `localhost` for local dev)
+
+**Step 3:** Add to `.env`:
+```
+STRAVA_CLIENT_ID=...
+STRAVA_CLIENT_SECRET=...
+STRAVA_REDIRECT_URI=http://localhost:3000/api/strava/callback
+STRAVA_WEBHOOK_VERIFY_TOKEN=prform_webhook_secret_2026
+```
+
+**Step 4:** Webhooks are registered automatically when a user connects Strava. For local development, use ngrok to expose localhost:3000 to Strava:
+```bash
+ngrok http 3000
+```
+Then set `STRAVA_REDIRECT_URI` and `NEXTAUTH_URL` to the ngrok URL so Strava can reach the webhook endpoint at `<ngrok-url>/api/strava/webhook`.
+
+---
+
 ## Tech Stack
 
 | Layer | Technology | Why |

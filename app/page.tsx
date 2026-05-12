@@ -5,7 +5,6 @@ import { FadeUp } from "@/components/FadeUp";
 import { Ticker } from "@/components/Ticker";
 import { Button } from "@/components/Button";
 import { WebGLShader } from "@/components/ui/web-gl-shader";
-import { LiquidButton } from "@/components/ui/liquid-glass-button";
 
 const meets = [
   "Penn Relays",
@@ -84,9 +83,9 @@ export default function LandingPage() {
           </p>
           <div className="flex flex-col sm:flex-row gap-4 items-start">
             <Link href="/signup">
-              <LiquidButton size="xl" className="text-white border border-white/20">
-                Get Started Free
-              </LiquidButton>
+              <Button size="lg" variant="primary">
+                Get Started Free →
+              </Button>
             </Link>
             <Link href="/login">
               <Button size="lg" variant="ghost" className="!border-[#444] !text-white hover:!border-white">
@@ -141,7 +140,10 @@ export default function LandingPage() {
           <span className="font-black text-sm uppercase tracking-tight">
             PR<span className="text-[#E8FF00] bg-[#0A0A0A] px-1">form</span>
           </span>
-          <p className="text-xs text-[#6B6B6B] uppercase tracking-wider">Sleep Sharp. Race Faster.</p>
+          <div className="flex items-center gap-6">
+            <p className="text-xs text-[#6B6B6B] uppercase tracking-wider">Sleep Sharp. Race Faster.</p>
+            <a href="/privacy" className="font-mono text-[10px] text-[#6B6B6B] no-underline hover:text-[#0A0A0A]">Privacy Policy</a>
+          </div>
         </div>
       </footer>
     </div>

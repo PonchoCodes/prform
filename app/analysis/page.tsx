@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
 import { Navbar } from "@/components/Navbar";
 import { FadeUp } from "@/components/FadeUp";
+import { Footer } from "@/components/Footer";
 import { PMCChart } from "@/components/charts/PMCChart";
 import { IntensityDistributionBar } from "@/components/charts/IntensityDistributionBar";
 import { PaceComplianceTable } from "@/components/charts/PaceComplianceTable";
@@ -24,7 +25,7 @@ function Stat({ label, value, sub }: { label: string; value: string | number; su
 
 function Diagnosis({ text }: { text: string }) {
   return (
-    <div className="border-l-2 border-[#E8FF00] pl-4 py-1 mt-4">
+    <div className="bg-[#F5F5F5] px-4 py-3 mt-4">
       <p className="text-sm text-[#6B6B6B] leading-relaxed">{text}</p>
     </div>
   );
@@ -297,8 +298,15 @@ export default function AnalysisPage() {
               </FadeUp>
             </div>
           </section>
+
+          <section className="px-6 py-4 border-t border-[#E5E5E5]">
+            <div className="max-w-[1200px] mx-auto">
+              <a href="https://www.strava.com" target="_blank" rel="noopener noreferrer" className="font-mono text-[10px] text-[#6B6B6B] no-underline hover:text-[#0A0A0A]">Powered by Strava</a>
+            </div>
+          </section>
         </>
       )}
+      <Footer />
     </div>
   );
 }

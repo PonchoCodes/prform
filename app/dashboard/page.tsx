@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
 import { motion, AnimatePresence } from "framer-motion";
 import { FadeUp } from "@/components/FadeUp";
+import { Footer } from "@/components/Footer";
 import { MonoClock } from "@/components/MonoClock";
 import { WindDownTimeline } from "@/components/WindDownTimeline";
 import { Badge } from "@/components/Badge";
@@ -15,9 +16,9 @@ import type { PerformanceReport } from "@/lib/performanceAnalysis";
 const DAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 
 const LOAD_COLORS = {
-  low: "bg-green-500",
-  medium: "bg-yellow-400",
-  high: "bg-red-500",
+  low: "bg-[#E5E5E5]",
+  medium: "bg-[#6B6B6B]",
+  high: "bg-[#0A0A0A]",
 };
 
 function formatDate(date: Date): string {
@@ -252,7 +253,7 @@ function InterventionCard({
                   {Math.round(impactPct * 0.4 * 10) / 10}%.
                 </p>
                 {adjustResult.cappedAt45 && (
-                  <p className="text-xs font-mono text-amber-400 mt-2">
+                  <p className="text-xs font-mono text-[#E8FF00] mt-2">
                     PRform can only adjust up to 45 minutes from the optimal target. Going beyond this would significantly impact your race performance.
                   </p>
                 )}
@@ -393,7 +394,7 @@ function PerformanceSummary({ report }: { report: PerformanceReport }) {
             </div>
           ))}
         </div>
-        <p className="text-xs text-[#6B6B6B] mt-4 border-l-2 border-[#E8FF00] pl-3">{pmc.interpretation}</p>
+        <p className="text-xs text-[#6B6B6B] mt-4 bg-[#F5F5F5] px-3 py-2">{pmc.interpretation}</p>
       </div>
 
       <div className="bg-white p-6">
@@ -434,7 +435,7 @@ function PerformanceSummary({ report }: { report: PerformanceReport }) {
         <p className="text-xs font-bold uppercase tracking-[0.3em] text-[#6B6B6B] mb-2">Aerobic Efficiency</p>
         <div className="flex items-end gap-3 mb-2">
           <p className="font-mono font-black text-4xl leading-none">{decoupling.rollingAvgDecoupling}%</p>
-          <p className={`text-xs font-bold uppercase tracking-wider mb-1 ${decoupling.trend === "improving" ? "text-green-600" : decoupling.trend === "declining" ? "text-red-500" : "text-[#6B6B6B]"}`}>
+          <p className="text-xs font-bold uppercase tracking-wider mb-1 text-[#6B6B6B]">
             {decoupling.trend === "improving" ? "↓ Improving" : decoupling.trend === "declining" ? "↑ Declining" : "→ Stable"}
           </p>
         </div>
@@ -532,7 +533,7 @@ export default function DashboardPage() {
   if (status === "loading" || loading) {
     return (
       <div className="min-h-screen bg-white flex items-center justify-center">
-        <p className="font-mono text-sm uppercase tracking-wider text-[#6B6B6B]">Loading...</p>
+        <p className="font-mono text-sm uppercase tracking-wider text-[#6B6B6B]">Loading…</p>
       </div>
     );
   }
@@ -599,11 +600,12 @@ export default function DashboardPage() {
               <div className="border border-[#E5E5E5] p-10 text-center max-w-lg mx-auto">
                 <h2 className="font-black text-2xl uppercase mb-3">Connect Strava</h2>
                 <p className="text-sm text-[#6B6B6B] mb-6">Sync your runs to unlock performance analysis.</p>
-                <a
-                  href="/api/strava/connect"
-                  className="inline-block bg-[#E8FF00] text-[#0A0A0A] font-black text-xs uppercase tracking-widest px-8 py-3 hover:bg-[#d4e800] transition-colors"
-                >
-                  Connect Strava →
+                <a href="/api/strava/connect">
+                  <img
+                    src="/strava/btn_strava_connect.png"
+                    alt="Connect with Strava"
+                    style={{ height: "48px", width: "auto", cursor: "pointer" }}
+                  />
                 </a>
               </div>
             </FadeUp>
@@ -622,6 +624,11 @@ export default function DashboardPage() {
                 </a>
               </div>
             </FadeUp>
+          )}
+          {stravaStatus?.connected && (
+            <p className="mt-6">
+              <a href="https://www.strava.com" target="_blank" rel="noopener noreferrer" className="font-mono text-[10px] text-[#6B6B6B] no-underline hover:text-[#0A0A0A]">Powered by Strava</a>
+            </p>
           )}
         </div>
       )}
@@ -725,12 +732,12 @@ export default function DashboardPage() {
 
           {/* Conflict banner */}
           {conflicts?.length > 0 && (
-            <div className="bg-amber-50 border-b border-amber-200 px-6 py-3">
+            <div className="bg-[#0A0A0A] border-b border-[#222] px-6 py-3">
               <div className="max-w-[1200px] mx-auto flex items-center justify-between flex-wrap gap-2">
-                <p className="text-xs font-bold uppercase tracking-wider text-amber-800">
+                <p className="text-xs font-bold uppercase tracking-wider text-[#E8FF00]">
                   {conflicts.length} workout conflict{conflicts.length > 1 ? "s" : ""} — Strava and manual entries overlap.
                 </p>
-                <a href="/schedule" className="text-xs font-bold uppercase tracking-wider text-amber-900 underline">
+                <a href="/schedule" className="text-xs font-bold uppercase tracking-wider text-white underline hover:text-[#E8FF00] transition-colors">
                   Resolve in Schedule →
                 </a>
               </div>
@@ -788,7 +795,7 @@ export default function DashboardPage() {
                           </div>
                           {source && source !== "rest" && (
                             <div className="flex items-center gap-1 mt-1">
-                              <div className={`w-1.5 h-1.5 rounded-full ${source === "strava" ? "bg-[#FC4C02]" : source === "manual" ? "bg-blue-400" : "bg-[#6B6B6B]"}`} />
+                              <div className={`w-1.5 h-1.5 ${source === "strava" ? "bg-[#FC4C02]" : source === "manual" ? "bg-[#0A0A0A]" : "bg-[#E5E5E5]"}`} />
                               <span className={`text-[10px] font-mono uppercase ${isToday ? "text-[#6B6B6B]" : "text-[#AAAAAA]"}`}>
                                 {tentative ? (source === "assumed" ? "est. from load" : "tentative") : source}
                               </span>
@@ -844,7 +851,7 @@ export default function DashboardPage() {
                 </div>
                 <p className="text-sm text-[#6B6B6B]">{recoveryLabel}</p>
                 {planAgg < 100 && (
-                  <p className="text-[10px] font-mono text-[#6B6B6B] mt-3 border-l-2 border-[#E5E5E5] pl-2">
+                  <p className="text-[10px] font-mono text-[#6B6B6B] mt-3 pl-3">
                     Plan running at {planAgg}% aggressiveness. Your theoretical maximum recovery score at 100% would be{" "}
                     {Math.min(100, Math.round(recoveryScore * (1 + (100 - planAgg) / 200)))}.
                   </p>
@@ -884,6 +891,7 @@ export default function DashboardPage() {
           </section>
         </>
       )}
+      <Footer />
     </div>
   );
 }

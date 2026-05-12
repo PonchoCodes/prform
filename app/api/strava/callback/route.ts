@@ -48,6 +48,31 @@ export async function GET(req: NextRequest) {
     },
   });
 
+  // Register webhook subscription (best-effort; don't block on failure)
+  const baseUrl = process.env.NEXTAUTH_URL_PRODUCTION ?? process.env.NEXTAUTH_URL ?? "";
+  if (baseUrl && process.env.STRAVA_WEBHOOK_VERIFY_TOKEN) {
+    fetch("https://www.strava.com/api/v3/push_subscriptions", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        client_id: process.env.STRAVA_CLIENT_ID,
+        client_secret: process.env.STRAVA_CLIENT_SECRET,
+        callback_url: `${baseUrl}/api/strava/webhook`,
+        verify_token: process.env.STRAVA_WEBHOOK_VERIFY_TOKEN,
+      }),
+    })
+      .then((r) => r.json())
+      .then((sub) => {
+        if (sub?.id) {
+          return prisma.user.update({
+            where: { id: userId },
+            data: { stravaWebhookSubscriptionId: String(sub.id) },
+          });
+        }
+      })
+      .catch(() => {});
+  }
+
   // Append connected=1 flag to whatever page the caller wanted to return to
   const dest = new URL(returnTo, req.url);
   dest.searchParams.set("connected", "1");

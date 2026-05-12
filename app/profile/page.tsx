@@ -5,6 +5,7 @@ import { useSession } from "next-auth/react";
 import { motion } from "framer-motion";
 import { FadeUp } from "@/components/FadeUp";
 import { Navbar } from "@/components/Navbar";
+import { Footer } from "@/components/Footer";
 import { Button } from "@/components/Button";
 import { formatTime12h } from "@/lib/sleepAlgorithm";
 
@@ -78,7 +79,7 @@ export default function ProfilePage() {
 
   const handleDisconnectStrava = async () => {
     setDisconnecting(true);
-    await fetch("/api/strava/status", { method: "DELETE" });
+    await fetch("/api/strava/disconnect", { method: "DELETE" });
     setStravaStatus((s: any) => ({ ...s, connected: false }));
     setDisconnecting(false);
   };
@@ -87,7 +88,7 @@ export default function ProfilePage() {
     <div className="min-h-screen bg-white">
       <Navbar />
       <div className="flex items-center justify-center h-64">
-        <p className="font-mono text-sm uppercase tracking-wider text-[#6B6B6B]">Loading...</p>
+        <p className="font-mono text-sm uppercase tracking-wider text-[#6B6B6B]">Loading…</p>
       </div>
     </div>
   );
@@ -369,14 +370,18 @@ export default function ProfilePage() {
                       </button>
                     </>
                   ) : (
-                    <a href="/api/strava/connect" className="inline-block bg-[#E8FF00] text-[#0A0A0A] font-black text-xs uppercase tracking-widest px-6 py-2 hover:bg-[#d4e800] transition-colors">
-                      Connect Strava →
+                    <a href="/api/strava/connect">
+                      <img
+                        src="/strava/btn_strava_connect.png"
+                        alt="Connect with Strava"
+                        style={{ height: "48px", width: "auto", cursor: "pointer" }}
+                      />
                     </a>
                   )}
                 </div>
               </div>
               {!stravaStatus?.connected && (
-                <p className="mt-4 text-xs text-[#6B6B6B] font-mono border-l-2 border-[#E8FF00] pl-3">
+                <p className="mt-4 text-xs text-[#6B6B6B] font-mono bg-[#F5F5F5] px-3 py-2">
                   Without Strava, PRform uses your weekly template + manually logged workouts. Connect Strava to unlock automatic activity sync and performance analysis.
                 </p>
               )}
@@ -412,6 +417,7 @@ export default function ProfilePage() {
           </Button>
         </div>
       </motion.div>
+      <Footer />
     </div>
   );
 }
