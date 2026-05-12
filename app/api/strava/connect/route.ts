@@ -11,7 +11,9 @@ export async function GET(req: NextRequest) {
 
   const userId = (session.user as any).id as string;
   const clientId = process.env.STRAVA_CLIENT_ID;
-  const appUrl = process.env.NEXTAUTH_URL_PRODUCTION ?? process.env.NEXTAUTH_URL;
+  // Use the live request origin so Strava redirects back to the current
+  // deployment, not whichever URL happens to be pinned in env vars.
+  const appUrl = new URL(req.url).origin;
   const redirectUri = process.env.STRAVA_REDIRECT_URI ?? `${appUrl}/api/strava/callback`;
 
   // Allow callers to pass a returnTo path (e.g. /onboarding?step=4) so the

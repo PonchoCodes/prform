@@ -82,8 +82,10 @@ export async function GET(req: NextRequest) {
       },
     });
 
-    // Register webhook subscription (best-effort; don't block on failure)
-    const baseUrl = process.env.NEXTAUTH_URL_PRODUCTION ?? process.env.NEXTAUTH_URL ?? "";
+    // Register webhook subscription (best-effort; don't block on failure).
+    // Origin from the live request — Strava will call our webhook back at the
+    // same deployment that handled this callback.
+    const baseUrl = new URL(req.url).origin;
     if (baseUrl && process.env.STRAVA_WEBHOOK_VERIFY_TOKEN) {
       fetch("https://www.strava.com/api/v3/push_subscriptions", {
         method: "POST",
