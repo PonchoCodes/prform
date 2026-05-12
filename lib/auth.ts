@@ -55,6 +55,7 @@ export const authOptions: NextAuthOptions = {
   },
   session: { strategy: "jwt" },
   pages: { signIn: "/login" },
+  // CRITICAL: must be explicit in prod, env var detection is unreliable in Next.js 14 App Router
   secret: process.env.NEXTAUTH_SECRET,
   // Allow auth to work on any Vercel preview/production URL
   cookies: {
