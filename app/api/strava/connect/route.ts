@@ -9,7 +9,8 @@ export async function GET(req: NextRequest) {
   }
 
   const clientId = process.env.STRAVA_CLIENT_ID;
-  const redirectUri = process.env.STRAVA_REDIRECT_URI ?? `${process.env.NEXTAUTH_URL}/api/strava/callback`;
+  const appUrl = process.env.NEXTAUTH_URL_PRODUCTION ?? process.env.NEXTAUTH_URL;
+  const redirectUri = process.env.STRAVA_REDIRECT_URI ?? `${appUrl}/api/strava/callback`;
 
   // Allow callers to pass a returnTo path (e.g. /onboarding?step=4) so the
   // callback can redirect back to the right place after OAuth completes.
