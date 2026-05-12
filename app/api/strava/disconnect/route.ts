@@ -18,7 +18,8 @@ export async function DELETE() {
   if (user?.stravaAccessToken) {
     await fetch("https://www.strava.com/oauth/deauthorize", {
       method: "POST",
-      headers: { Authorization: `Bearer ${user.stravaAccessToken}` },
+      headers: { "Content-Type": "application/x-www-form-urlencoded" },
+      body: `access_token=${user.stravaAccessToken}`,
     }).catch(() => {});
   }
 
