@@ -82,7 +82,14 @@ export default function OnboardingPage() {
     { name: "", date: "", distances: "", priority: "A", raceTime: "" },
   ]);
 
+  const [unitPreference, setUnitPreference] = useState<"imperial" | "metric">("imperial");
   const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    if (typeof navigator !== "undefined") {
+      setUnitPreference(navigator.language.startsWith("en-US") ? "imperial" : "metric");
+    }
+  }, []);
 
   // On mount: check if returning from Strava OAuth (connected=1 in URL) and
   // advance to step 4. Also poll Strava connection status when on step 3.
@@ -142,6 +149,7 @@ export default function OnboardingPage() {
       restedFeeling,
       weekTemplate,
       meets: meets.filter((m) => m.name && m.date),
+      unitPreference,
     };
 
     await fetch("/api/user/onboarding", {

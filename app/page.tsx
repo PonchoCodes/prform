@@ -39,14 +39,14 @@ const features = [
 
 export default function LandingPage() {
   return (
-    <div className="min-h-screen bg-white">
-      <nav className="border-b border-[#E5E5E5] bg-white sticky top-0 z-50">
+    <div className="min-h-screen bg-white dark:bg-[#1a1a1a]">
+      <nav className="border-b border-[#E5E5E5] dark:border-[#333] bg-white dark:bg-[#1a1a1a] sticky top-0 z-50">
         <div className="max-w-[1200px] mx-auto px-6 h-14 flex items-center justify-between">
           <span className="font-black text-xl uppercase tracking-tight">
             PR<span className="text-[#E8FF00] bg-[#0A0A0A] px-1">form</span>
           </span>
           <div className="flex items-center gap-4">
-            <Link href="/login" className="link-wipe text-sm font-bold uppercase tracking-wider text-[#6B6B6B] hover:text-[#0A0A0A]">
+            <Link href="/login" className="link-wipe text-sm font-bold uppercase tracking-wider text-[#6B6B6B] dark:text-[#A0A0A0] hover:text-[#0A0A0A] dark:hover:text-[#F5F5F5]">
               Log In
             </Link>
             <Link
@@ -99,21 +99,21 @@ export default function LandingPage() {
 
       <Ticker items={meets} />
 
-      <section className="py-24 px-6">
+      <section className="py-24 px-6 dark:bg-[#1a1a1a]">
         <div className="max-w-[1200px] mx-auto">
           <FadeUp>
-            <p className="text-xs font-bold uppercase tracking-[0.3em] text-[#6B6B6B] mb-3">How It Works</p>
-            <h2 className="font-black text-4xl md:text-5xl uppercase mb-16">Built on Sleep Science</h2>
+            <p className="text-xs font-bold uppercase tracking-[0.3em] text-[#6B6B6B] dark:text-[#A0A0A0] mb-3">How It Works</p>
+            <h2 className="font-black text-4xl md:text-5xl uppercase mb-16 dark:text-[#F5F5F5]">Built on Sleep Science</h2>
           </FadeUp>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-px bg-[#E5E5E5]">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-px bg-[#E5E5E5] dark:bg-[#333]">
             {features.map((f, i) => (
               <FadeUp key={f.tag} delay={i * 80}>
-                <div className="bg-white p-8 h-full border border-[#E5E5E5] group hover:border-[#0A0A0A] transition-colors">
+                <div className="bg-white dark:bg-[#242424] p-8 h-full border border-[#E5E5E5] dark:border-[#333] group hover:border-[#0A0A0A] dark:hover:border-[#F5F5F5] transition-colors">
                   <p className="text-xs font-bold uppercase tracking-widest text-[#E8FF00] bg-[#0A0A0A] inline-block px-2 py-0.5 mb-6">
                     {f.tag}
                   </p>
-                  <h3 className="font-black text-xl uppercase mb-4">{f.title}</h3>
-                  <p className="text-[#6B6B6B] text-sm leading-relaxed">{f.body}</p>
+                  <h3 className="font-black text-xl uppercase mb-4 dark:text-[#F5F5F5]">{f.title}</h3>
+                  <p className="text-[#6B6B6B] dark:text-[#A0A0A0] text-sm leading-relaxed">{f.body}</p>
                 </div>
               </FadeUp>
             ))}
@@ -135,14 +135,14 @@ export default function LandingPage() {
         </div>
       </section>
 
-      <footer className="border-t border-[#E5E5E5] py-8 px-6">
+      <footer className="border-t border-[#E5E5E5] dark:border-[#333] py-8 px-6 dark:bg-[#1a1a1a]">
         <div className="max-w-[1200px] mx-auto flex items-center justify-between">
-          <span className="font-black text-sm uppercase tracking-tight">
+          <span className="font-black text-sm uppercase tracking-tight dark:text-[#F5F5F5]">
             PR<span className="text-[#E8FF00] bg-[#0A0A0A] px-1">form</span>
           </span>
           <div className="flex items-center gap-6">
-            <p className="text-xs text-[#6B6B6B] uppercase tracking-wider">Sleep Sharp. Race Faster.</p>
-            <a href="/privacy" className="font-mono text-[10px] text-[#6B6B6B] no-underline hover:text-[#0A0A0A]">Privacy Policy</a>
+            <p className="text-xs text-[#6B6B6B] dark:text-[#A0A0A0] uppercase tracking-wider">Sleep Sharp. Race Faster.</p>
+            <a href="/privacy" className="font-mono text-[10px] text-[#6B6B6B] dark:text-[#A0A0A0] no-underline hover:text-[#0A0A0A] dark:hover:text-[#F5F5F5]">Privacy Policy</a>
           </div>
         </div>
       </footer>

@@ -249,6 +249,10 @@ export interface PaceTable {
   intervalPaceMinKm: string;
   repPaceMinKm: string;
   thresholdPaceMs: number;
+  easyPaceMs: number;
+  marathonPaceMs: number;
+  intervalPaceMs: number;
+  repPaceMs: number;
 }
 
 export type PaceCompliance = "ON_TARGET" | "TOO_FAST" | "TOO_SLOW";
@@ -258,6 +262,7 @@ export interface RunAnalysis {
   name: string;
   date: string;
   averagePaceMinKm: string;
+  averageSpeed: number;
   compliance: PaceCompliance;
   intendedType: string;
 }
@@ -304,6 +309,10 @@ function getPacesFromVDOT(vdot: number): PaceTable {
     intervalPaceMinKm: msToMinKm(intervalPaceMs),
     repPaceMinKm: msToMinKm(repPaceMs),
     thresholdPaceMs,
+    easyPaceMs,
+    marathonPaceMs,
+    intervalPaceMs,
+    repPaceMs,
   };
 }
 
@@ -396,6 +405,7 @@ export function calculateVDOT(
       name: act.name,
       date: new Date(act.startDate).toISOString().slice(0, 10),
       averagePaceMinKm: msToMinKm(act.averageSpeed),
+      averageSpeed: act.averageSpeed,
       compliance,
       intendedType,
     });
@@ -516,6 +526,7 @@ export interface ScatterPoint {
   date: string;
   activityName: string;
   paceMinKm: string;
+  averageSpeed: number;   // m/s, for unit-aware display
   targetBedtime: string;  // HH:MM of PRform recommended bedtime for that day
   confirmed: boolean;     // true = derived from an actual SleepLog record
 }
@@ -630,6 +641,7 @@ export function calculateSleepPerformanceCorrelation(
       date: new Date(act.startDate).toISOString().slice(0, 10),
       activityName: act.name,
       paceMinKm: speedToMinKm(act.averageSpeed),
+      averageSpeed: act.averageSpeed,
       targetBedtime: minutesToTimeStr(realRecMin),
       confirmed: true,
     });

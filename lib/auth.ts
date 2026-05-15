@@ -2,6 +2,7 @@ import { NextAuthOptions } from "next-auth";
 import CredentialsProvider from "next-auth/providers/credentials";
 import { prisma } from "@/lib/prisma";
 import bcrypt from "bcryptjs";
+import type { UnitPreference } from "@/lib/unitUtils";
 
 export const authOptions: NextAuthOptions = {
   providers: [
@@ -42,6 +43,11 @@ export const authOptions: NextAuthOptions = {
       if (user) {
         token.id = user.id;
         token.onboardingDone = (user as any).onboardingDone;
+        const dbUser = await prisma.user.findUnique({
+          where: { id: user.id },
+          select: { unitPreference: true },
+        });
+        token.unitPreference = (dbUser?.unitPreference ?? "imperial") as UnitPreference;
       }
       return token;
     },
@@ -49,6 +55,7 @@ export const authOptions: NextAuthOptions = {
       if (token && session.user) {
         (session.user as any).id = token.id as string;
         (session.user as any).onboardingDone = token.onboardingDone as boolean;
+        (session.user as any).unitPreference = (token.unitPreference ?? "imperial") as UnitPreference;
       }
       return session;
     },

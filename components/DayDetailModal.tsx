@@ -4,7 +4,8 @@ import { motion } from "framer-motion";
 import { AnimatePresence } from "framer-motion";
 import type { DailySleepPlan } from "@/lib/sleepAlgorithm";
 import { formatTime12h } from "@/lib/sleepAlgorithm";
-import { mpsToMinPerMile } from "@/lib/paceUtils";
+import { formatPace, formatDistance } from "@/lib/unitUtils";
+import type { UnitPreference } from "@/lib/unitUtils";
 
 interface ActivityInfo {
   name: string;
@@ -17,6 +18,7 @@ interface ActivityInfo {
 interface DayDetailModalProps {
   day: DailySleepPlan;
   activity?: ActivityInfo;
+  unit?: UnitPreference;
   onClose: () => void;
 }
 
@@ -35,7 +37,7 @@ const LOAD_DOT: Record<string, string> = {
 const DAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 
-export function DayDetailModal({ day, activity, onClose }: DayDetailModalProps) {
+export function DayDetailModal({ day, activity, unit = "imperial", onClose }: DayDetailModalProps) {
   useEffect(() => {
     const handler = (e: KeyboardEvent) => { if (e.key === "Escape") onClose(); };
     document.addEventListener("keydown", handler);
@@ -138,8 +140,8 @@ export function DayDetailModal({ day, activity, onClose }: DayDetailModalProps) 
               <div>
                 <p className="font-bold text-sm mb-1 truncate">{activity.name}</p>
                 <div className="flex gap-4 text-xs font-mono text-[#6B6B6B] dark:text-[#A0A0A0]">
-                  <span>{(activity.distance / 1000).toFixed(2)} km</span>
-                  <span>{mpsToMinPerMile(activity.averageSpeed)}</span>
+                  <span>{formatDistance(activity.distance, unit)}</span>
+                  <span>{formatPace(activity.averageSpeed, unit)}</span>
                   {activity.averageHeartrate && <span>{Math.round(activity.averageHeartrate)} bpm</span>}
                 </div>
               </div>

@@ -10,7 +10,7 @@ export async function POST(req: Request) {
 
   const userId = (session.user as any).id;
   const body = await req.json();
-  const { age, biologicalSex, weeklyMileage, experienceLevel, currentWakeTime, currentBedTime, restedFeeling, weekTemplate, meets, sport } = body;
+  const { age, biologicalSex, weeklyMileage, experienceLevel, currentWakeTime, currentBedTime, restedFeeling, weekTemplate, meets, sport, unitPreference } = body;
 
   await prisma.user.update({
     where: { id: userId },
@@ -25,6 +25,7 @@ export async function POST(req: Request) {
       onboardingDone: true,
       sport,
       planAggressiveness: aggressivenessForExperienceLevel(experienceLevel ?? ""),
+      ...(unitPreference === "imperial" || unitPreference === "metric" ? { unitPreference } : {}),
     },
   });
 

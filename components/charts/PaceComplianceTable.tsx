@@ -1,8 +1,11 @@
 "use client";
 import type { RunAnalysis } from "@/lib/performanceAnalysis";
+import { formatPace } from "@/lib/unitUtils";
+import type { UnitPreference } from "@/lib/unitUtils";
 
 interface Props {
   runs: RunAnalysis[];
+  unit?: UnitPreference;
 }
 
 const BADGE: Record<string, { label: string; className: string }> = {
@@ -11,7 +14,7 @@ const BADGE: Record<string, { label: string; className: string }> = {
   TOO_SLOW: { label: "TOO SLOW", className: "bg-[#E5E5E5] text-[#6B6B6B]" },
 };
 
-export function PaceComplianceTable({ runs }: Props) {
+export function PaceComplianceTable({ runs, unit = "imperial" }: Props) {
   if (runs.length === 0) {
     return <p className="text-xs font-mono text-[#6B6B6B]">No recent runs to display.</p>;
   }
@@ -36,7 +39,7 @@ export function PaceComplianceTable({ runs }: Props) {
                 <td className="py-2 pr-4 text-[#6B6B6B] dark:text-[#A0A0A0]">{run.date}</td>
                 <td className="py-2 pr-4 max-w-[160px] truncate">{run.name}</td>
                 <td className="py-2 pr-4 text-[#6B6B6B] dark:text-[#A0A0A0] capitalize">{run.intendedType}</td>
-                <td className="py-2 pr-4 font-bold">{run.averagePaceMinKm}</td>
+                <td className="py-2 pr-4 font-bold">{formatPace(run.averageSpeed, unit)}</td>
                 <td className="py-2">
                   <span className={`px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider ${badge.className}`}>
                     {badge.label}

@@ -6,6 +6,8 @@ import { Navbar } from "@/components/Navbar";
 import { Footer } from "@/components/Footer";
 import { FadeUp } from "@/components/FadeUp";
 import { formatTime12h } from "@/lib/sleepAlgorithm";
+import { formatPace, formatDistance } from "@/lib/unitUtils";
+import type { UnitPreference } from "@/lib/unitUtils";
 
 type Filter = "month" | "3months" | "all";
 
@@ -31,7 +33,8 @@ function getDateRange(filter: Filter): { startDate?: string; endDate?: string } 
 }
 
 export default function HistoryPage() {
-  const { status } = useSession();
+  const { data: session, status } = useSession();
+  const unit = ((session?.user as any)?.unitPreference ?? "imperial") as UnitPreference;
   const router = useRouter();
   const [filter, setFilter] = useState<Filter>("all");
   const [rows, setRows] = useState<any[]>([]);
@@ -143,7 +146,7 @@ export default function HistoryPage() {
                       {row.activity ? (
                         <span>
                           <span className="font-bold text-[#0A0A0A] dark:text-[#F5F5F5]">{row.activity.name}</span>
-                          <span className="text-[#6B6B6B] dark:text-[#A0A0A0] ml-2">{(row.activity.distance / 1000).toFixed(1)} km · {row.activity.pace}</span>
+                          <span className="text-[#6B6B6B] dark:text-[#A0A0A0] ml-2">{formatDistance(row.activity.distance, unit)} · {formatPace(row.activity.averageSpeed, unit)}</span>
                         </span>
                       ) : (
                         <span className="text-[#AAAAAA]">—</span>

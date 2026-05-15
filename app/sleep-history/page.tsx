@@ -45,7 +45,7 @@ interface RowState {
 
 function DeviationBadge({ log }: { log: SleepLog }) {
   if (log.hitTarget === true) {
-    return <span className="text-xs font-mono text-[#6B6B6B]">On time</span>;
+    return <span className="text-xs font-mono text-[#6B6B6B] dark:text-[#A0A0A0]">On time</span>;
   }
   if (log.actualBedtime && log.recommendedBedtime) {
     const actual = parseTimeMin(log.actualBedtime);
@@ -55,20 +55,20 @@ function DeviationBadge({ log }: { log: SleepLog }) {
     if (dev < -720) dev += 1440;
     const abs = Math.abs(dev);
     const sign = dev > 0 ? "+" : "-";
-    if (abs < 1) return <span className="text-xs font-mono text-[#6B6B6B]">On time</span>;
+    if (abs < 1) return <span className="text-xs font-mono text-[#6B6B6B] dark:text-[#A0A0A0]">On time</span>;
     return (
-      <span className={`text-xs font-mono font-bold ${dev > 0 ? "text-[#0A0A0A]" : "text-[#6B6B6B]"}`}>
+      <span className={`text-xs font-mono font-bold ${dev > 0 ? "text-[#0A0A0A] dark:text-[#F5F5F5]" : "text-[#6B6B6B] dark:text-[#A0A0A0]"}`}>
         {sign}{abs} min
       </span>
     );
   }
-  return <span className="text-xs font-mono text-[#6B6B6B]">—</span>;
+  return <span className="text-xs font-mono text-[#6B6B6B] dark:text-[#A0A0A0]">—</span>;
 }
 
 function StatusBadge({ log }: { log: SleepLog | null }) {
   if (!log || log.hitTarget === null || log.hitTarget === undefined) {
     return (
-      <span className="text-[10px] font-bold uppercase tracking-wider bg-[#F5F5F5] text-[#6B6B6B] px-2 py-0.5">
+      <span className="text-[10px] font-bold uppercase tracking-wider bg-[#F5F5F5] dark:bg-[#2a2a2a] text-[#6B6B6B] dark:text-[#A0A0A0] px-2 py-0.5">
         Unlogged
       </span>
     );
@@ -81,7 +81,7 @@ function StatusBadge({ log }: { log: SleepLog | null }) {
     );
   }
   return (
-    <span className="text-[10px] font-bold uppercase tracking-wider border border-[#0A0A0A] text-[#0A0A0A] px-2 py-0.5">
+    <span className="text-[10px] font-bold uppercase tracking-wider border border-[#0A0A0A] dark:border-[#F5F5F5] text-[#0A0A0A] dark:text-[#F5F5F5] px-2 py-0.5">
       Missed
     </span>
   );
@@ -190,14 +190,14 @@ export default function SleepHistoryPage() {
 
   if (status === "loading" || loading) {
     return (
-      <div className="min-h-screen bg-white flex items-center justify-center">
+      <div className="min-h-screen bg-white dark:bg-[#1a1a1a] flex items-center justify-center">
         <p className="font-mono text-sm uppercase tracking-wider text-[#6B6B6B]">Loading…</p>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-white">
+    <div className="min-h-screen bg-white dark:bg-[#1a1a1a]">
       <Navbar />
 
       {/* Header */}
@@ -227,12 +227,12 @@ export default function SleepHistoryPage() {
       {/* History table */}
       <div className="max-w-[1200px] mx-auto px-6 py-10">
         <FadeUp>
-          <div className="border border-[#E5E5E5]">
+          <div className="border border-[#E5E5E5] dark:border-[#333333]">
             {/* Header row */}
-            <div className="grid grid-cols-5 gap-px bg-[#E5E5E5] border-b border-[#E5E5E5]">
+            <div className="grid grid-cols-5 gap-px bg-[#E5E5E5] dark:bg-[#333333] border-b border-[#E5E5E5] dark:border-[#333333]">
               {["Date", "Target", "Actual", "Deviation", "Status"].map((h) => (
-                <div key={h} className="bg-white px-4 py-2">
-                  <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-[#6B6B6B]">{h}</p>
+                <div key={h} className="bg-white dark:bg-[#242424] px-4 py-2">
+                  <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-[#6B6B6B] dark:text-[#A0A0A0]">{h}</p>
                 </div>
               ))}
             </div>
@@ -245,34 +245,34 @@ export default function SleepHistoryPage() {
               const targetBedtime = log?.recommendedBedtime ?? userBedtime;
 
               return (
-                <div key={dateStr} className={`border-b border-[#E5E5E5] last:border-0 ${isToday ? "bg-[#FAFAFA]" : ""}`}>
+                <div key={dateStr} className={`border-b border-[#E5E5E5] dark:border-[#333333] last:border-0 ${isToday ? "bg-[#FAFAFA] dark:bg-[#2a2a2a]" : ""}`}>
                   {/* Main row */}
-                  <div className="grid grid-cols-5 gap-px bg-[#E5E5E5]">
-                    <div className="bg-white px-4 py-3 flex items-center">
-                      <p className="text-xs font-mono font-bold">
+                  <div className="grid grid-cols-5 gap-px bg-[#E5E5E5] dark:bg-[#333333]">
+                    <div className="bg-white dark:bg-[#242424] px-4 py-3 flex items-center">
+                      <p className="text-xs font-mono font-bold dark:text-[#F5F5F5]">
                         {formatDateLabel(dateStr)}
                         {isToday && <span className="ml-2 text-[#E8FF00] bg-[#0A0A0A] px-1 text-[9px] uppercase tracking-wider">Today</span>}
                       </p>
                     </div>
-                    <div className="bg-white px-4 py-3 flex items-center">
-                      <p className="text-xs font-mono">{formatTime12h(targetBedtime)}</p>
+                    <div className="bg-white dark:bg-[#242424] px-4 py-3 flex items-center">
+                      <p className="text-xs font-mono dark:text-[#F5F5F5]">{formatTime12h(targetBedtime)}</p>
                     </div>
-                    <div className="bg-white px-4 py-3 flex items-center">
+                    <div className="bg-white dark:bg-[#242424] px-4 py-3 flex items-center">
                       {log?.actualBedtime ? (
-                        <p className="text-xs font-mono">{formatTime12h(log.actualBedtime)}</p>
+                        <p className="text-xs font-mono dark:text-[#F5F5F5]">{formatTime12h(log.actualBedtime)}</p>
                       ) : (
-                        <p className="text-xs font-mono text-[#6B6B6B]">—</p>
+                        <p className="text-xs font-mono text-[#6B6B6B] dark:text-[#A0A0A0]">—</p>
                       )}
                     </div>
-                    <div className="bg-white px-4 py-3 flex items-center">
-                      {log ? <DeviationBadge log={log} /> : <span className="text-xs font-mono text-[#6B6B6B]">—</span>}
+                    <div className="bg-white dark:bg-[#242424] px-4 py-3 flex items-center">
+                      {log ? <DeviationBadge log={log} /> : <span className="text-xs font-mono text-[#6B6B6B] dark:text-[#A0A0A0]">—</span>}
                     </div>
-                    <div className="bg-white px-4 py-3 flex items-center justify-between">
+                    <div className="bg-white dark:bg-[#242424] px-4 py-3 flex items-center justify-between">
                       <StatusBadge log={log} />
                       {!isToday && (
                         <button
                           onClick={() => setRowState(dateStr, { mode: row.mode === "view" ? (log ? "edit" : "log") : "view" })}
-                          className="text-[10px] font-bold uppercase tracking-wider border border-[#E5E5E5] px-2 py-0.5 text-[#6B6B6B] hover:border-[#0A0A0A] hover:text-[#0A0A0A] transition-colors ml-2"
+                          className="text-[10px] font-bold uppercase tracking-wider border border-[#E5E5E5] dark:border-[#444444] px-2 py-0.5 text-[#6B6B6B] dark:text-[#A0A0A0] hover:border-[#0A0A0A] hover:text-[#0A0A0A] dark:hover:border-[#F5F5F5] dark:hover:text-[#F5F5F5] transition-colors ml-2"
                         >
                           {log ? "Edit" : "Log"} →
                         </button>
@@ -282,8 +282,8 @@ export default function SleepHistoryPage() {
 
                   {/* Expanded log/edit UI */}
                   {isExpanded && (
-                    <div className="px-6 py-4 bg-[#FAFAFA] border-t border-[#E5E5E5]">
-                      <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-[#6B6B6B] mb-3">
+                    <div className="px-6 py-4 bg-[#FAFAFA] dark:bg-[#2a2a2a] border-t border-[#E5E5E5] dark:border-[#333333]">
+                      <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-[#6B6B6B] dark:text-[#A0A0A0] mb-3">
                         {log ? "Edit Log" : "Log Last Night"}
                       </p>
                       <div className="flex gap-px mb-3">
@@ -298,8 +298,8 @@ export default function SleepHistoryPage() {
                           onClick={() => setRowState(dateStr, { hitTarget: false })}
                           className={`flex-1 py-2 border font-black text-xs uppercase tracking-widest transition-colors ${
                             row.hitTarget === false
-                              ? "border-[#0A0A0A] bg-white text-[#0A0A0A]"
-                              : "border-[#E5E5E5] text-[#6B6B6B] hover:border-[#0A0A0A]"
+                              ? "border-[#0A0A0A] dark:border-[#F5F5F5] bg-white dark:bg-[#333333] text-[#0A0A0A] dark:text-[#F5F5F5]"
+                              : "border-[#E5E5E5] dark:border-[#444444] text-[#6B6B6B] dark:text-[#A0A0A0] hover:border-[#0A0A0A] dark:hover:border-[#F5F5F5]"
                           }`}
                         >
                           Missed
@@ -310,21 +310,21 @@ export default function SleepHistoryPage() {
                         <div className="space-y-2 mb-3">
                           <div className="grid grid-cols-2 gap-3">
                             <div>
-                              <label className="block text-[10px] font-bold uppercase tracking-wider text-[#6B6B6B] mb-1">Went to bed at:</label>
+                              <label className="block text-[10px] font-bold uppercase tracking-wider text-[#6B6B6B] dark:text-[#A0A0A0] mb-1">Went to bed at:</label>
                               <input
                                 type="time"
                                 value={row.actualBedtime}
                                 onChange={(e) => setRowState(dateStr, { actualBedtime: e.target.value })}
-                                className="w-full border border-[#E5E5E5] px-3 py-2 text-sm font-mono focus:outline-none focus:border-[#0A0A0A]"
+                                className="w-full border border-[#E5E5E5] dark:border-[#444444] dark:bg-[#333333] dark:text-[#F5F5F5] px-3 py-2 text-sm font-mono focus:outline-none focus:border-[#0A0A0A] dark:focus:border-[#F5F5F5]"
                               />
                             </div>
                             <div>
-                              <label className="block text-[10px] font-bold uppercase tracking-wider text-[#6B6B6B] mb-1">Woke up at: <span className="text-[#AAAAAA]">(optional)</span></label>
+                              <label className="block text-[10px] font-bold uppercase tracking-wider text-[#6B6B6B] dark:text-[#A0A0A0] mb-1">Woke up at: <span className="text-[#AAAAAA]">(optional)</span></label>
                               <input
                                 type="time"
                                 value={row.actualWakeTime}
                                 onChange={(e) => setRowState(dateStr, { actualWakeTime: e.target.value })}
-                                className="w-full border border-[#E5E5E5] px-3 py-2 text-sm font-mono focus:outline-none focus:border-[#0A0A0A]"
+                                className="w-full border border-[#E5E5E5] dark:border-[#444444] dark:bg-[#333333] dark:text-[#F5F5F5] px-3 py-2 text-sm font-mono focus:outline-none focus:border-[#0A0A0A] dark:focus:border-[#F5F5F5]"
                               />
                             </div>
                           </div>
@@ -340,7 +340,7 @@ export default function SleepHistoryPage() {
 
                       <button
                         onClick={() => setRowState(dateStr, { mode: "view", hitTarget: null })}
-                        className="text-[10px] font-mono text-[#6B6B6B] hover:text-[#0A0A0A]"
+                        className="text-[10px] font-mono text-[#6B6B6B] dark:text-[#A0A0A0] hover:text-[#0A0A0A] dark:hover:text-[#F5F5F5]"
                       >
                         Cancel
                       </button>

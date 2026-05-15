@@ -386,6 +386,45 @@ export default function ProfilePage() {
           </FadeUp>
         </div>
 
+        {/* Units */}
+        <div className="max-w-[1200px] mx-auto px-6 pb-10">
+          <FadeUp delay={170}>
+            <h2 className="font-black text-xl uppercase mb-6 border-b border-[#E5E5E5] dark:border-[#333] pb-3">Units</h2>
+            <div className="flex gap-px mb-4">
+              {[
+                { value: "imperial", label: "Imperial" },
+                { value: "metric", label: "Metric" },
+              ].map((u) => (
+                <button
+                  key={u.value}
+                  onClick={async () => {
+                    const updated = { ...profile, unitPreference: u.value };
+                    setProfile(updated);
+                    await fetch("/api/user/profile", {
+                      method: "PUT",
+                      headers: { "Content-Type": "application/json" },
+                      body: JSON.stringify(updated),
+                    });
+                  }}
+                  className={`flex-1 py-3 text-xs font-bold uppercase tracking-wider border transition-colors ${
+                    (profile.unitPreference ?? "imperial") === u.value
+                      ? "bg-[#0A0A0A] text-white border-[#0A0A0A]"
+                      : "border-[#E5E5E5] dark:border-[#444] hover:border-[#0A0A0A] dark:hover:border-[#F5F5F5]"
+                  }`}
+                >
+                  {u.label}
+                </button>
+              ))}
+            </div>
+            <p className="text-xs font-mono text-[#6B6B6B] dark:text-[#A0A0A0]">
+              Pace displayed as:{" "}
+              <span className="text-[#0A0A0A] dark:text-[#F5F5F5] font-bold">
+                {(profile.unitPreference ?? "imperial") === "imperial" ? "6:30 /mi" : "4:02 /km"}
+              </span>
+            </p>
+          </FadeUp>
+        </div>
+
         {/* Sleep history link */}
         <div className="max-w-[1200px] mx-auto px-6 pb-10">
           <FadeUp delay={180}>

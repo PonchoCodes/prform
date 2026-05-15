@@ -15,7 +15,7 @@ export async function GET() {
       weeklyMileage: true, experienceLevel: true, currentWakeTime: true,
       currentBedTime: true, restedFeeling: true, notifPhase1: true,
       notifPhase2: true, notifPhase3: true, notifPhase4: true, sport: true,
-      planAggressiveness: true, bedtimeAdjustmentMinutes: true,
+      planAggressiveness: true, bedtimeAdjustmentMinutes: true, unitPreference: true,
     },
   });
   return NextResponse.json(user);
@@ -49,6 +49,9 @@ export async function PUT(req: Request) {
   }
   if (body.bedtimeAdjustmentMinutes !== undefined) {
     data.bedtimeAdjustmentMinutes = Math.min(45, Math.max(-45, body.bedtimeAdjustmentMinutes));
+  }
+  if (body.unitPreference === "imperial" || body.unitPreference === "metric") {
+    data.unitPreference = body.unitPreference;
   }
 
   await prisma.user.update({ where: { id: userId }, data });

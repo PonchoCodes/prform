@@ -11,13 +11,16 @@ import {
 } from "recharts";
 import type { ScatterPoint } from "@/lib/performanceAnalysis";
 import { useDarkMode } from "@/hooks/useDarkMode";
+import { formatPace } from "@/lib/unitUtils";
+import type { UnitPreference } from "@/lib/unitUtils";
 
 interface Props {
   data: ScatterPoint[];
   correlation: number;
+  unit?: UnitPreference;
 }
 
-const CustomTooltip = ({ active, payload }: any) => {
+const CustomTooltip = ({ active, payload, unit }: any) => {
   if (!active || !payload?.length) return null;
   const d = payload[0]?.payload as ScatterPoint;
   const sign = d.deviationMin >= 0 ? "+" : "";
@@ -25,7 +28,7 @@ const CustomTooltip = ({ active, payload }: any) => {
     <div className="bg-[#0A0A0A] border border-[#333] p-3 text-xs font-mono min-w-[180px]">
       <p className="text-[#6B6B6B] mb-1">{d.date}</p>
       <p className="text-white truncate max-w-[200px]">{d.activityName}</p>
-      <p className="text-[#E8FF00] mt-1">Pace: {d.paceMinKm}</p>
+      <p className="text-[#E8FF00] mt-1">Pace: {formatPace(d.averageSpeed, unit ?? "imperial")}</p>
       <p className="text-white">Score: {d.paceScore > 0 ? "+" : ""}{d.paceScore}</p>
       <p className="text-[#6B6B6B] mt-1">Deviation: {sign}{d.deviationMin} min</p>
       <p className="text-[#6B6B6B]">PRform target: {d.targetBedtime}</p>
@@ -50,7 +53,7 @@ function regressionLine(data: ScatterPoint[]): { x: number; y: number }[] {
   ];
 }
 
-export function SleepPaceScatterChart({ data, correlation }: Props) {
+export function SleepPaceScatterChart({ data, correlation, unit = "imperial" }: Props) {
   const isDark = useDarkMode();
   const axisColor = isDark ? "#A0A0A0" : "#6B6B6B";
   const gridColor = isDark ? "#333" : "#333";
@@ -118,7 +121,7 @@ export function SleepPaceScatterChart({ data, correlation }: Props) {
                 fontFamily: "var(--font-geist-mono)",
               }}
             />
-            <Tooltip content={<CustomTooltip />} cursor={{ stroke: "#333" }} />
+            <Tooltip content={<CustomTooltip unit={unit} />} cursor={{ stroke: "#333" }} />
             <ReferenceLine y={0} stroke="#333" />
             <ReferenceLine x={0} stroke="#444" strokeDasharray="4 4" />
 

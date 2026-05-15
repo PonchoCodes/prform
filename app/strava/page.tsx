@@ -10,18 +10,12 @@ function formatDate(d: string | Date) {
   return new Date(d).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
 }
 
-import { mpsToMinPerMile } from "@/lib/paceUtils";
-
-function formatPace(speedMs: number): string {
-  return mpsToMinPerMile(speedMs);
-}
-
-function formatDist(m: number): string {
-  return (m / 1000).toFixed(2) + " km";
-}
+import { formatPace, formatDistance } from "@/lib/unitUtils";
+import type { UnitPreference } from "@/lib/unitUtils";
 
 export default function StravaPage() {
   const { data: session, status } = useSession();
+  const unit = ((session?.user as any)?.unitPreference ?? "imperial") as UnitPreference;
   const router = useRouter();
   const [justConnected, setJustConnected] = useState(false);
   const [connectionError, setConnectionError] = useState<string | null>(null);
@@ -191,8 +185,8 @@ export default function StravaPage() {
                     <div key={act.stravaId} className="grid grid-cols-6 gap-px bg-[#E5E5E5] dark:bg-[#333] border-t border-[#E5E5E5] dark:border-[#333]">
                       <div className="bg-white dark:bg-[#242424] px-4 py-3 font-mono text-xs text-[#6B6B6B] dark:text-[#A0A0A0]">{formatDate(act.startDate)}</div>
                       <div className="bg-white dark:bg-[#242424] px-4 py-3 font-mono text-xs col-span-2 truncate">{act.name}</div>
-                      <div className="bg-white dark:bg-[#242424] px-4 py-3 font-mono text-xs">{formatDist(act.distance)}</div>
-                      <div className="bg-white dark:bg-[#242424] px-4 py-3 font-mono text-xs">{formatPace(act.averageSpeed)}</div>
+                      <div className="bg-white dark:bg-[#242424] px-4 py-3 font-mono text-xs">{formatDistance(act.distance, unit)}</div>
+                      <div className="bg-white dark:bg-[#242424] px-4 py-3 font-mono text-xs">{formatPace(act.averageSpeed, unit)}</div>
                       <div className="bg-white dark:bg-[#242424] px-4 py-3 font-mono text-xs">{act.averageHeartrate ? `${Math.round(act.averageHeartrate)} bpm` : "—"}</div>
                     </div>
                   ))

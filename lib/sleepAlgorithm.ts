@@ -25,6 +25,7 @@ export interface SleepLogForPlan {
   hitTarget?: boolean | null;
   actualBedtime?: string | null;
   actualSleepHours?: number | null;
+  recommendedBedtime?: string | null;
 }
 
 export interface WindDownPhases {
@@ -77,6 +78,8 @@ export interface DailySleepPlan {
   actualSleepHours: number | null;
   sleepConfirmed: boolean;
   recoverySleepNote: string;
+  recoveryFactors: string[];
+  allRecentMissed: boolean;
 }
 
 // ── helpers ──────────────────────────────────────────────────────────────────
@@ -217,7 +220,7 @@ export function calculateSleepPlan(
   meets: MeetInput[],
   workoutDataSource: NormalizedWorkout[],
   currentTSB?: number,
-  opts?: { startDayOffset?: number; sleepLogs?: SleepLogForPlan[] }
+  opts?: { startDayOffset?: number; sleepLogs?: SleepLogForPlan[]; recentSleepLogs?: SleepLogForPlan[] }
 ): DailySleepPlan[] {
   const startDayOffset = opts?.startDayOffset ?? 0;
   const sleepLogs = opts?.sleepLogs ?? [];
@@ -242,6 +245,36 @@ export function calculateSleepPlan(
   for (const log of sleepLogs) {
     sleepLogMap.set(log.date, log);
   }
+
+  // Compute sleep penalty and streak from the most recent 3 logged nights.
+  // recentSleepLogs must be ordered DESC (most recent first).
+  const recentSleepLogs = opts?.recentSleepLogs ?? [];
+  let globalSleepPenalty = 0;
+  for (const log of recentSleepLogs) {
+    console.log("[algorithm] processing sleep log:", log.date, "hitTarget:", log.hitTarget, "actualBedtime:", log.actualBedtime, "recommendedBedtime:", log.recommendedBedtime);
+    if (log.hitTarget === false && log.actualBedtime && log.recommendedBedtime) {
+      let devMin = timeToMinutes(log.actualBedtime) - timeToMinutes(log.recommendedBedtime);
+      // Handle midnight crossing (e.g. recommended 22:00, actual 00:30)
+      if (devMin < -720) devMin += 1440;
+      if (devMin > 720) devMin -= 1440;
+      console.log("[algorithm] devMin:", devMin, "penalty added:", (devMin / 60) * 3);
+      if (devMin > 0) {
+        globalSleepPenalty += (devMin / 60) * 3;
+      }
+    }
+  }
+  globalSleepPenalty = Math.round(globalSleepPenalty);
+
+  // Streak: consecutive hitTarget=true from most recent going backward
+  let sleepStreak = 0;
+  for (const log of recentSleepLogs) {
+    if (log.hitTarget === true) sleepStreak++;
+    else break;
+  }
+  const globalStreakBonus = Math.min(sleepStreak * 2, 10);
+
+  const allRecentMissed =
+    recentSleepLogs.length > 0 && recentSleepLogs.every((l) => l.hitTarget === false);
 
   const futureMeets = meets
     .map((m) => ({ ...m, date: new Date(m.date) }))
@@ -353,39 +386,8 @@ export function calculateSleepPlan(
 
     if (daysUntilNextMeet !== null && daysUntilNextMeet <= 3) recovery -= 10;
 
-    // Sleep deficit penalty from last 3 confirmed nights
-    const sleepNeedHours = totalSleepHours;
-    let totalSleepDeficit = 0;
-    let loggedNightsCount = 0;
-    let sleepPenalty = 0;
-    for (let j = Math.max(0, dayOffset - 3); j < dayOffset; j++) {
-      const d = new Date(today);
-      d.setDate(today.getDate() + j);
-      const logDate = d.toISOString().slice(0, 10);
-      const log = sleepLogMap.get(logDate);
-      if (log && log.hitTarget !== null && log.hitTarget !== undefined) {
-        loggedNightsCount++;
-        if (log.hitTarget === false && log.actualSleepHours != null) {
-          const deficit = Math.max(0, sleepNeedHours - log.actualSleepHours);
-          totalSleepDeficit += deficit;
-        }
-      }
-    }
-    sleepPenalty = Math.round(totalSleepDeficit * 3);
-    recovery -= sleepPenalty;
-
-    // Streak bonus: 2 pts per consecutive confirmed night, max 10
-    let currentStreak = 0;
-    for (let j = dayOffset - 1; j >= 0; j--) {
-      const d = new Date(today);
-      d.setDate(today.getDate() + j);
-      const logDate = d.toISOString().slice(0, 10);
-      const log = sleepLogMap.get(logDate);
-      if (log?.hitTarget === true) currentStreak++;
-      else break;
-    }
-    const streakBonus = Math.min(currentStreak * 2, 10);
-    recovery += streakBonus;
+    recovery -= globalSleepPenalty;
+    recovery += globalStreakBonus;
 
     for (let j = Math.max(0, dayOffset - 3); j < dayOffset; j++) {
       const d = new Date(today);
@@ -397,8 +399,15 @@ export function calculateSleepPlan(
 
     recovery = Math.max(0, Math.min(100, recovery));
 
-    const recoverySleepNote = loggedNightsCount > 0
-      ? `Based on ${loggedNightsCount} logged night${loggedNightsCount > 1 ? "s" : ""}.${streakBonus > 0 ? ` Streak bonus: +${streakBonus} pts.` : ""}${sleepPenalty > 0 ? ` Sleep deficit: -${sleepPenalty} pts.` : ""}`
+    // Build recovery factor breakdown for display
+    const recoveryFactors: string[] = [];
+    if (globalSleepPenalty > 0) recoveryFactors.push(`Sleep deficit: -${globalSleepPenalty} pts`);
+    if (globalStreakBonus > 0) recoveryFactors.push(`Sleep streak: +${globalStreakBonus} pts`);
+    if (consecutiveHard > 0) recoveryFactors.push(`Training load: -${consecutiveHard * 5} pts`);
+    if (daysUntilNextMeet !== null && daysUntilNextMeet <= 3) recoveryFactors.push("Meet approaching: -10 pts");
+
+    const recoverySleepNote = recentSleepLogs.length > 0
+      ? recoveryFactors.join(" · ")
       : "Log your sleep each morning to improve the accuracy of your recovery score.";
 
     // Enrich with SleepLog data for past days
@@ -437,6 +446,8 @@ export function calculateSleepPlan(
       actualSleepHours: actualSleepHoursOut,
       sleepConfirmed,
       recoverySleepNote,
+      recoveryFactors,
+      allRecentMissed,
     });
   }
 

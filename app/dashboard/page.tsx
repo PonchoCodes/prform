@@ -188,6 +188,7 @@ interface InterventionCardProps {
   consecutiveMisses: number;
   avgDeviationMinutes: number;
   recommendedBedtime: string;
+  unitPreference: "imperial" | "metric";
   onAdjust: (result: any) => void;
   onKeep: () => void;
   onRemindLater: () => void;
@@ -197,6 +198,7 @@ function InterventionCard({
   consecutiveMisses,
   avgDeviationMinutes,
   recommendedBedtime,
+  unitPreference,
   onAdjust,
   onKeep,
   onRemindLater,
@@ -210,7 +212,12 @@ function InterventionCard({
   const avgActualTime = minutesToTime(avgActualMin);
 
   const impactPct = Math.min(8, Math.round((Math.abs(avgDeviationMinutes) / 30) * 2 * 10) / 10);
-  const secondsLost = Math.round((impactPct / 100) * 285); // ~285s/km default threshold pace
+  // Threshold pace default: ~458s/mi (≈ 7:38/mi). Convert to per-km for metric display.
+  const secondsLostPerMile = Math.round((impactPct / 100) * 458);
+  const secondsLostDisplay = unitPreference === "metric"
+    ? Math.round(secondsLostPerMile / 1.60934)
+    : secondsLostPerMile;
+  const paceUnitLabel = unitPreference === "metric" ? "per km" : "per mile";
 
   const handleAdjust = async () => {
     setPhase("adjusting");
@@ -276,7 +283,7 @@ function InterventionCard({
                 </p>
                 <p className="text-xs font-mono text-[#E8FF00] mb-4 leading-relaxed">
                   Based on your running data, athletes with this sleep deficit pattern show an average pace decrease of{" "}
-                  {impactPct}%. That&apos;s approximately {secondsLost}s per km on your current threshold pace.
+                  {impactPct}%. That&apos;s approximately {secondsLostDisplay}s {paceUnitLabel} on your current threshold pace.
                 </p>
                 <p className="font-black text-sm uppercase mb-4">
                   Would you like PRform to adjust your targets to better fit your schedule?
@@ -488,7 +495,7 @@ export default function DashboardPage() {
   useEffect(() => {
     if (status !== "authenticated") return;
     Promise.all([
-      fetch("/api/sleep-plan").then((r) => r.json()),
+      fetch("/api/sleep-plan", { cache: "no-store" }).then((r) => r.json()),
       fetch("/api/strava/status").then((r) => r.json()),
       fetch("/api/sleep-log/streak").then((r) => r.json()),
     ]).then(([sleepData, stravaData, streak]) => {
@@ -742,6 +749,7 @@ export default function DashboardPage() {
               consecutiveMisses={streakData.consecutiveMisses}
               avgDeviationMinutes={streakData.avgDeviationMinutes}
               recommendedBedtime={yesterdayPlan.recommendedBedtime}
+              unitPreference={(data.user?.unitPreference ?? "imperial") as "imperial" | "metric"}
               onAdjust={() => setInterventionDismissed(true)}
               onKeep={handleInterventionKeep}
               onRemindLater={handleInterventionRemindLater}
@@ -919,9 +927,30 @@ export default function DashboardPage() {
                                 <p className={`text-xs font-mono mb-2 ${isToday ? "text-[#AAAAAA]" : "text-[#6B6B6B] dark:text-[#A0A0A0]"}`}>
                                   Wake <MonoClock time24={d.recommendedWakeTime} className="inline" />
                                 </p>
-                                <p className={`text-xs font-bold mb-2 ${isToday ? "text-[#CCCCCC]" : "text-[#6B6B6B] dark:text-[#A0A0A0]"}`}>
-                                  {d.totalSleepHours}h
-                                </p>
+                                {(() => {
+                                  const isConfirmedPast = d.sleepConfirmed && d.actualSleepHours != null;
+                                  const displayHours = isConfirmedPast ? d.actualSleepHours : d.totalSleepHours;
+                                  const hoursLabel = isConfirmedPast ? "actual" : "target";
+                                  return (
+                                    <>
+                                      <p className={`text-xs font-bold mb-1 ${isToday ? "text-[#CCCCCC]" : "text-[#6B6B6B] dark:text-[#A0A0A0]"}`}>
+                                        {displayHours}h
+                                      </p>
+                                      <p className={`text-[10px] font-mono mb-2 ${isToday ? "text-[#6B6B6B]" : "text-[#AAAAAA] dark:text-[#555]"}`}>
+                                        {hoursLabel}
+                                      </p>
+                                      {isToday && !yesterdayPlan?.sleepConfirmed && (
+                                        <a
+                                          href="/sleep-history"
+                                          onClick={(e) => e.stopPropagation()}
+                                          className="block text-[9px] font-bold uppercase tracking-widest text-[#E8FF00] hover:text-white transition-colors mb-2"
+                                        >
+                                          Log Sleep →
+                                        </a>
+                                      )}
+                                    </>
+                                  );
+                                })()}
                                 <div className="flex items-center gap-1.5 mb-2">
                                   <div className={`w-2 h-2 ${LOAD_COLORS[d.trainingLoadLevel]}`} />
                                   <span className={`text-xs uppercase tracking-wider ${isToday ? "text-[#6B6B6B]" : "text-[#AAAAAA] dark:text-[#555]"}`}>
@@ -989,6 +1018,11 @@ export default function DashboardPage() {
               <FadeUp>
                 <p className="text-xs font-bold uppercase tracking-[0.3em] text-[#6B6B6B] dark:text-[#A0A0A0] mb-2">Recovery</p>
                 <h2 className="font-black text-2xl uppercase mb-6">Recovery Score</h2>
+                {today.allRecentMissed && (
+                  <p className="text-[10px] font-mono font-bold uppercase tracking-widest text-[#E8FF00] bg-[#0A0A0A] px-2 py-1 inline-block mb-4">
+                    Your sleep is affecting your score
+                  </p>
+                )}
                 <div className="flex items-end gap-4 mb-4">
                   <span className="font-mono font-black text-8xl leading-none">{recoveryScore}</span>
                   <span className="text-[#6B6B6B] dark:text-[#A0A0A0] text-sm uppercase tracking-wider mb-2">/ 100</span>
@@ -1000,9 +1034,15 @@ export default function DashboardPage() {
                   />
                 </div>
                 <p className="text-sm text-[#6B6B6B] dark:text-[#A0A0A0]">{recoveryLabel}</p>
-                {today.recoverySleepNote && (
+                {today.recoveryFactors?.length > 0 ? (
+                  <div className="space-y-0.5 mt-2">
+                    {today.recoveryFactors.map((factor: string, i: number) => (
+                      <p key={i} className="text-[10px] font-mono text-[#6B6B6B] dark:text-[#A0A0A0]">{factor}</p>
+                    ))}
+                  </div>
+                ) : today.recoverySleepNote ? (
                   <p className="text-[10px] font-mono text-[#6B6B6B] dark:text-[#A0A0A0] mt-2">{today.recoverySleepNote}</p>
-                )}
+                ) : null}
                 {planAgg < 100 && (
                   <p className="text-[10px] font-mono text-[#6B6B6B] dark:text-[#A0A0A0] mt-3 pl-3">
                     Plan running at {planAgg}% aggressiveness. Your theoretical maximum recovery score at 100% would be{" "}
@@ -1048,6 +1088,7 @@ export default function DashboardPage() {
               <DayDetailModal
                 day={selectedDay}
                 activity={selectedDayActivity ?? undefined}
+                unit={(data.user?.unitPreference ?? "imperial") as "imperial" | "metric"}
                 onClose={() => { setSelectedDay(null); setSelectedDayActivity(null); }}
               />
             )}

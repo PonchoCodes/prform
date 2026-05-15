@@ -41,6 +41,7 @@ model User {
 
   planAggressiveness       Int @default(85)
   bedtimeAdjustmentMinutes Int @default(0)
+  unitPreference           String @default("imperial")
 
   workouts         Workout[]
   meets            Meet[]

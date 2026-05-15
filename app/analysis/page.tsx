@@ -10,6 +10,8 @@ import { IntensityDistributionBar } from "@/components/charts/IntensityDistribut
 import { PaceComplianceTable } from "@/components/charts/PaceComplianceTable";
 import { SleepPaceScatterChart } from "@/components/charts/SleepPaceScatterChart";
 import type { PerformanceReport } from "@/lib/performanceAnalysis";
+import { formatPace } from "@/lib/unitUtils";
+import type { UnitPreference } from "@/lib/unitUtils";
 
 type WindowDays = 30 | 60 | 90;
 
@@ -41,6 +43,7 @@ function Placeholder({ message }: { message: string }) {
 
 export default function AnalysisPage() {
   const { data: session, status } = useSession();
+  const unit = ((session?.user as any)?.unitPreference ?? "imperial") as UnitPreference;
   const router = useRouter();
   const [report, setReport] = useState<PerformanceReport | null>(null);
   const [loading, setLoading] = useState(true);
@@ -251,15 +254,15 @@ export default function AnalysisPage() {
                       {report.vdot.paces && (
                         <div className="mt-6 border border-[#E5E5E5] dark:border-[#333]">
                           {[
-                            ["Easy", report.vdot.paces.easyPaceMinKm],
-                            ["Marathon", report.vdot.paces.marathonPaceMinKm],
-                            ["Threshold", report.vdot.paces.thresholdPaceMinKm],
-                            ["Interval", report.vdot.paces.intervalPaceMinKm],
-                            ["Rep", report.vdot.paces.repPaceMinKm],
-                          ].map(([label, pace]) => (
-                            <div key={label} className="flex justify-between items-center px-4 py-2 border-b border-[#E5E5E5] dark:border-[#333] last:border-0">
+                            ["Easy", report.vdot.paces.easyPaceMs],
+                            ["Marathon", report.vdot.paces.marathonPaceMs],
+                            ["Threshold", report.vdot.paces.thresholdPaceMs],
+                            ["Interval", report.vdot.paces.intervalPaceMs],
+                            ["Rep", report.vdot.paces.repPaceMs],
+                          ].map(([label, paceMs]) => (
+                            <div key={label as string} className="flex justify-between items-center px-4 py-2 border-b border-[#E5E5E5] dark:border-[#333] last:border-0">
                               <span className="text-xs font-bold uppercase tracking-wider text-[#6B6B6B] dark:text-[#A0A0A0]">{label}</span>
-                              <span className="font-mono font-black text-lg">{pace}</span>
+                              <span className="font-mono font-black text-lg">{formatPace(paceMs as number, unit)}</span>
                             </div>
                           ))}
                         </div>
@@ -268,7 +271,7 @@ export default function AnalysisPage() {
 
                     <div>
                       <p className="text-xs font-bold uppercase tracking-[0.3em] text-[#6B6B6B] mb-4">Recent Run Analysis</p>
-                      <PaceComplianceTable runs={report.vdot.recentRunAnalysis} />
+                      <PaceComplianceTable runs={report.vdot.recentRunAnalysis} unit={unit} />
                       {report.vdot.paceComplianceRate > 0 && (
                         <p className="font-mono text-xs text-[#6B6B6B] mt-3">
                           Pace compliance: <span className="text-[#0A0A0A] font-bold">{report.vdot.paceComplianceRate}%</span> on target
@@ -293,6 +296,7 @@ export default function AnalysisPage() {
                 <SleepPaceScatterChart
                   data={report.sleepPerf.scatterData}
                   correlation={report.sleepPerf.correlation}
+                  unit={unit}
                 />
                 <Diagnosis text={report.sleepPerf.insight} />
               </FadeUp>

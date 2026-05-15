@@ -30,13 +30,13 @@ const phases: Phase[] = [
       <div className="flex gap-2 mt-2">
         <a
           href="App-prefs:root=DISPLAY"
-          className="text-xs font-bold uppercase tracking-wider px-3 py-1 border border-[#0A0A0A] hover:bg-[#0A0A0A] hover:text-white transition-colors"
+          className="text-xs font-bold uppercase tracking-wider px-3 py-1 border border-[#0A0A0A] hover:bg-[#0A0A0A] hover:text-white dark:border-[#F5F5F5] dark:hover:bg-[#F5F5F5] dark:hover:text-[#0A0A0A] transition-colors"
         >
           iOS Settings →
         </a>
         <a
           href="intent://settings"
-          className="text-xs font-bold uppercase tracking-wider px-3 py-1 border border-[#0A0A0A] hover:bg-[#0A0A0A] hover:text-white transition-colors"
+          className="text-xs font-bold uppercase tracking-wider px-3 py-1 border border-[#0A0A0A] hover:bg-[#0A0A0A] hover:text-white dark:border-[#F5F5F5] dark:hover:bg-[#F5F5F5] dark:hover:text-[#0A0A0A] transition-colors"
         >
           Android Settings →
         </a>
@@ -84,7 +84,7 @@ export function WindDownTimeline({ windDown }: WindDownTimelineProps) {
 
   return (
     <div>
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-px bg-[#E5E5E5]">
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-px bg-[#E5E5E5] dark:bg-[#333333]">
         {phases.map((phase) => {
           const status = getStatus(windDown[phase.key], now);
           return (
@@ -94,8 +94,8 @@ export function WindDownTimeline({ windDown }: WindDownTimelineProps) {
                 status === "now"
                   ? "bg-[#0A0A0A] text-white"
                   : status === "done"
-                  ? "bg-[#F5F5F5]"
-                  : "bg-white"
+                  ? "bg-[#F5F5F5] dark:bg-[#2a2a2a]"
+                  : "bg-white dark:bg-[#242424]"
               }`}
             >
               <div className="flex items-center justify-between mb-3">
@@ -103,23 +103,21 @@ export function WindDownTimeline({ windDown }: WindDownTimelineProps) {
                   className={`text-xs font-bold uppercase tracking-widest ${
                     status === "now"
                       ? "text-[#E8FF00]"
-                      : status === "done"
-                      ? "text-[#6B6B6B]"
-                      : "text-[#6B6B6B]"
+                      : "text-[#6B6B6B] dark:text-[#A0A0A0]"
                   }`}
                 >
                   {status === "now" ? "● NOW" : status === "done" ? "✓ DONE" : "UPCOMING"}
                 </span>
                 <span
                   className={`font-mono text-sm font-bold ${
-                    status === "now" ? "text-[#E8FF00] accent-pulse" : ""
+                    status === "now" ? "text-[#E8FF00] accent-pulse" : "dark:text-[#F5F5F5]"
                   }`}
                 >
                   {formatTime12h(windDown[phase.key])}
                 </span>
               </div>
-              <p className="text-xs font-bold uppercase tracking-wider mb-1">{phase.label}</p>
-              <p className={`text-sm leading-relaxed ${status === "now" ? "text-[#CCCCCC]" : "text-[#6B6B6B]"}`}>
+              <p className="text-xs font-bold uppercase tracking-wider mb-1 dark:text-[#F5F5F5]">{phase.label}</p>
+              <p className={`text-sm leading-relaxed ${status === "now" ? "text-[#CCCCCC]" : "text-[#6B6B6B] dark:text-[#A0A0A0]"}`}>
                 {phase.description}
               </p>
               {phase.extra && status !== "done" && (
