@@ -181,7 +181,7 @@ export default function AnalysisPage() {
               ) : (
                 <>
                   <FadeUp delay={60}>
-                    <div className="bg-[#0A0A0A] p-4 mb-6">
+                    <div className="bg-[#F5F5F5] dark:bg-[#0A0A0A] p-4 mb-6">
                       <PMCChart data={report.pmc.daily} />
                     </div>
                   </FadeUp>

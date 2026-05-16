@@ -24,16 +24,16 @@ export function CircadianProtocolSection({ circadian }: { circadian: CircadianPl
             </div>
           </FadeUp>
 
-          <FadeUp delay={60} className="bg-[#0A0A0A] text-white p-6">
+          <FadeUp delay={60} className="bg-[#F5F5F5] dark:bg-[#0A0A0A] p-6">
             <p className="text-xs font-bold uppercase tracking-[0.3em] text-[#6B6B6B] mb-3">Light Prescription</p>
             <div className="flex items-end gap-2 mb-1">
-              <p className="font-mono font-black text-4xl leading-none text-[#E8FF00]">{formatTime12h(circadian.lightExposure.start)}</p>
+              <p className="font-mono font-black text-4xl leading-none text-[#0A0A0A] dark:text-[#E8FF00]">{formatTime12h(circadian.lightExposure.start)}</p>
               <p className="text-[#6B6B6B] text-sm mb-1 font-mono">&rarr; {formatTime12h(circadian.lightExposure.end)}</p>
             </div>
             <p className="text-xs text-[#6B6B6B] uppercase tracking-wider mb-4">
               {circadian.lightExposure.durationMin} min &middot; {circadian.lightExposure.type === "outdoor" ? "Outdoor sunlight" : "10,000 lux lamp"}
             </p>
-            <p className="text-xs text-[#AAAAAA] font-mono leading-relaxed">{circadian.lightExposure.instruction}</p>
+            <p className="text-xs text-[#6B6B6B] dark:text-[#AAAAAA] font-mono leading-relaxed">{circadian.lightExposure.instruction}</p>
           </FadeUp>
 
           <FadeUp delay={120} className="bg-white dark:bg-[#242424] p-6">

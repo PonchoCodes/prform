@@ -93,23 +93,23 @@ function MorningConfirmationCard({ yesterdayPlan, onDismiss }: MorningCardProps)
           initial={{ opacity: 1 }}
           exit={{ opacity: 0 }}
           transition={{ duration: 0.2 }}
-          className="bg-[#0A0A0A] text-white px-6 py-6 border-b border-[#222]"
+          className="bg-[#F5F5F5] dark:bg-[#0A0A0A] text-[#0A0A0A] dark:text-white px-6 py-6 border-b border-[#E5E5E5] dark:border-[#222]"
         >
           <div className="max-w-[1200px] mx-auto">
             {phase === "done" ? (
               <div className="flex items-center gap-3">
-                <span className="text-[#E8FF00] font-bold text-sm uppercase tracking-widest">✓ Logged</span>
+                <span className="text-[#0A0A0A] dark:text-[#E8FF00] font-bold text-sm uppercase tracking-widest">✓ Logged</span>
                 <span className="text-[#6B6B6B] font-mono text-xs">Sleep confirmed for last night.</span>
               </div>
             ) : (
               <>
-                <p className="text-xs font-bold uppercase tracking-[0.3em] text-[#E8FF00] mb-2">Last Night</p>
+                <p className="text-xs font-bold uppercase tracking-[0.3em] text-[#6B6B6B] dark:text-[#E8FF00] mb-2">Last Night</p>
                 <h2 className="font-black text-2xl uppercase mb-3">Did You Hit Your Target?</h2>
                 <p className="text-xs font-mono text-[#6B6B6B] mb-1">
-                  Target bedtime: <span className="text-white">{formatTime12h(yesterdayPlan.recommendedBedtime)}</span>
+                  Target bedtime: <span className="text-[#0A0A0A] dark:text-white font-bold">{formatTime12h(yesterdayPlan.recommendedBedtime)}</span>
                 </p>
                 <p className="text-xs font-mono text-[#6B6B6B] mb-4">
-                  Target wake: <span className="text-white">{formatTime12h(yesterdayPlan.recommendedWakeTime)}</span>
+                  Target wake: <span className="text-[#0A0A0A] dark:text-white font-bold">{formatTime12h(yesterdayPlan.recommendedWakeTime)}</span>
                 </p>
 
                 {phase === "question" && (
@@ -123,14 +123,14 @@ function MorningConfirmationCard({ yesterdayPlan, onDismiss }: MorningCardProps)
                       </button>
                       <button
                         onClick={() => setPhase("miss")}
-                        className="flex-1 py-3 bg-white text-[#0A0A0A] font-black text-xs uppercase tracking-widest hover:bg-[#E5E5E5] transition-colors border border-[#E5E5E5]"
+                        className="flex-1 py-3 bg-white dark:bg-[#1a1a1a] text-[#0A0A0A] dark:text-white font-black text-xs uppercase tracking-widest hover:bg-[#E5E5E5] dark:hover:bg-[#2a2a2a] transition-colors border border-[#E5E5E5] dark:border-[#333]"
                       >
                         No, I Missed It
                       </button>
                     </div>
                     <p className="text-[10px] font-mono text-[#6B6B6B]">
                       You can edit this later in your{" "}
-                      <a href="/sleep" className="underline hover:text-white">sleep history</a>.
+                      <a href="/sleep" className="underline hover:text-[#0A0A0A] dark:hover:text-white">sleep history</a>.
                     </p>
                   </>
                 )}
@@ -146,31 +146,31 @@ function MorningConfirmationCard({ yesterdayPlan, onDismiss }: MorningCardProps)
                           type="time"
                           value={actualBedtime}
                           onChange={(e) => setActualBedtime(e.target.value)}
-                          className="w-full bg-[#1a1a1a] border border-[#333] px-3 py-2 text-sm font-mono text-white focus:outline-none focus:border-[#E8FF00]"
+                          className="w-full bg-white dark:bg-[#1a1a1a] border border-[#E5E5E5] dark:border-[#333] px-3 py-2 text-sm font-mono text-[#0A0A0A] dark:text-white focus:outline-none focus:border-[#0A0A0A] dark:focus:border-[#E8FF00]"
                         />
                       </div>
                       <div>
                         <label className="block text-[10px] font-bold uppercase tracking-wider text-[#6B6B6B] mb-1">
-                          I woke up at: <span className="text-[#444]">(optional)</span>
+                          I woke up at: <span className="text-[#AAAAAA] dark:text-[#444]">(optional)</span>
                         </label>
                         <input
                           type="time"
                           value={actualWakeTime}
                           onChange={(e) => setActualWakeTime(e.target.value)}
-                          className="w-full bg-[#1a1a1a] border border-[#333] px-3 py-2 text-sm font-mono text-white focus:outline-none focus:border-[#E8FF00]"
+                          className="w-full bg-white dark:bg-[#1a1a1a] border border-[#E5E5E5] dark:border-[#333] px-3 py-2 text-sm font-mono text-[#0A0A0A] dark:text-white focus:outline-none focus:border-[#0A0A0A] dark:focus:border-[#E8FF00]"
                         />
                       </div>
                     </div>
                     <button
                       onClick={() => submit(false)}
                       disabled={!actualBedtime}
-                      className="w-full py-3 bg-white text-[#0A0A0A] font-black text-xs uppercase tracking-widest hover:bg-[#E5E5E5] transition-colors disabled:opacity-40"
+                      className="w-full py-3 bg-[#0A0A0A] dark:bg-white text-white dark:text-[#0A0A0A] font-black text-xs uppercase tracking-widest hover:bg-[#333] dark:hover:bg-[#E5E5E5] transition-colors disabled:opacity-40"
                     >
                       Confirm
                     </button>
                     <p className="text-[10px] font-mono text-[#6B6B6B] mt-2">
                       You can edit this later in your{" "}
-                      <a href="/sleep" className="underline hover:text-white">sleep history</a>.
+                      <a href="/sleep" className="underline hover:text-[#0A0A0A] dark:hover:text-white">sleep history</a>.
                     </p>
                   </>
                 )}
@@ -244,20 +244,20 @@ function InterventionCard({
           initial={{ opacity: 1 }}
           exit={{ opacity: 0 }}
           transition={{ duration: 0.2 }}
-          className="bg-[#0A0A0A] text-white px-6 py-6 border-b border-[#222]"
+          className="bg-[#F5F5F5] dark:bg-[#0A0A0A] text-[#0A0A0A] dark:text-white px-6 py-6 border-b border-[#E5E5E5] dark:border-[#222]"
         >
           <div className="max-w-[1200px] mx-auto">
             {phase === "confirmed" && adjustResult ? (
               <>
-                <p className="text-xs font-bold uppercase tracking-[0.3em] text-[#E8FF00] mb-2">Target Adjusted</p>
+                <p className="text-xs font-bold uppercase tracking-[0.3em] text-[#6B6B6B] dark:text-[#E8FF00] mb-2">Target Adjusted</p>
                 <div className="grid grid-cols-2 gap-4 mb-4">
                   <div>
                     <p className="text-[10px] text-[#6B6B6B] uppercase tracking-wider mb-1">Old target</p>
                     <p className="font-mono font-black text-2xl">{formatTime12h(adjustResult.oldTargetApprox)}</p>
                   </div>
                   <div>
-                    <p className="text-[10px] text-[#E8FF00] uppercase tracking-wider mb-1">New target</p>
-                    <p className="font-mono font-black text-2xl text-[#E8FF00]">{formatTime12h(adjustResult.newTargetApprox)}</p>
+                    <p className="text-[10px] text-[#6B6B6B] dark:text-[#E8FF00] uppercase tracking-wider mb-1">New target</p>
+                    <p className="font-mono font-black text-2xl text-[#0A0A0A] dark:text-[#E8FF00]">{formatTime12h(adjustResult.newTargetApprox)}</p>
                   </div>
                 </div>
                 <p className="text-xs font-mono text-[#6B6B6B] mb-1">
@@ -265,27 +265,27 @@ function InterventionCard({
                   {Math.round(impactPct * 0.4 * 10) / 10}%.
                 </p>
                 {adjustResult.cappedAt45 && (
-                  <p className="text-xs font-mono text-[#E8FF00] mt-2">
+                  <p className="text-xs font-mono text-[#6B6B6B] dark:text-[#E8FF00] mt-2">
                     PRform can only adjust up to 45 minutes from the optimal target. Going beyond this would significantly impact your race performance.
                   </p>
                 )}
                 <p className="text-[10px] font-mono text-[#6B6B6B] mt-2">
-                  You can change this anytime in <a href="/profile" className="underline hover:text-white">Settings</a>.
+                  You can change this anytime in <a href="/profile" className="underline hover:text-[#0A0A0A] dark:hover:text-white">Settings</a>.
                 </p>
               </>
             ) : (
               <>
-                <p className="text-xs font-bold uppercase tracking-[0.3em] text-[#E8FF00] mb-2">Sleep Pattern Detected</p>
+                <p className="text-xs font-bold uppercase tracking-[0.3em] text-[#6B6B6B] dark:text-[#E8FF00] mb-2">Sleep Pattern Detected</p>
                 <h2 className="font-black text-2xl uppercase mb-3">
                   You&apos;ve Missed Your Target {consecutiveMisses} Night{consecutiveMisses !== 1 ? "s" : ""} in a Row
                 </h2>
                 <p className="text-xs font-mono text-[#6B6B6B] mb-3 leading-relaxed">
                   Your recommended bedtime has been{" "}
-                  <span className="text-white">{formatTime12h(recommendedBedtime)}</span> but you&apos;ve been going to
-                  bed around <span className="text-white">{formatTime12h(avgActualTime)}</span> instead — an average of{" "}
-                  <span className="text-white">{avgDeviationMinutes} minutes late</span>.
+                  <span className="text-[#0A0A0A] dark:text-white font-bold">{formatTime12h(recommendedBedtime)}</span> but you&apos;ve been going to
+                  bed around <span className="text-[#0A0A0A] dark:text-white font-bold">{formatTime12h(avgActualTime)}</span> instead — an average of{" "}
+                  <span className="text-[#0A0A0A] dark:text-white font-bold">{avgDeviationMinutes} minutes late</span>.
                 </p>
-                <p className="text-xs font-mono text-[#E8FF00] mb-4 leading-relaxed">
+                <p className="text-xs font-mono text-[#0A0A0A] dark:text-[#E8FF00] mb-4 leading-relaxed">
                   Based on your running data, athletes with this sleep deficit pattern show an average pace decrease of{" "}
                   {impactPct}%. That&apos;s approximately {secondsLostDisplay}s {paceUnitLabel} on your current threshold pace.
                 </p>
@@ -307,14 +307,14 @@ function InterventionCard({
                   </button>
                   <button
                     onClick={() => dismiss(onKeep)}
-                    className="w-full p-4 bg-white text-[#0A0A0A] text-left border border-[#E5E5E5] hover:bg-[#F5F5F5] transition-colors"
+                    className="w-full p-4 bg-white dark:bg-[#1a1a1a] text-[#0A0A0A] dark:text-white text-left border border-[#E5E5E5] dark:border-[#333] hover:bg-[#F5F5F5] dark:hover:bg-[#2a2a2a] transition-colors"
                   >
                     <p className="font-black text-xs uppercase tracking-widest">No — Keep My Current Targets</p>
                     <p className="text-xs text-[#6B6B6B] mt-1">I&apos;ll work on hitting {formatTime12h(recommendedBedtime)}.</p>
                   </button>
                   <button
                     onClick={() => dismiss(onRemindLater)}
-                    className="w-full p-4 text-left text-[#6B6B6B] hover:text-white transition-colors"
+                    className="w-full p-4 text-left text-[#6B6B6B] hover:text-[#0A0A0A] dark:hover:text-white transition-colors"
                   >
                     <p className="font-black text-xs uppercase tracking-widest">Remind Me Later</p>
                     <p className="text-xs mt-1">Ask me again after {consecutiveMisses + 2 - consecutiveMisses} more missed nights.</p>
@@ -357,9 +357,9 @@ function WindDownSinglePhase({ windDown, bedtime }: WindDownSinglePhaseProps) {
 
   if (normNow >= normTimes[4]) {
     return (
-      <div className="bg-[#0A0A0A] text-white p-6">
-        <p className="font-black text-lg uppercase text-[#E8FF00]">WIND-DOWN COMPLETE</p>
-        <p className="text-sm font-mono text-[#AAAAAA] mt-2">Time to sleep. Target: {formatTime12h(bedtime)}</p>
+      <div className="bg-[#F5F5F5] dark:bg-[#0A0A0A] p-6 border border-[#E5E5E5] dark:border-transparent">
+        <p className="font-black text-lg uppercase text-[#0A0A0A] dark:text-[#E8FF00]">WIND-DOWN COMPLETE</p>
+        <p className="text-sm font-mono text-[#6B6B6B] dark:text-[#AAAAAA] mt-2">Time to sleep. Target: {formatTime12h(bedtime)}</p>
       </div>
     );
   }
@@ -386,27 +386,27 @@ function WindDownSinglePhase({ windDown, bedtime }: WindDownSinglePhaseProps) {
   })();
 
   return (
-    <div className="bg-[#0A0A0A] text-white p-6 flex items-start justify-between gap-6">
+    <div className="bg-[#F5F5F5] dark:bg-[#0A0A0A] text-[#0A0A0A] dark:text-white p-6 flex items-start justify-between gap-6 border border-[#E5E5E5] dark:border-transparent">
       <div className="flex-1">
         <div className="flex items-center gap-3 mb-3">
-          <span className={`text-xs font-bold uppercase tracking-widest ${isUpcoming ? "text-[#6B6B6B]" : "text-[#E8FF00]"}`}>
+          <span className={`text-xs font-bold uppercase tracking-widest ${isUpcoming ? "text-[#6B6B6B]" : "text-[#0A0A0A] dark:text-[#E8FF00]"}`}>
             {isUpcoming ? "UPCOMING" : "● NOW"}
           </span>
           <span className="font-mono text-sm text-[#6B6B6B]">{formatTime12h(phaseTime)}</span>
         </div>
         <p className="font-black text-xl uppercase mb-2">{phase.label}</p>
-        <p className="text-sm text-[#AAAAAA] font-mono leading-relaxed">{phase.description}</p>
+        <p className="text-sm text-[#6B6B6B] dark:text-[#AAAAAA] font-mono leading-relaxed">{phase.description}</p>
         {phaseIdx === 1 && (
           <div className="flex gap-2 mt-3">
             <a
               href="App-prefs:root=DISPLAY"
-              className="text-xs font-bold uppercase tracking-wider px-3 py-1 border border-white hover:bg-white hover:text-[#0A0A0A] transition-colors"
+              className="text-xs font-bold uppercase tracking-wider px-3 py-1 border border-[#0A0A0A] dark:border-white hover:bg-[#0A0A0A] dark:hover:bg-white hover:text-white dark:hover:text-[#0A0A0A] transition-colors"
             >
               iOS Settings →
             </a>
             <a
               href="intent://settings"
-              className="text-xs font-bold uppercase tracking-wider px-3 py-1 border border-white hover:bg-white hover:text-[#0A0A0A] transition-colors"
+              className="text-xs font-bold uppercase tracking-wider px-3 py-1 border border-[#0A0A0A] dark:border-white hover:bg-[#0A0A0A] dark:hover:bg-white hover:text-white dark:hover:text-[#0A0A0A] transition-colors"
             >
               Android Settings →
             </a>
@@ -415,11 +415,11 @@ function WindDownSinglePhase({ windDown, bedtime }: WindDownSinglePhaseProps) {
       </div>
       <div className="flex-shrink-0 text-right">
         {isUpcoming ? (
-          <p className="font-mono font-black text-2xl text-white leading-none">{countdown}</p>
+          <p className="font-mono font-black text-2xl text-[#0A0A0A] dark:text-white leading-none">{countdown}</p>
         ) : (
           <div className="flex flex-col items-end gap-1">
             <div className="w-3 h-3 bg-[#E8FF00] animate-pulse" />
-            <p className="text-xs font-bold uppercase tracking-wider text-[#E8FF00]">ACTIVE NOW</p>
+            <p className="text-xs font-bold uppercase tracking-wider text-[#0A0A0A] dark:text-[#E8FF00]">ACTIVE NOW</p>
           </div>
         )}
       </div>
@@ -755,7 +755,7 @@ export default function DashboardPage() {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ duration: 0.4 }}
-            className="bg-[#0A0A0A] text-white px-6 py-10"
+            className="bg-[#F5F5F5] dark:bg-[#0A0A0A] text-[#0A0A0A] dark:text-white px-6 py-10"
           >
             <div className="max-w-[1200px] mx-auto grid grid-cols-1 md:grid-cols-2 gap-8 items-center">
               {/* Left: bedtime */}
@@ -767,9 +767,9 @@ export default function DashboardPage() {
                   animate
                   className="text-6xl md:text-8xl font-black leading-none block mb-3"
                 />
-                <p className="text-[#AAAAAA] text-sm uppercase tracking-wider">Fall asleep by</p>
+                <p className="text-[#6B6B6B] text-sm uppercase tracking-wider">Fall asleep by</p>
                 <p className="text-[#6B6B6B] text-xs mt-2 font-mono">
-                  Wake: <MonoClock time24={today.recommendedWakeTime} className="inline text-white" />
+                  Wake: <MonoClock time24={today.recommendedWakeTime} className="inline text-[#0A0A0A] dark:text-white" />
                 </p>
                 <p className="text-[#6B6B6B] text-xs mt-1 font-mono">
                   {today.totalSleepHours}h sleep target tonight
@@ -777,7 +777,7 @@ export default function DashboardPage() {
                 {/* Circadian drift note — inline, conditional */}
                 {today.circadianDelayMinutes > 30 && (
                   <div className="mt-3">
-                    <span className="text-[10px] font-bold uppercase tracking-widest" style={{ color: "#b8cc00" }}>
+                    <span className="text-[10px] font-bold uppercase tracking-widest text-[#6B6B6B] dark:text-[#b8cc00]">
                       CIRCADIAN DRIFT DETECTED
                     </span>
                     <p className="text-[10px] font-mono text-[#6B6B6B] mt-0.5">
@@ -793,16 +793,16 @@ export default function DashboardPage() {
                 onClick={() => router.push("/meets")}
               >
                 {nextMeet ? (
-                  <div className="border border-[#333] p-6">
+                  <div className="border border-[#E5E5E5] dark:border-[#333] p-6">
                     <p className="text-xs font-bold uppercase tracking-[0.3em] text-[#6B6B6B] mb-4">Next Meet</p>
                     <div className="flex items-start justify-between">
                       <div>
                         <p className="font-black text-2xl mb-1">{nextMeet.name}</p>
-                        <p className="text-[#AAAAAA] text-sm mb-3">{formatDate(nextMeet.date)}</p>
+                        <p className="text-[#6B6B6B] text-sm mb-3">{formatDate(nextMeet.date)}</p>
                         <Badge label={`${nextMeet.priority} Race`} variant={nextMeet.priority as "A" | "B" | "C"} />
                       </div>
                       <div className="text-right">
-                        <p className="font-mono font-black text-6xl text-[#E8FF00] leading-none">
+                        <p className="font-mono font-black text-6xl text-[#0A0A0A] dark:text-[#E8FF00] leading-none">
                           {today.daysUntilNextMeet ?? "0"}
                         </p>
                         <p className="text-[#6B6B6B] text-xs uppercase tracking-wider mt-1">days away</p>
@@ -814,7 +814,7 @@ export default function DashboardPage() {
                       </div>
                     </div>
                     {today.daysUntilNextMeet !== null && today.daysUntilNextMeet <= 10 && (
-                      <p className="mt-4 text-xs text-[#E8FF00] font-bold uppercase tracking-wider">
+                      <p className="mt-4 text-xs text-[#0A0A0A] dark:text-[#E8FF00] font-bold uppercase tracking-wider">
                         Sleep shift in progress ↗
                       </p>
                     )}
@@ -824,12 +824,12 @@ export default function DashboardPage() {
                       if (pred) {
                         const isSlower = pred.timeDifference > 0.5;
                         const isFaster = pred.timeDifference < -0.5;
-                        const diffColor = isSlower ? "text-[#FF6B6B]" : isFaster ? "text-[#E8FF00]" : "text-[#6B6B6B]";
+                        const diffColor = isSlower ? "text-[#FF6B6B]" : isFaster ? "text-[#0A0A0A] dark:text-[#E8FF00]" : "text-[#6B6B6B]";
                         const refLabel = pred.referenceLabel === "Season Best" ? "SB" : "PR";
                         return (
-                          <div className="mt-5 pt-4 border-t border-[#222]">
+                          <div className="mt-5 pt-4 border-t border-[#E5E5E5] dark:border-[#222]">
                             <p className="text-[10px] font-bold uppercase tracking-[0.3em] text-[#6B6B6B] mb-2">Predicted Finish</p>
-                            <p className="font-mono font-black text-3xl text-white leading-none mb-1">
+                            <p className="font-mono font-black text-3xl text-[#0A0A0A] dark:text-white leading-none mb-1">
                               {formatTimeFromSeconds(pred.predictedTime, pred.unit)}
                             </p>
                             <p className={`font-mono text-sm ${diffColor}`}>
@@ -837,7 +837,7 @@ export default function DashboardPage() {
                                 ? `${formatTimeDifference(pred.timeDifference)} vs ${refLabel}`
                                 : `On track for ${refLabel}`}
                             </p>
-                            <p className="text-[9px] font-mono text-[#444] mt-2">
+                            <p className="text-[9px] font-mono text-[#AAAAAA] mt-2">
                               Based on {pred.confidenceNights}/{pred.totalNights} nights of sleep data
                               {pred.isEstimated ? " (estimated)" : ""}
                             </p>
@@ -846,10 +846,10 @@ export default function DashboardPage() {
                       }
                       if (nextMeet.primaryEvent && !(nextMeet.recentBest || nextMeet.personalBest)) {
                         return (
-                          <div className="mt-5 pt-4 border-t border-[#222]">
+                          <div className="mt-5 pt-4 border-t border-[#E5E5E5] dark:border-[#222]">
                             <button
                               onClick={(e) => { e.stopPropagation(); router.push(`/meets?edit=${nextMeet.id}`); }}
-                              className="text-xs font-bold uppercase tracking-wider text-[#6B6B6B] hover:text-white px-3 py-2 border border-[#333] hover:border-[#555] transition-colors"
+                              className="text-xs font-bold uppercase tracking-wider text-[#6B6B6B] hover:text-[#0A0A0A] dark:hover:text-white px-3 py-2 border border-[#E5E5E5] dark:border-[#333] hover:border-[#0A0A0A] dark:hover:border-[#555] transition-colors"
                             >
                               ADD PR →
                             </button>
@@ -858,10 +858,10 @@ export default function DashboardPage() {
                       }
                       if (!nextMeet.primaryEvent) {
                         return (
-                          <div className="mt-5 pt-4 border-t border-[#222]">
+                          <div className="mt-5 pt-4 border-t border-[#E5E5E5] dark:border-[#222]">
                             <button
                               onClick={(e) => { e.stopPropagation(); router.push(`/meets?edit=${nextMeet.id}`); }}
-                              className="text-xs font-bold uppercase tracking-wider text-[#6B6B6B] hover:text-white px-3 py-2 border border-[#333] hover:border-[#555] transition-colors"
+                              className="text-xs font-bold uppercase tracking-wider text-[#6B6B6B] hover:text-[#0A0A0A] dark:hover:text-white px-3 py-2 border border-[#E5E5E5] dark:border-[#333] hover:border-[#0A0A0A] dark:hover:border-[#555] transition-colors"
                             >
                               ADD EVENT + PR →
                             </button>
@@ -872,7 +872,7 @@ export default function DashboardPage() {
                     })()}
                   </div>
                 ) : (
-                  <div className="border border-[#333] p-6 flex items-center justify-center">
+                  <div className="border border-[#E5E5E5] dark:border-[#333] p-6 flex items-center justify-center">
                     <p className="text-[#6B6B6B] text-sm uppercase tracking-wider">No upcoming meets</p>
                   </div>
                 )}
@@ -938,8 +938,8 @@ export default function DashboardPage() {
                           const dateStr = d ? new Date(d.date).toISOString().slice(0, 10) : null;
 
                           if (!d) return (
-                            <div key={i} className={`flex-1 p-4 min-w-[100px] ${isToday ? "bg-[#0A0A0A] text-white" : "bg-white dark:bg-[#242424]"}`}>
-                              <p className={`text-xs font-bold uppercase tracking-wider mb-3 ${isToday ? "text-[#E8FF00]" : "text-[#6B6B6B] dark:text-[#A0A0A0]"}`}>{isToday ? "TODAY" : DAYS[i]}</p>
+                            <div key={i} className={`flex-1 p-4 min-w-[100px] ${isToday ? "bg-[#F5F5F5] dark:bg-[#0A0A0A] border-2 border-[#0A0A0A] dark:border-transparent" : "bg-white dark:bg-[#242424]"}`}>
+                              <p className={`text-xs font-bold uppercase tracking-wider mb-3 ${isToday ? "text-[#0A0A0A] dark:text-[#E8FF00]" : "text-[#6B6B6B] dark:text-[#A0A0A0]"}`}>{isToday ? "TODAY" : DAYS[i]}</p>
                               <p className="text-xs text-[#6B6B6B] dark:text-[#A0A0A0]">Rest</p>
                             </div>
                           );
@@ -948,7 +948,7 @@ export default function DashboardPage() {
                               <div
                                 className={`relative group p-4 h-full cursor-pointer border-2 transition-colors duration-150 ${
                                   isToday
-                                    ? "bg-[#0A0A0A] text-white border-transparent hover:border-[#E8FF00]"
+                                    ? "bg-[#F5F5F5] dark:bg-[#0A0A0A] text-[#0A0A0A] dark:text-white border-[#0A0A0A] dark:border-transparent hover:border-[#E8FF00]"
                                     : "bg-white dark:bg-[#242424] border-transparent hover:border-[#0A0A0A] dark:hover:border-[#F5F5F5]"
                                 }`}
                                 onClick={() => {
@@ -963,15 +963,15 @@ export default function DashboardPage() {
                                 >
                                   ×
                                 </button>
-                                <p className={`text-xs font-bold uppercase tracking-wider mb-3 ${isToday ? "text-[#E8FF00]" : "text-[#6B6B6B] dark:text-[#A0A0A0]"}`}>
+                                <p className={`text-xs font-bold uppercase tracking-wider mb-3 ${isToday ? "text-[#0A0A0A] dark:text-[#E8FF00]" : "text-[#6B6B6B] dark:text-[#A0A0A0]"}`}>
                                   {isToday ? "TODAY" : DAYS[(new Date(d.date).getDay() + 6) % 7]}
                                 </p>
                                 <MonoClock
                                   time24={d.recommendedBedtime}
-                                  className={`text-base font-black block mb-1 ${isToday ? "text-[#E8FF00]" : ""}`}
+                                  className={`text-base font-black block mb-1 ${isToday ? "text-[#0A0A0A] dark:text-[#E8FF00]" : ""}`}
                                   animate={isToday}
                                 />
-                                <p className={`text-xs font-mono mb-2 ${isToday ? "text-[#AAAAAA]" : "text-[#6B6B6B] dark:text-[#A0A0A0]"}`}>
+                                <p className={`text-xs font-mono mb-2 ${isToday ? "text-[#6B6B6B]" : "text-[#6B6B6B] dark:text-[#A0A0A0]"}`}>
                                   Wake <MonoClock time24={d.recommendedWakeTime} className="inline" />
                                 </p>
                                 {(() => {
@@ -980,7 +980,7 @@ export default function DashboardPage() {
                                   const hoursLabel = isConfirmedPast ? "actual" : "target";
                                   return (
                                     <>
-                                      <p className={`text-xs font-bold mb-1 ${isToday ? "text-[#CCCCCC]" : "text-[#6B6B6B] dark:text-[#A0A0A0]"}`}>
+                                      <p className={`text-xs font-bold mb-1 ${isToday ? "text-[#0A0A0A] dark:text-[#CCCCCC]" : "text-[#6B6B6B] dark:text-[#A0A0A0]"}`}>
                                         {displayHours}h
                                       </p>
                                       <p className={`text-[10px] font-mono mb-2 ${isToday ? "text-[#6B6B6B]" : "text-[#AAAAAA] dark:text-[#555]"}`}>
@@ -990,7 +990,7 @@ export default function DashboardPage() {
                                         <a
                                           href="/sleep"
                                           onClick={(e) => e.stopPropagation()}
-                                          className="block text-[9px] font-bold uppercase tracking-widest text-[#E8FF00] hover:text-white transition-colors mb-2"
+                                          className="block text-[9px] font-bold uppercase tracking-widest text-[#0A0A0A] dark:text-[#E8FF00] hover:text-[#6B6B6B] dark:hover:text-white transition-colors mb-2"
                                         >
                                           Log Sleep →
                                         </a>
@@ -1040,18 +1040,18 @@ export default function DashboardPage() {
           <section className="px-6 py-10 border-b border-[#E5E5E5] dark:border-[#333]">
             <div className="max-w-[1200px] mx-auto">
               <FadeUp>
-                <div className="bg-[#0A0A0A] text-white border border-[#333333] p-6">
+                <div className="bg-[#F5F5F5] dark:bg-[#0A0A0A] text-[#0A0A0A] dark:text-white border border-[#E5E5E5] dark:border-[#333333] p-6">
                   <p className="text-[10px] font-bold uppercase tracking-[0.3em] text-[#6B6B6B] mb-6">RACE READINESS</p>
                   <div className="grid grid-cols-2 gap-6">
                     {/* Left: Recovery */}
-                    <div className="border-r border-[#333333] pr-6">
+                    <div className="border-r border-[#E5E5E5] dark:border-[#333333] pr-6">
                       <p className="text-[10px] font-bold uppercase tracking-wider text-[#6B6B6B] mb-2">RECOVERY</p>
                       <div className="flex items-end gap-2 mb-1">
                         <p className="font-mono font-black text-4xl leading-none">{recoveryScore}</p>
                         <p className="text-[#6B6B6B] text-lg mb-1">/ 100</p>
                       </div>
                       <p className="text-xs font-mono text-[#6B6B6B] mt-1 mb-3">{recoveryFactorText}</p>
-                      <div className="w-full h-0.5 bg-[#333333]">
+                      <div className="w-full h-0.5 bg-[#E5E5E5] dark:bg-[#333333]">
                         <div
                           className="h-0.5 transition-all duration-700"
                           style={{ width: `${recoveryScore}%`, backgroundColor: recoveryBarColor }}
@@ -1065,7 +1065,8 @@ export default function DashboardPage() {
                         (() => {
                           const isSlower = nextMeetPred.timeDifference > 0.5;
                           const isFaster = nextMeetPred.timeDifference < -0.5;
-                          const diffColor = isSlower ? "#FF6B6B" : isFaster ? "#E8FF00" : "#6B6B6B";
+                          const diffColor = isSlower ? "#FF6B6B" : isFaster ? "#0A0A0A" : "#6B6B6B";
+                          const diffColorDark = isSlower ? "#FF6B6B" : isFaster ? "#E8FF00" : "#6B6B6B";
                           const refLabel = nextMeetPred.referenceLabel === "Season Best" ? "SB" : "PR";
                           const daysOut = Math.round((new Date(nextMeet.date).getTime() - Date.now()) / 86400000);
                           return (
@@ -1074,7 +1075,7 @@ export default function DashboardPage() {
                               <p className="font-mono font-black text-4xl leading-none mb-1">
                                 {formatTimeFromSeconds(nextMeetPred.predictedTime, nextMeetPred.unit)}
                               </p>
-                              <p className="text-xs font-mono mt-1" style={{ color: diffColor }}>
+                              <p className="text-xs font-mono mt-1 dark:[color:var(--diff-dark)]" style={{ color: diffColor, ["--diff-dark" as any]: diffColorDark }}>
                                 {isSlower || isFaster
                                   ? `${formatTimeDifference(nextMeetPred.timeDifference)} vs ${refLabel}`
                                   : `On track for ${refLabel}`}
@@ -1094,7 +1095,7 @@ export default function DashboardPage() {
                           <p className="text-sm font-mono text-[#6B6B6B] mb-3">Add your event and PR to a meet</p>
                           <a
                             href="/meets"
-                            className="inline-block text-xs font-bold uppercase tracking-wider text-[#6B6B6B] border border-[#333] px-3 py-1.5 hover:border-[#555] hover:text-white transition-colors"
+                            className="inline-block text-xs font-bold uppercase tracking-wider text-[#6B6B6B] border border-[#E5E5E5] dark:border-[#333] px-3 py-1.5 hover:border-[#0A0A0A] dark:hover:border-[#555] hover:text-[#0A0A0A] dark:hover:text-white transition-colors"
                           >
                             SET UP →
                           </a>
@@ -1103,8 +1104,8 @@ export default function DashboardPage() {
                     </div>
                   </div>
 
-                  <div className="mt-6 pt-4 border-t border-[#333333]">
-                    <a href="/schedule?tab=history" className="text-[10px] font-mono text-[#6B6B6B] hover:text-white transition-colors">
+                  <div className="mt-6 pt-4 border-t border-[#E5E5E5] dark:border-[#333333]">
+                    <a href="/schedule?tab=history" className="text-[10px] font-mono text-[#6B6B6B] hover:text-[#0A0A0A] dark:hover:text-white transition-colors">
                       View sleep history →
                     </a>
                   </div>

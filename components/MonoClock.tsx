@@ -59,7 +59,7 @@ export function MonoClock({ time24, className = "", accent = false, animate = fa
   return (
     <span
       ref={ref}
-      className={`font-mono ${accent ? "text-[#E8FF00] accent-pulse" : ""} ${className}`}
+      className={`font-mono ${accent ? "text-[#0A0A0A] dark:text-[#E8FF00] accent-pulse" : ""} ${className}`}
     >
       {displayed}
     </span>
