@@ -632,9 +632,40 @@ export default function DashboardPage() {
 
   const nextMeetPred: PerformancePrediction | null = nextMeet ? (meetPredictions[nextMeet.id] ?? null) : null;
 
+  const subscriptionStatus = data?.user?.subscriptionStatus as string | null | undefined;
+  const trialEndsAt = data?.user?.trialEndsAt ? new Date(data.user.trialEndsAt) : null;
+  const trialDaysLeft = trialEndsAt
+    ? Math.max(0, Math.ceil((trialEndsAt.getTime() - Date.now()) / (1000 * 60 * 60 * 24)))
+    : null;
+
   return (
     <div className="min-h-screen bg-white dark:bg-[#1a1a1a]">
       <Navbar />
+
+      {/* Subscription banner */}
+      {subscriptionStatus === "trialing" && trialDaysLeft !== null && (
+        <div className="border-b border-[#E5E5E5] dark:border-[#333] px-6 py-2 flex items-center justify-between max-w-full">
+          <p className="font-mono text-xs text-[#6B6B6B] dark:text-[#A0A0A0]">
+            <span className="font-black text-[#0A0A0A] dark:text-[#F5F5F5]">{trialDaysLeft}d</span> left in your free trial
+          </p>
+          <a href="/subscribe" className="text-[10px] font-mono text-[#6B6B6B] dark:text-[#A0A0A0] hover:text-[#0A0A0A] dark:hover:text-[#F5F5F5] underline transition-colors">
+            Manage billing →
+          </a>
+        </div>
+      )}
+      {subscriptionStatus !== "trialing" && subscriptionStatus !== "active" && (
+        <div className="bg-[#E8FF00] px-6 py-3 flex items-center justify-between">
+          <p className="font-black text-xs uppercase tracking-widest text-[#0A0A0A]">
+            Start your 30-day free trial to unlock PRform
+          </p>
+          <a
+            href="/subscribe"
+            className="bg-[#0A0A0A] text-white font-black text-[10px] uppercase tracking-widest px-4 py-2 hover:bg-[#333] transition-colors shrink-0 ml-4"
+          >
+            Subscribe →
+          </a>
+        </div>
+      )}
 
       {/* Tab toggle */}
       <div className="border-b border-[#E5E5E5] dark:border-[#333] px-6">

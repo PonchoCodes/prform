@@ -43,6 +43,11 @@ model User {
   bedtimeAdjustmentMinutes Int @default(0)
   unitPreference           String @default("imperial")
 
+  stripeCustomerId       String?
+  stripeSubscriptionId   String?
+  subscriptionStatus     String?
+  trialEndsAt            DateTime?
+
   workouts         Workout[]
   meets            Meet[]
   sessions         Session[]

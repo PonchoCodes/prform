@@ -155,7 +155,7 @@ export default function OnboardingPage() {
       body: JSON.stringify(payload),
     });
 
-    router.push("/dashboard");
+    router.push("/subscribe");
   };
 
   const progress = (step / 3) * 100;
