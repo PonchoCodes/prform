@@ -80,6 +80,8 @@ export interface DailySleepPlan {
   recoverySleepNote: string;
   recoveryFactors: string[];
   allRecentMissed: boolean;
+  circadianDelayMinutes: number;
+  circadianDetectedBedtime: string | null;
 }
 
 // ── helpers ──────────────────────────────────────────────────────────────────
@@ -213,6 +215,37 @@ function computePRCPlan(
   };
 }
 
+// ── Circadian phase detection ─────────────────────────────────────────────────
+
+const SHIFT_FRACTIONS: Record<number, number> = {
+  10: 0.10 / 3,
+  9: (0.10 * 2) / 3,
+  8: 0.10,
+  7: 0.10 + 0.25 / 3,
+  6: 0.10 + (0.25 * 2) / 3,
+  5: 0.35,
+  4: 0.35 + 0.40 / 3,
+  3: 0.35 + (0.40 * 2) / 3,
+  2: 0.75,
+  1: 1.0,
+  0: 1.0,
+};
+
+function detectActualCircadianPhase(
+  recentSleepLogs: SleepLogForPlan[],
+  baselineBedtime: string,
+): number {
+  const missedWithBedtime = recentSleepLogs.filter(
+    (l) => l.hitTarget === false && l.actualBedtime
+  );
+  if (missedWithBedtime.length < 3) return timeToMinutes(baselineBedtime);
+  const minutesList = missedWithBedtime.map((l) => {
+    const m = timeToMinutes(l.actualBedtime!);
+    return m < 360 ? m + 1440 : m;
+  });
+  return Math.round(minutesList.reduce((a, b) => a + b, 0) / minutesList.length);
+}
+
 // ── main export ───────────────────────────────────────────────────────────────
 
 export function calculateSleepPlan(
@@ -251,13 +284,10 @@ export function calculateSleepPlan(
   const recentSleepLogs = opts?.recentSleepLogs ?? [];
   let globalSleepPenalty = 0;
   for (const log of recentSleepLogs) {
-    console.log("[algorithm] processing sleep log:", log.date, "hitTarget:", log.hitTarget, "actualBedtime:", log.actualBedtime, "recommendedBedtime:", log.recommendedBedtime);
     if (log.hitTarget === false && log.actualBedtime && log.recommendedBedtime) {
       let devMin = timeToMinutes(log.actualBedtime) - timeToMinutes(log.recommendedBedtime);
-      // Handle midnight crossing (e.g. recommended 22:00, actual 00:30)
       if (devMin < -720) devMin += 1440;
       if (devMin > 720) devMin -= 1440;
-      console.log("[algorithm] devMin:", devMin, "penalty added:", (devMin / 60) * 3);
       if (devMin > 0) {
         globalSleepPenalty += (devMin / 60) * 3;
       }
@@ -275,6 +305,17 @@ export function calculateSleepPlan(
 
   const allRecentMissed =
     recentSleepLogs.length > 0 && recentSleepLogs.every((l) => l.hitTarget === false);
+
+  const actualPhaseMinutes = detectActualCircadianPhase(
+    recentSleepLogs,
+    user.currentBedTime ?? "22:30",
+  );
+  const baselineBedtimeMinutes = timeToMinutes(user.currentBedTime ?? "22:30");
+  const circadianDelay = Math.max(0, actualPhaseMinutes - baselineBedtimeMinutes);
+  const cappedDelay = Math.min(circadianDelay, 240);
+  const circadianDetectedBedtime = cappedDelay > 0
+    ? minutesToTime(actualPhaseMinutes % 1440)
+    : null;
 
   const futureMeets = meets
     .map((m) => ({ ...m, date: new Date(m.date) }))
@@ -326,27 +367,31 @@ export function calculateSleepPlan(
 
     for (const mss of meetShiftSchedules) {
       const daysOut = daysApart(date, mss.meet.date);
-      if (daysOut < 0 || daysOut > mss.shiftWindowDays) continue;
+      if (daysOut < 0 || daysOut > 10) continue;
 
-      let cumulative: number;
-      if (daysOut === 0) {
-        cumulative = mss.totalAdvanceMin;
-      } else {
-        cumulative = mss.totalAdvanceMin - (daysOut - 1) * mss.actualDailyRateMin;
-        cumulative = Math.max(0, Math.round(cumulative));
-      }
+      const totalShiftNeeded = mss.totalAdvanceMin + cappedDelay;
+      const fraction = SHIFT_FRACTIONS[daysOut] ?? 0;
+      const cumulative = Math.round(fraction * totalShiftNeeded);
+
+      const prevFraction = daysOut < 10 ? (SHIFT_FRACTIONS[daysOut + 1] ?? 0) : 0;
+      const dailyShift = (fraction - prevFraction) * totalShiftNeeded;
 
       if (cumulative > bestCumulative) {
         bestCumulative = cumulative;
-        bestDailyRate = mss.actualDailyRateMin;
+        bestDailyRate = dailyShift;
         controllingSchedule = mss;
       }
     }
 
     const dayWakeMinutes = baseWakeMinutes - bestCumulative;
     const rawBedtimeMinutes = dayWakeMinutes - sleepNeed;
-    // Apply adaptive adjustment and round to nearest minute
-    const bedtimeMinutes = Math.round(rawBedtimeMinutes + bedtimeAdj);
+    let bedtimeMinutes = Math.round(rawBedtimeMinutes + bedtimeAdj);
+    if (plans.length > 0) {
+      const prevBedMin = timeToMinutes(plans[plans.length - 1].recommendedBedtime);
+      if (prevBedMin - bedtimeMinutes > 45) {
+        bedtimeMinutes = prevBedMin - 45;
+      }
+    }
     const recommendedBedtime = minutesToTime(bedtimeMinutes);
     const recommendedWakeTime = minutesToTime(dayWakeMinutes);
     const totalSleepHours = Math.round((sleepNeed / 60) * 10) / 10;
@@ -448,6 +493,8 @@ export function calculateSleepPlan(
       recoverySleepNote,
       recoveryFactors,
       allRecentMissed,
+      circadianDelayMinutes: cappedDelay,
+      circadianDetectedBedtime,
     });
   }
 

@@ -56,9 +56,6 @@ export async function GET() {
     }),
   ]);
 
-  console.log("[sleep-plan] recentSleepLogs:", JSON.stringify(recentSleepLogs));
-  console.log("[sleep-plan] globalSleepPenalty will be calculated from", recentSleepLogs.length, "logs");
-
   const sleepLogsForPlan: SleepLogForPlan[] = sleepLogs.map((l) => ({
     date: new Date(l.date).toISOString().slice(0, 10),
     hitTarget: l.hitTarget,

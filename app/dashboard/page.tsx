@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { useSession } from "next-auth/react";
 import { motion, AnimatePresence } from "framer-motion";
 import { FadeUp } from "@/components/FadeUp";
@@ -789,40 +790,57 @@ export default function DashboardPage() {
                 </p>
               </div>
 
-              {nextMeet ? (
-                <div className="border border-[#333] p-6">
-                  <p className="text-xs font-bold uppercase tracking-[0.3em] text-[#6B6B6B] mb-4">Next Meet</p>
-                  <div className="flex items-start justify-between">
-                    <div>
-                      <p className="font-black text-2xl mb-1">{nextMeet.name}</p>
-                      <p className="text-[#AAAAAA] text-sm mb-3">{formatDate(nextMeet.date)}</p>
-                      <Badge label={`${nextMeet.priority} Race`} variant={nextMeet.priority as "A" | "B" | "C"} />
-                    </div>
-                    <div className="text-right">
-                      <p className="font-mono font-black text-6xl text-[#E8FF00] leading-none">
-                        {today.daysUntilNextMeet ?? "0"}
-                      </p>
-                      <p className="text-[#6B6B6B] text-xs uppercase tracking-wider mt-1">days away</p>
-                      {nextMeet.raceTime && today.daysUntilNextMeet !== null && today.daysUntilNextMeet <= 10 && (
-                        <p className="text-[#6B6B6B] text-xs font-mono uppercase tracking-wider mt-1">
-                          RACE AT {formatTime12h(nextMeet.raceTime)}
+              <Link href="/meets" className="cursor-pointer hover:opacity-80 transition-opacity duration-150">
+                {nextMeet ? (
+                  <div className="border border-[#333] p-6">
+                    <p className="text-xs font-bold uppercase tracking-[0.3em] text-[#6B6B6B] mb-4">Next Meet</p>
+                    <div className="flex items-start justify-between">
+                      <div>
+                        <p className="font-black text-2xl mb-1">{nextMeet.name}</p>
+                        <p className="text-[#AAAAAA] text-sm mb-3">{formatDate(nextMeet.date)}</p>
+                        <Badge label={`${nextMeet.priority} Race`} variant={nextMeet.priority as "A" | "B" | "C"} />
+                      </div>
+                      <div className="text-right">
+                        <p className="font-mono font-black text-6xl text-[#E8FF00] leading-none">
+                          {today.daysUntilNextMeet ?? "0"}
                         </p>
-                      )}
+                        <p className="text-[#6B6B6B] text-xs uppercase tracking-wider mt-1">days away</p>
+                        {nextMeet.raceTime && today.daysUntilNextMeet !== null && today.daysUntilNextMeet <= 10 && (
+                          <p className="text-[#6B6B6B] text-xs font-mono uppercase tracking-wider mt-1">
+                            RACE AT {formatTime12h(nextMeet.raceTime)}
+                          </p>
+                        )}
+                      </div>
                     </div>
+                    {today.daysUntilNextMeet !== null && today.daysUntilNextMeet <= 10 && (
+                      <p className="mt-4 text-xs text-[#E8FF00] font-bold uppercase tracking-wider">
+                        Sleep shift in progress ↗
+                      </p>
+                    )}
                   </div>
-                  {today.daysUntilNextMeet !== null && today.daysUntilNextMeet <= 10 && (
-                    <p className="mt-4 text-xs text-[#E8FF00] font-bold uppercase tracking-wider">
-                      Sleep shift in progress ↗
-                    </p>
-                  )}
-                </div>
-              ) : (
-                <div className="border border-[#333] p-6 flex items-center justify-center">
-                  <p className="text-[#6B6B6B] text-sm uppercase tracking-wider">No upcoming meets</p>
-                </div>
-              )}
+                ) : (
+                  <div className="border border-[#333] p-6 flex items-center justify-center">
+                    <p className="text-[#6B6B6B] text-sm uppercase tracking-wider">No upcoming meets</p>
+                  </div>
+                )}
+              </Link>
             </div>
           </motion.section>
+
+          {/* Circadian drift banner */}
+          {today.circadianDelayMinutes > 30 && today.circadianDetectedBedtime && (
+            <div className="bg-[#0A0A0A] text-white px-6 py-3 border-b border-[#222]">
+              <div className="max-w-[1200px] mx-auto">
+                <p className="text-xs font-bold uppercase tracking-wider text-[#E8FF00] mb-0.5">Circadian Drift Detected</p>
+                <p className="text-xs font-mono text-[#AAAAAA]">
+                  Your recent sleep logs show you&apos;ve been going to bed around{" "}
+                  {formatTime12h(today.circadianDetectedBedtime as string)} on average, which is{" "}
+                  {Math.round(today.circadianDelayMinutes / 60 * 10) / 10} hours later than your baseline.
+                  {today.nextMeetName ? ` PRform has adjusted your ramp to correct this before your ${today.nextMeetName} meet.` : ""}
+                </p>
+              </div>
+            </div>
+          )}
 
           {/* Wind-Down Timeline */}
           <section className="border-b border-[#E5E5E5] dark:border-[#333] px-6 py-10">

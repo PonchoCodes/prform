@@ -45,8 +45,8 @@ export default function SignUpPage() {
   };
 
   return (
-    <div className="min-h-screen bg-white flex flex-col">
-      <nav className="border-b border-[#E5E5E5] px-6 h-14 flex items-center">
+    <div className="min-h-screen bg-white dark:bg-[#1a1a1a] flex flex-col">
+      <nav className="border-b border-[#E5E5E5] dark:border-[#333333] px-6 h-14 flex items-center">
         <Link href="/" className="font-black text-xl uppercase tracking-tight">
           PR<span className="text-[#E8FF00] bg-[#0A0A0A] px-1">form</span>
         </Link>
@@ -59,39 +59,39 @@ export default function SignUpPage() {
           transition={{ duration: 0.4 }}
           className="w-full max-w-md mx-auto px-6 py-16"
         >
-          <p className="text-xs font-bold uppercase tracking-[0.3em] text-[#6B6B6B] mb-3">Get Started</p>
-          <h1 className="font-black text-4xl uppercase mb-8">Create Account</h1>
+          <p className="text-xs font-bold uppercase tracking-[0.3em] text-[#6B6B6B] dark:text-[#A0A0A0] mb-3">Get Started</p>
+          <h1 className="font-black text-4xl uppercase mb-8 dark:text-[#F5F5F5]">Create Account</h1>
 
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
-              <label className="block text-xs font-bold uppercase tracking-wider mb-2">Full Name</label>
+              <label className="block text-xs font-bold uppercase tracking-wider mb-2 dark:text-[#A0A0A0]">Full Name</label>
               <input
                 type="text"
                 value={form.name}
                 onChange={(e) => setForm({ ...form, name: e.target.value })}
-                className="w-full border border-[#E5E5E5] px-4 py-3 text-sm focus:outline-none focus:border-[#0A0A0A] transition-colors"
+                className="w-full border border-[#E5E5E5] dark:border-[#444444] px-4 py-3 text-sm focus:outline-none focus:border-[#0A0A0A] dark:focus:border-[#F5F5F5] transition-colors dark:bg-[#2a2a2a] dark:text-[#F5F5F5] dark:placeholder-[#666666]"
                 placeholder="Your name"
                 required
               />
             </div>
             <div>
-              <label className="block text-xs font-bold uppercase tracking-wider mb-2">Email</label>
+              <label className="block text-xs font-bold uppercase tracking-wider mb-2 dark:text-[#A0A0A0]">Email</label>
               <input
                 type="email"
                 value={form.email}
                 onChange={(e) => setForm({ ...form, email: e.target.value })}
-                className="w-full border border-[#E5E5E5] px-4 py-3 text-sm focus:outline-none focus:border-[#0A0A0A] transition-colors"
+                className="w-full border border-[#E5E5E5] dark:border-[#444444] px-4 py-3 text-sm focus:outline-none focus:border-[#0A0A0A] dark:focus:border-[#F5F5F5] transition-colors dark:bg-[#2a2a2a] dark:text-[#F5F5F5] dark:placeholder-[#666666]"
                 placeholder="you@example.com"
                 required
               />
             </div>
             <div>
-              <label className="block text-xs font-bold uppercase tracking-wider mb-2">Password</label>
+              <label className="block text-xs font-bold uppercase tracking-wider mb-2 dark:text-[#A0A0A0]">Password</label>
               <input
                 type="password"
                 value={form.password}
                 onChange={(e) => setForm({ ...form, password: e.target.value })}
-                className="w-full border border-[#E5E5E5] px-4 py-3 text-sm focus:outline-none focus:border-[#0A0A0A] transition-colors"
+                className="w-full border border-[#E5E5E5] dark:border-[#444444] px-4 py-3 text-sm focus:outline-none focus:border-[#0A0A0A] dark:focus:border-[#F5F5F5] transition-colors dark:bg-[#2a2a2a] dark:text-[#F5F5F5] dark:placeholder-[#666666]"
                 placeholder="Min 8 characters"
                 required
                 minLength={8}
@@ -105,9 +105,9 @@ export default function SignUpPage() {
             </Button>
           </form>
 
-          <p className="mt-6 text-sm text-[#6B6B6B]">
+          <p className="mt-6 text-sm text-[#6B6B6B] dark:text-[#A0A0A0]">
             Already have an account?{" "}
-            <Link href="/login" className="font-bold text-[#0A0A0A] link-wipe">
+            <Link href="/login" className="font-bold text-[#0A0A0A] dark:text-[#F5F5F5] link-wipe">
               Log in
             </Link>
           </p>
