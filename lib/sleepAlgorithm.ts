@@ -82,6 +82,7 @@ export interface DailySleepPlan {
   allRecentMissed: boolean;
   circadianDelayMinutes: number;
   circadianDetectedBedtime: string | null;
+  preRaceShiftMinutes: number;
 }
 
 // ── helpers ──────────────────────────────────────────────────────────────────
@@ -149,13 +150,13 @@ function buildMeetShiftSchedule(
 
   if (meet.raceTime) {
     const raceMin = timeToMinutes(meet.raceTime);
-    targetWakeMinutes = raceMin - 120;
+    targetWakeMinutes = raceMin - 660; // wake 11 hours before race
   } else {
     const defaultAdv = meet.priority === "A" ? 30 : meet.priority === "B" ? 15 : 0;
     targetWakeMinutes = baseWakeMinutes - defaultAdv;
   }
 
-  const rawAdvanceMin = Math.max(0, Math.min(90, baseWakeMinutes - targetWakeMinutes));
+  const rawAdvanceMin = Math.max(0, Math.min(120, baseWakeMinutes - targetWakeMinutes));
   const totalAdvanceMin = Math.round(rawAdvanceMin * aggFactor);
 
   const maxDailyRate = meet.priority === "A" ? 30 : meet.priority === "B" ? 20 : 15;
@@ -361,30 +362,45 @@ export function calculateSleepPlan(
     const fatigueBoostMinutes = isFatigueBoostDay ? 15 : 0;
     sleepNeed += fatigueBoostMinutes;
 
-    let bestCumulative = 0;
+    let bestPreRaceShift = 0;
+    let bestCircadianShift = 0;
     let bestDailyRate = 0;
     let controllingSchedule: MeetShiftSchedule | null = null;
+    let recoveryShift = 0;
 
     for (const mss of meetShiftSchedules) {
       const daysOut = daysApart(date, mss.meet.date);
-      if (daysOut < 0 || daysOut > 10) continue;
+      if (daysOut < -3 || daysOut > 10) continue;
 
-      const totalShiftNeeded = mss.totalAdvanceMin + cappedDelay;
-      const fraction = SHIFT_FRACTIONS[daysOut] ?? 0;
-      const cumulative = Math.round(fraction * totalShiftNeeded);
+      if (daysOut < 0) {
+        // Post-meet recovery: fade bedtime shift back over 3 nights, wake returns immediately
+        const nightIdx = -daysOut - 1;
+        const multipliers = [0.67, 0.33, 0.0];
+        const multiplier = multipliers[nightIdx] ?? 0;
+        const candidate = Math.round(multiplier * (mss.totalAdvanceMin + cappedDelay));
+        if (candidate > recoveryShift) recoveryShift = candidate;
+        continue;
+      }
+
+      const raceFraction = SHIFT_FRACTIONS[daysOut] ?? 0;
+      const preRaceCumulative = Math.round(raceFraction * mss.totalAdvanceMin);
+      const circadianCumulative = Math.round(raceFraction * cappedDelay);
 
       const prevFraction = daysOut < 10 ? (SHIFT_FRACTIONS[daysOut + 1] ?? 0) : 0;
-      const dailyShift = (fraction - prevFraction) * totalShiftNeeded;
+      const dailyShift = (raceFraction - prevFraction) * (mss.totalAdvanceMin + cappedDelay);
 
-      if (cumulative > bestCumulative) {
-        bestCumulative = cumulative;
+      if (preRaceCumulative > bestPreRaceShift) {
+        bestPreRaceShift = preRaceCumulative;
+        bestCircadianShift = circadianCumulative;
         bestDailyRate = dailyShift;
         controllingSchedule = mss;
       }
     }
 
-    const dayWakeMinutes = baseWakeMinutes - bestCumulative;
-    const rawBedtimeMinutes = dayWakeMinutes - sleepNeed;
+    const totalBedtimeShift = bestPreRaceShift + bestCircadianShift;
+    // Wake only advances for race alignment — circadian correction stays in bedtime only
+    const dayWakeMinutes = baseWakeMinutes - bestPreRaceShift;
+    const rawBedtimeMinutes = dayWakeMinutes - sleepNeed - bestCircadianShift - recoveryShift;
     let bedtimeMinutes = Math.round(rawBedtimeMinutes + bedtimeAdj);
     if (plans.length > 0) {
       const prevBedMin = timeToMinutes(plans[plans.length - 1].recommendedBedtime);
@@ -404,12 +420,12 @@ export function calculateSleepPlan(
     };
 
     let circadian: CircadianPlan | null = null;
-    if (controllingSchedule && bestCumulative > 0) {
+    if (controllingSchedule && totalBedtimeShift > 0) {
       circadian = computePRCPlan(
         dayWakeMinutes,
         bedtimeMinutes,
         bestDailyRate,
-        bestCumulative,
+        totalBedtimeShift,
         minutesToTime(controllingSchedule.targetWakeMinutes),
       );
     }
@@ -495,8 +511,16 @@ export function calculateSleepPlan(
       allRecentMissed,
       circadianDelayMinutes: cappedDelay,
       circadianDetectedBedtime,
+      preRaceShiftMinutes: totalBedtimeShift,
     });
   }
+
+  console.log("[algorithm] plan summary:", plans.slice(0, 10).map((d, i) => ({
+    dayOffset: startDayOffset + i,
+    wake: d.recommendedWakeTime,
+    bed: d.recommendedBedtime,
+    shift: d.preRaceShiftMinutes,
+  })));
 
   return plans;
 }
