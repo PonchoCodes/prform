@@ -250,7 +250,7 @@ Source: Morin CM (1993). *Insomnia: Psychological assessment and management*. Gu
 
 ## Design System
 
-PRform mirrors the aesthetic of Citius Mag, the premier running media brand. Sharp, editorial, high-contrast. No softness.
+PRform is Sharp, editorial, high-contrast. No softness.
 
 ```
 Background:     #FFFFFF (pure white) / #0A0A0A (near black)
