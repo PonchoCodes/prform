@@ -15,6 +15,7 @@ export interface NormalizedWorkout {
   distance: number;
   duration: number;
   averageHeartRate?: number;
+  effort?: number | null; // 1–5 RPE rating (manual workouts only); drives Seiler zone scaling
   source: "strava" | "manual" | "assumed";
   isTentative: boolean;
   stravaActivityId?: string;
