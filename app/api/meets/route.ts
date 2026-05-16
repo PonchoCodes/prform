@@ -29,6 +29,10 @@ export async function POST(req: Request) {
       distances: body.distances,
       priority: body.priority,
       raceTime: body.raceTime || null,
+      primaryEvent: body.primaryEvent || null,
+      personalBest: body.personalBest || null,
+      recentBest: body.recentBest || null,
+      personalBestUnit: body.personalBestUnit || null,
     },
   });
   return NextResponse.json(meet);
@@ -48,6 +52,10 @@ export async function PUT(req: Request) {
       distances: body.distances,
       priority: body.priority,
       raceTime: body.raceTime || null,
+      primaryEvent: body.primaryEvent || null,
+      personalBest: body.personalBest || null,
+      recentBest: body.recentBest || null,
+      personalBestUnit: body.personalBestUnit || null,
     },
   });
   return NextResponse.json(meet);

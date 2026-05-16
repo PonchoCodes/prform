@@ -46,12 +46,19 @@ const defaultWeek: WeekTemplate = {
   6: { type: "rest", distance: "" },
 };
 
+const COMMON_EVENTS = [
+  "100m", "200m", "400m", "800m", "1500m", "Mile", "3000m", "5000m", "10000m",
+  "110m Hurdles", "400m Hurdles", "4×100m", "4×400m",
+  "100m Fly", "200m Fly", "400m IM", "200m Free", "500m Free", "1650m Free",
+];
+
 interface Meet {
   name: string;
   date: string;
-  distances: string;
-  priority: "A" | "B" | "C";
   raceTime: string;
+  primaryEvent: string;
+  personalBest: string;
+  priority: "A" | "B" | "C";
 }
 
 export default function OnboardingPage() {
@@ -59,28 +66,29 @@ export default function OnboardingPage() {
   const { data: session } = useSession();
   const [step, setStep] = useState(1);
 
-  // Step 1: Profile
+  // Step 1: Essentials
   const [sport, setSport] = useState("track");
   const [age, setAge] = useState("");
   const [biologicalSex, setBiologicalSex] = useState("");
-  const [weeklyMileage, setWeeklyMileage] = useState("");
-  const [experienceLevel, setExperienceLevel] = useState("");
-
-  // Step 2: Sleep baseline
   const [wakeTime, setWakeTime] = useState("06:00");
   const [bedTime, setBedTime] = useState("22:00");
-  const [restedFeeling, setRestedFeeling] = useState("");
+
+  // Step 2: Your Next Race
+  const [meet, setMeet] = useState<Meet>({
+    name: "",
+    date: "",
+    raceTime: "",
+    primaryEvent: "",
+    personalBest: "",
+    priority: "A",
+  });
+  const [skipRace, setSkipRace] = useState(false);
 
   // Step 3: Data source
   const [stravaConnected, setStravaConnected] = useState(false);
   const [stravaAthleteId, setStravaAthleteId] = useState<string | null>(null);
   const [showManualSchedule, setShowManualSchedule] = useState(false);
   const [weekTemplate, setWeekTemplate] = useState<WeekTemplate>(defaultWeek);
-
-  // Step 4: Meets
-  const [meets, setMeets] = useState<Meet[]>([
-    { name: "", date: "", distances: "", priority: "A", raceTime: "" },
-  ]);
 
   const [unitPreference, setUnitPreference] = useState<"imperial" | "metric">("imperial");
   const [loading, setLoading] = useState(false);
@@ -91,14 +99,11 @@ export default function OnboardingPage() {
     }
   }, []);
 
-  // On mount: check if returning from Strava OAuth (connected=1 in URL) and
-  // advance to step 4. Also poll Strava connection status when on step 3.
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     if (params.get("connected") === "1") {
       setStravaConnected(true);
-      setStep(4);
-      // Clean the URL without a hard reload
+      setStep(3);
       window.history.replaceState({}, "", "/onboarding");
       return;
     }
@@ -126,29 +131,21 @@ export default function OnboardingPage() {
     }));
   };
 
-  const addMeet = () =>
-    setMeets((prev) => [...prev, { name: "", date: "", distances: "", priority: "A", raceTime: "" }]);
-
-  const updateMeet = (i: number, field: keyof Meet, value: string) =>
-    setMeets((prev) => prev.map((m, idx) => (idx === i ? { ...m, [field]: value } : m)));
-
-  const removeMeet = (i: number) =>
-    setMeets((prev) => prev.filter((_, idx) => idx !== i));
-
   const handleSubmit = async () => {
     setLoading(true);
+
+    const meets = skipRace || !meet.name || !meet.date
+      ? []
+      : [meet];
 
     const payload = {
       sport,
       age: parseInt(age),
       biologicalSex,
-      weeklyMileage,
-      experienceLevel,
       currentWakeTime: wakeTime,
       currentBedTime: bedTime,
-      restedFeeling,
       weekTemplate,
-      meets: meets.filter((m) => m.name && m.date),
+      meets,
       unitPreference,
     };
 
@@ -161,7 +158,7 @@ export default function OnboardingPage() {
     router.push("/dashboard");
   };
 
-  const progress = (step / 4) * 100;
+  const progress = (step / 3) * 100;
 
   return (
     <div className="min-h-screen bg-white dark:bg-[#1a1a1a] flex flex-col">
@@ -169,8 +166,8 @@ export default function OnboardingPage() {
         <span className="font-black text-xl uppercase tracking-tight">
           PR<span className="text-[#E8FF00] bg-[#0A0A0A] px-1">form</span>
         </span>
-        <span className="text-xs font-bold uppercase tracking-wider text-[#6B6B6B]">
-          Step {step} of 4
+        <span className="text-xs font-bold uppercase tracking-wider text-[#6B6B6B] dark:text-[#A0A0A0]">
+          Step {step} of 3
         </span>
       </nav>
 
@@ -191,10 +188,14 @@ export default function OnboardingPage() {
             exit={{ opacity: 0, x: -20 }}
             transition={{ duration: 0.25 }}
           >
+            {/* Step 1: The Essentials */}
             {step === 1 && (
               <div>
-                <p className="text-xs font-bold uppercase tracking-[0.3em] text-[#6B6B6B] mb-2">Step 1 of 4</p>
-                <h1 className="font-black text-3xl uppercase mb-8">Athlete Profile</h1>
+                <p className="text-xs font-bold uppercase tracking-[0.3em] text-[#6B6B6B] dark:text-[#A0A0A0] mb-2">Step 1 of 3</p>
+                <h1 className="font-black text-3xl uppercase mb-2">The Essentials</h1>
+                <p className="text-sm text-[#6B6B6B] dark:text-[#A0A0A0] font-mono mb-8">
+                  Four things and we can calculate your first bedtime tonight.
+                </p>
                 <div className="space-y-6">
                   <div>
                     <label className="block text-xs font-bold uppercase tracking-wider mb-3">Your Sport</label>
@@ -245,56 +246,6 @@ export default function OnboardingPage() {
                     </div>
                   </div>
                   <div>
-                    <label className="block text-xs font-bold uppercase tracking-wider mb-3">Weekly Mileage</label>
-                    <div className="grid grid-cols-2 gap-3">
-                      {["0-30", "30-50", "50-70", "70+"].map((m) => (
-                        <button
-                          key={m}
-                          onClick={() => setWeeklyMileage(m)}
-                          className={`py-3 text-xs font-bold uppercase tracking-wider border transition-colors ${
-                            weeklyMileage === m
-                              ? "bg-[#0A0A0A] text-white border-[#0A0A0A]"
-                              : "border-[#E5E5E5] dark:border-[#444] hover:border-[#0A0A0A] dark:hover:border-[#F5F5F5]"
-                          }`}
-                        >
-                          {m} mi/wk
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                  <div>
-                    <label className="block text-xs font-bold uppercase tracking-wider mb-3">Experience Level</label>
-                    <div className="grid grid-cols-2 gap-3">
-                      {[
-                        { value: "high_school", label: "High School" },
-                        { value: "collegiate", label: "Collegiate" },
-                        { value: "post_collegiate", label: "Post-Collegiate" },
-                        { value: "masters", label: "Masters" },
-                      ].map((e) => (
-                        <button
-                          key={e.value}
-                          onClick={() => setExperienceLevel(e.value)}
-                          className={`py-3 text-xs font-bold uppercase tracking-wider border transition-colors ${
-                            experienceLevel === e.value
-                              ? "bg-[#0A0A0A] text-white border-[#0A0A0A]"
-                              : "border-[#E5E5E5] dark:border-[#444] hover:border-[#0A0A0A] dark:hover:border-[#F5F5F5]"
-                          }`}
-                        >
-                          {e.label}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {step === 2 && (
-              <div>
-                <p className="text-xs font-bold uppercase tracking-[0.3em] text-[#6B6B6B] mb-2">Step 2 of 4</p>
-                <h1 className="font-black text-3xl uppercase mb-8">Sleep Baseline</h1>
-                <div className="space-y-6">
-                  <div>
                     <label className="block text-xs font-bold uppercase tracking-wider mb-2">Current Wake Time</label>
                     <input
                       type="time"
@@ -312,38 +263,115 @@ export default function OnboardingPage() {
                       className="w-full border border-[#E5E5E5] dark:border-[#444] dark:bg-[#2a2a2a] dark:text-[#F5F5F5] px-4 py-3 text-sm font-mono focus:outline-none focus:border-[#0A0A0A] dark:focus:border-[#F5F5F5]"
                     />
                   </div>
-                  <div>
-                    <label className="block text-xs font-bold uppercase tracking-wider mb-3">How Rested Do You Feel?</label>
-                    <div className="grid grid-cols-3 gap-3">
-                      {[
-                        { value: "well", label: "Well Rested" },
-                        { value: "sometimes", label: "Sometimes Rested" },
-                        { value: "rarely", label: "Rarely Rested" },
-                      ].map((r) => (
-                        <button
-                          key={r.value}
-                          onClick={() => setRestedFeeling(r.value)}
-                          className={`py-3 text-xs font-bold uppercase tracking-wider border transition-colors ${
-                            restedFeeling === r.value
-                              ? "bg-[#0A0A0A] text-white border-[#0A0A0A]"
-                              : "border-[#E5E5E5] dark:border-[#444] hover:border-[#0A0A0A] dark:hover:border-[#F5F5F5]"
-                          }`}
-                        >
-                          {r.label}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
                 </div>
               </div>
             )}
 
+            {/* Step 2: Your Next Race */}
+            {step === 2 && (
+              <div>
+                <p className="text-xs font-bold uppercase tracking-[0.3em] text-[#6B6B6B] dark:text-[#A0A0A0] mb-2">Step 2 of 3</p>
+                <h1 className="font-black text-3xl uppercase mb-2">Your Next Race</h1>
+                <p className="text-sm text-[#6B6B6B] dark:text-[#A0A0A0] font-mono mb-8">
+                  When is it? We&apos;ll build your sleep plan backward from race day.
+                </p>
+
+                <div className="space-y-4">
+                  <div className="border border-[#E5E5E5] dark:border-[#333] p-4">
+                    <div className="space-y-3">
+                      <div>
+                        <label className="block text-xs font-bold uppercase tracking-wider mb-1">Meet Name</label>
+                        <input
+                          type="text"
+                          placeholder="e.g. State Championships"
+                          value={meet.name}
+                          onChange={(e) => setMeet((m) => ({ ...m, name: e.target.value }))}
+                          className="w-full border border-[#E5E5E5] dark:border-[#444] dark:bg-[#2a2a2a] dark:text-[#F5F5F5] px-4 py-2 text-sm focus:outline-none focus:border-[#0A0A0A] dark:focus:border-[#F5F5F5]"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-bold uppercase tracking-wider mb-1">Meet Date</label>
+                        <input
+                          type="date"
+                          value={meet.date}
+                          onChange={(e) => setMeet((m) => ({ ...m, date: e.target.value }))}
+                          className="w-full border border-[#E5E5E5] dark:border-[#444] dark:bg-[#2a2a2a] dark:text-[#F5F5F5] px-4 py-2 text-sm font-mono focus:outline-none focus:border-[#0A0A0A] dark:focus:border-[#F5F5F5]"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-bold uppercase tracking-[0.3em] text-[#6B6B6B] dark:text-[#A0A0A0] mb-1">Race Start Time</label>
+                        <input
+                          type="time"
+                          value={meet.raceTime}
+                          onChange={(e) => setMeet((m) => ({ ...m, raceTime: e.target.value }))}
+                          className="w-full border border-[#E5E5E5] dark:border-[#444] dark:bg-[#2a2a2a] dark:text-[#F5F5F5] px-4 py-2 text-sm font-mono focus:outline-none focus:border-[#0A0A0A] dark:focus:border-[#F5F5F5]"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-bold uppercase tracking-wider mb-1">Primary Event</label>
+                        <select
+                          value={meet.primaryEvent}
+                          onChange={(e) => setMeet((m) => ({ ...m, primaryEvent: e.target.value }))}
+                          className="w-full border border-[#E5E5E5] dark:border-[#444] dark:bg-[#2a2a2a] dark:text-[#F5F5F5] px-4 py-2 text-sm font-mono focus:outline-none focus:border-[#0A0A0A] dark:focus:border-[#F5F5F5] bg-white"
+                        >
+                          <option value="">Select event…</option>
+                          {COMMON_EVENTS.map((ev) => (
+                            <option key={ev} value={ev}>{ev}</option>
+                          ))}
+                        </select>
+                      </div>
+                      <div>
+                        <label className="block text-xs font-bold uppercase tracking-wider mb-1">
+                          Personal Best <span className="text-[#6B6B6B] dark:text-[#A0A0A0] normal-case">(optional — e.g. 51.8 or 1:52.4)</span>
+                        </label>
+                        <input
+                          type="text"
+                          placeholder="e.g. 51.8 or 1:52.4"
+                          value={meet.personalBest}
+                          onChange={(e) => setMeet((m) => ({ ...m, personalBest: e.target.value }))}
+                          className="w-full border border-[#E5E5E5] dark:border-[#444] dark:bg-[#2a2a2a] dark:text-[#F5F5F5] px-4 py-2 text-sm font-mono focus:outline-none focus:border-[#0A0A0A] dark:focus:border-[#F5F5F5]"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-bold uppercase tracking-wider mb-2">Priority</label>
+                        <div className="flex gap-2">
+                          {(["A", "B", "C"] as const).map((p) => (
+                            <button
+                              key={p}
+                              onClick={() => setMeet((m) => ({ ...m, priority: p }))}
+                              className={`flex-1 py-2 text-xs font-bold uppercase tracking-wider border transition-colors ${
+                                meet.priority === p
+                                  ? p === "A"
+                                    ? "bg-[#E8FF00] text-[#0A0A0A] border-[#E8FF00]"
+                                    : "bg-[#0A0A0A] text-white border-[#0A0A0A]"
+                                  : "border-[#E5E5E5] dark:border-[#444] hover:border-[#0A0A0A] dark:hover:border-[#F5F5F5]"
+                              }`}
+                            >
+                              {p} Race
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <button
+                    onClick={() => { setSkipRace(true); setStep(3); }}
+                    className="w-full text-center text-xs font-mono text-[#6B6B6B] dark:text-[#A0A0A0] hover:text-[#0A0A0A] dark:hover:text-[#F5F5F5] py-2 transition-colors"
+                  >
+                    Skip for now →
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* Step 3: Connect Your Data */}
             {step === 3 && (
               <div>
-                <p className="text-xs font-bold uppercase tracking-[0.3em] text-[#6B6B6B] mb-2">Step 3 of 4</p>
+                <p className="text-xs font-bold uppercase tracking-[0.3em] text-[#6B6B6B] dark:text-[#A0A0A0] mb-2">Step 3 of 3</p>
                 <h1 className="font-black text-3xl uppercase mb-2">Connect Your Data</h1>
                 <p className="text-sm text-[#6B6B6B] dark:text-[#A0A0A0] mb-8">
-                  PRform uses your actual training data to optimise your sleep plan. Connect Strava for automatic tracking, or set a weekly template manually.
+                  Connect Strava and PRform updates your sleep plan automatically after every run.
                 </p>
 
                 {/* Strava card */}
@@ -422,84 +450,6 @@ export default function OnboardingPage() {
                 )}
               </div>
             )}
-
-            {step === 4 && (
-              <div>
-                <p className="text-xs font-bold uppercase tracking-[0.3em] text-[#6B6B6B] mb-2">Step 4 of 4</p>
-                <h1 className="font-black text-3xl uppercase mb-8">Meet Schedule</h1>
-                <div className="space-y-4">
-                  {meets.map((meet, i) => (
-                    <div key={i} className="border border-[#E5E5E5] dark:border-[#333] p-4">
-                      <div className="flex items-center justify-between mb-3">
-                        <p className="text-xs font-bold uppercase tracking-wider">Meet {i + 1}</p>
-                        {meets.length > 1 && (
-                          <button
-                            onClick={() => removeMeet(i)}
-                            className="text-xs text-[#6B6B6B] hover:text-red-600 font-bold uppercase tracking-wider"
-                          >
-                            Remove
-                          </button>
-                        )}
-                      </div>
-                      <div className="space-y-3">
-                        <input
-                          type="text"
-                          placeholder="Meet name"
-                          value={meet.name}
-                          onChange={(e) => updateMeet(i, "name", e.target.value)}
-                          className="w-full border border-[#E5E5E5] dark:border-[#444] dark:bg-[#2a2a2a] dark:text-[#F5F5F5] px-4 py-2 text-sm focus:outline-none focus:border-[#0A0A0A] dark:focus:border-[#F5F5F5]"
-                        />
-                        <input
-                          type="date"
-                          value={meet.date}
-                          onChange={(e) => updateMeet(i, "date", e.target.value)}
-                          className="w-full border border-[#E5E5E5] dark:border-[#444] dark:bg-[#2a2a2a] dark:text-[#F5F5F5] px-4 py-2 text-sm font-mono focus:outline-none focus:border-[#0A0A0A] dark:focus:border-[#F5F5F5]"
-                        />
-                        <div>
-                          <label className="block text-xs font-bold uppercase tracking-[0.3em] text-[#6B6B6B] mb-1">Race Time</label>
-                          <input
-                            type="time"
-                            value={meet.raceTime}
-                            onChange={(e) => updateMeet(i, "raceTime", e.target.value)}
-                            className="w-full border border-[#E5E5E5] dark:border-[#444] dark:bg-[#2a2a2a] dark:text-[#F5F5F5] px-4 py-2 text-sm font-mono focus:outline-none focus:border-[#0A0A0A] dark:focus:border-[#F5F5F5]"
-                          />
-                        </div>
-                        <input
-                          type="text"
-                          placeholder="Distances (e.g. 5K, 10K)"
-                          value={meet.distances}
-                          onChange={(e) => updateMeet(i, "distances", e.target.value)}
-                          className="w-full border border-[#E5E5E5] dark:border-[#444] dark:bg-[#2a2a2a] dark:text-[#F5F5F5] px-4 py-2 text-sm focus:outline-none focus:border-[#0A0A0A] dark:focus:border-[#F5F5F5]"
-                        />
-                        <div className="flex gap-2">
-                          {(["A", "B", "C"] as const).map((p) => (
-                            <button
-                              key={p}
-                              onClick={() => updateMeet(i, "priority", p)}
-                              className={`flex-1 py-2 text-xs font-bold uppercase tracking-wider border transition-colors ${
-                                meet.priority === p
-                                  ? p === "A"
-                                    ? "bg-[#E8FF00] text-[#0A0A0A] border-[#E8FF00]"
-                                    : "bg-[#0A0A0A] text-white border-[#0A0A0A]"
-                                  : "border-[#E5E5E5] hover:border-[#0A0A0A]"
-                              }`}
-                            >
-                              {p} Race
-                            </button>
-                          ))}
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                  <button
-                    onClick={addMeet}
-                    className="w-full border border-dashed border-[#E5E5E5] dark:border-[#444] py-3 text-xs font-bold uppercase tracking-wider text-[#6B6B6B] dark:text-[#A0A0A0] hover:border-[#0A0A0A] dark:hover:border-[#F5F5F5] hover:text-[#0A0A0A] dark:hover:text-[#F5F5F5] transition-colors"
-                  >
-                    + Add Meet
-                  </button>
-                </div>
-              </div>
-            )}
           </motion.div>
         </AnimatePresence>
 
@@ -509,7 +459,7 @@ export default function OnboardingPage() {
               Back
             </Button>
           )}
-          {step < 4 ? (
+          {step < 3 ? (
             <Button variant="secondary" size="lg" onClick={() => setStep(step + 1)} className="flex-1">
               Continue →
             </Button>

@@ -50,9 +50,11 @@ export async function POST(req: Request) {
         userId,
         name: m.name,
         date: new Date(m.date),
-        distances: m.distances,
+        distances: m.distances || null,
         priority: m.priority,
         raceTime: m.raceTime || null,
+        primaryEvent: m.primaryEvent || null,
+        personalBest: m.personalBest || null,
       })),
     });
   }

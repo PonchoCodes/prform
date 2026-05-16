@@ -1,18 +1,18 @@
 "use client";
 import { useEffect, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
-import Link from "next/link";
 import { useSession } from "next-auth/react";
 import { motion, AnimatePresence } from "framer-motion";
 import { FadeUp } from "@/components/FadeUp";
 import { Footer } from "@/components/Footer";
 import { MonoClock } from "@/components/MonoClock";
-import { WindDownTimeline } from "@/components/WindDownTimeline";
 import { Badge } from "@/components/Badge";
 import { Navbar } from "@/components/Navbar";
-import type { DailySleepPlan, CircadianPlan } from "@/lib/sleepAlgorithm";
+import type { DailySleepPlan } from "@/lib/sleepAlgorithm";
 import { formatTime12h } from "@/lib/sleepAlgorithm";
 import type { PerformanceReport } from "@/lib/performanceAnalysis";
+import { formatTimeFromSeconds, formatTimeDifference } from "@/lib/performancePrediction";
+import type { PerformancePrediction } from "@/lib/performancePrediction";
 import { DayDetailModal } from "@/components/DayDetailModal";
 
 const DAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
@@ -27,10 +27,6 @@ function formatDate(date: Date): string {
   return new Date(date).toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" });
 }
 
-function getTodayIndex(): number {
-  return (new Date().getDay() + 6) % 7;
-}
-
 function parseTimeMin(t: string): number {
   const [h, m] = t.split(":").map(Number);
   return (h || 0) * 60 + (m || 0);
@@ -39,6 +35,15 @@ function parseTimeMin(t: string): number {
 function minutesToTime(min: number): string {
   const total = ((min % 1440) + 1440) % 1440;
   return `${String(Math.floor(total / 60)).padStart(2, "0")}:${String(total % 60).padStart(2, "0")}`;
+}
+
+function currentMinutes(): number {
+  const now = new Date();
+  return now.getHours() * 60 + now.getMinutes();
+}
+
+function normalizeMin(t: number): number {
+  return t < 12 * 60 ? t + 1440 : t;
 }
 
 // ── Morning Confirmation Card ─────────────────────────────────────────────────
@@ -51,7 +56,6 @@ interface MorningCardProps {
 function MorningConfirmationCard({ yesterdayPlan, onDismiss }: MorningCardProps) {
   const [phase, setPhase] = useState<"question" | "miss" | "submitting" | "done">("question");
   const [actualBedtime, setActualBedtime] = useState(() => {
-    // Default: 30 min after recommended
     const rec = parseTimeMin(yesterdayPlan.recommendedBedtime);
     return minutesToTime(rec + 30);
   });
@@ -126,7 +130,7 @@ function MorningConfirmationCard({ yesterdayPlan, onDismiss }: MorningCardProps)
                     </div>
                     <p className="text-[10px] font-mono text-[#6B6B6B]">
                       You can edit this later in your{" "}
-                      <a href="/sleep-history" className="underline hover:text-white">sleep history</a>.
+                      <a href="/sleep" className="underline hover:text-white">sleep history</a>.
                     </p>
                   </>
                 )}
@@ -166,7 +170,7 @@ function MorningConfirmationCard({ yesterdayPlan, onDismiss }: MorningCardProps)
                     </button>
                     <p className="text-[10px] font-mono text-[#6B6B6B] mt-2">
                       You can edit this later in your{" "}
-                      <a href="/sleep-history" className="underline hover:text-white">sleep history</a>.
+                      <a href="/sleep" className="underline hover:text-white">sleep history</a>.
                     </p>
                   </>
                 )}
@@ -213,7 +217,6 @@ function InterventionCard({
   const avgActualTime = minutesToTime(avgActualMin);
 
   const impactPct = Math.min(8, Math.round((Math.abs(avgDeviationMinutes) / 30) * 2 * 10) / 10);
-  // Threshold pace default: ~458s/mi (≈ 7:38/mi). Convert to per-km for metric display.
   const secondsLostPerMile = Math.round((impactPct / 100) * 458);
   const secondsLostDisplay = unitPreference === "metric"
     ? Math.round(secondsLostPerMile / 1.60934)
@@ -326,63 +329,101 @@ function InterventionCard({
   );
 }
 
-// ── Circadian Protocol ────────────────────────────────────────────────────────
+// ── Wind-Down Single Phase ────────────────────────────────────────────────────
 
-function CircadianProtocolSection({ circadian }: { circadian: CircadianPlan }) {
-  return (
-    <section className="border-b border-[#E5E5E5] dark:border-[#333] px-6 py-10">
-      <div className="max-w-[1200px] mx-auto">
-        <FadeUp>
-          <p className="text-xs font-bold uppercase tracking-[0.3em] text-[#6B6B6B] dark:text-[#A0A0A0] mb-2">Phase Response Curve</p>
-          <h2 className="font-black text-2xl uppercase mb-1">Circadian Protocol</h2>
-          <p className="text-xs text-[#6B6B6B] dark:text-[#A0A0A0] font-mono mb-8 max-w-xl">{circadian.mechanismNote}</p>
-        </FadeUp>
+const WIND_DOWN_PHASES = [
+  { label: "DIM LIGHTS", description: "Dim overhead lights. Move to lamps only." },
+  { label: "NIGHT MODE", description: "Enable Night Shift / Night Mode on all devices." },
+  { label: "NO SCREENS", description: "Put your phone across the room. No more screens." },
+  { label: "LIGHTS OFF", description: "Lights off or near-dark. Lie down." },
+];
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-px bg-[#E5E5E5] dark:bg-[#333]">
-          <FadeUp className="bg-white dark:bg-[#242424] p-6">
-            <p className="text-xs font-bold uppercase tracking-[0.3em] text-[#6B6B6B] dark:text-[#A0A0A0] mb-3">CBTmin Anchor</p>
-            <p className="font-mono font-black text-5xl leading-none mb-2">{formatTime12h(circadian.cbtMin)}</p>
-            <p className="text-xs text-[#6B6B6B] dark:text-[#A0A0A0] uppercase tracking-wider mb-4">Core body temp minimum</p>
-            <div className="space-y-1 text-xs font-mono text-[#6B6B6B] dark:text-[#A0A0A0]">
-              <p><span className="text-[#E8FF00] bg-[#0A0A0A] px-1">ADVANCE ZONE</span> after {formatTime12h(circadian.advanceWindowStart)}</p>
-              <p><span className="text-red-400 bg-[#0A0A0A] px-1">DELAY ZONE</span> before {formatTime12h(circadian.delayZoneEnd)}</p>
-            </div>
-          </FadeUp>
+interface WindDownSinglePhaseProps {
+  windDown: { phase1: string; phase2: string; phase3: string; phase4: string };
+  bedtime: string;
+}
 
-          <FadeUp delay={60} className="bg-[#0A0A0A] text-white p-6">
-            <p className="text-xs font-bold uppercase tracking-[0.3em] text-[#6B6B6B] mb-3">Light Prescription</p>
-            <div className="flex items-end gap-2 mb-1">
-              <p className="font-mono font-black text-4xl leading-none text-[#E8FF00]">{formatTime12h(circadian.lightExposure.start)}</p>
-              <p className="text-[#6B6B6B] text-sm mb-1 font-mono">→ {formatTime12h(circadian.lightExposure.end)}</p>
-            </div>
-            <p className="text-xs text-[#6B6B6B] uppercase tracking-wider mb-4">
-              {circadian.lightExposure.durationMin} min &middot; {circadian.lightExposure.type === "outdoor" ? "Outdoor sunlight" : "10,000 lux lamp"}
-            </p>
-            <p className="text-xs text-[#AAAAAA] font-mono leading-relaxed">{circadian.lightExposure.instruction}</p>
-          </FadeUp>
+function WindDownSinglePhase({ windDown, bedtime }: WindDownSinglePhaseProps) {
+  const [now, setNow] = useState(currentMinutes());
 
-          <FadeUp delay={120} className="bg-white dark:bg-[#242424] p-6">
-            <p className="text-xs font-bold uppercase tracking-[0.3em] text-[#6B6B6B] dark:text-[#A0A0A0] mb-3">Shift Progress</p>
-            <div className="flex items-end gap-2 mb-4">
-              <p className="font-mono font-black text-5xl leading-none">{circadian.cumulativeShiftMin}</p>
-              <p className="text-[#6B6B6B] dark:text-[#A0A0A0] text-sm mb-1">min advanced</p>
-            </div>
-            <div className="w-full h-1.5 bg-[#E5E5E5] dark:bg-[#444] mb-4">
-              <div
-                className="h-1.5 bg-[#E8FF00] transition-all duration-700"
-                style={{ width: `${Math.min(100, (circadian.cumulativeShiftMin / Math.max(circadian.cumulativeShiftMin, 90)) * 100)}%` }}
-              />
-            </div>
-            <div className="space-y-1 text-xs font-mono text-[#6B6B6B] dark:text-[#A0A0A0]">
-              <p>+{circadian.dailyShiftMin} min today &rarr; target {formatTime12h(circadian.targetWakeTime)} wake</p>
-              <p className="text-[#0A0A0A] dark:text-[#F5F5F5] font-bold uppercase tracking-wider mt-3">
-                Dim lights after {formatTime12h(circadian.lightAvoidStart)}
-              </p>
-            </div>
-          </FadeUp>
-        </div>
+  useEffect(() => {
+    const interval = setInterval(() => setNow(currentMinutes()), 60000);
+    return () => clearInterval(interval);
+  }, []);
+
+  const phaseTimes = [windDown.phase1, windDown.phase2, windDown.phase3, windDown.phase4, bedtime];
+  const normNow = normalizeMin(now);
+  const normTimes = phaseTimes.map((t) => normalizeMin(parseTimeMin(t)));
+
+  if (normNow >= normTimes[4]) {
+    return (
+      <div className="bg-[#0A0A0A] text-white p-6">
+        <p className="font-black text-lg uppercase text-[#E8FF00]">WIND-DOWN COMPLETE</p>
+        <p className="text-sm font-mono text-[#AAAAAA] mt-2">Time to sleep. Target: {formatTime12h(bedtime)}</p>
       </div>
-    </section>
+    );
+  }
+
+  let activeIdx = -1;
+  for (let i = 3; i >= 0; i--) {
+    if (normNow >= normTimes[i]) { activeIdx = i; break; }
+  }
+
+  const isUpcoming = activeIdx === -1;
+  const phaseIdx = isUpcoming ? 0 : activeIdx;
+  const phase = WIND_DOWN_PHASES[phaseIdx];
+  const phaseTime = phaseTimes[phaseIdx];
+  const minutesUntil = isUpcoming ? normTimes[0] - normNow : 0;
+
+  const countdown = (() => {
+    if (!isUpcoming) return "";
+    if (minutesUntil >= 60) {
+      const h = Math.floor(minutesUntil / 60);
+      const m = minutesUntil % 60;
+      return m > 0 ? `IN ${h}h ${m}m` : `IN ${h}h`;
+    }
+    return `IN ${minutesUntil}m`;
+  })();
+
+  return (
+    <div className="bg-[#0A0A0A] text-white p-6 flex items-start justify-between gap-6">
+      <div className="flex-1">
+        <div className="flex items-center gap-3 mb-3">
+          <span className={`text-xs font-bold uppercase tracking-widest ${isUpcoming ? "text-[#6B6B6B]" : "text-[#E8FF00]"}`}>
+            {isUpcoming ? "UPCOMING" : "● NOW"}
+          </span>
+          <span className="font-mono text-sm text-[#6B6B6B]">{formatTime12h(phaseTime)}</span>
+        </div>
+        <p className="font-black text-xl uppercase mb-2">{phase.label}</p>
+        <p className="text-sm text-[#AAAAAA] font-mono leading-relaxed">{phase.description}</p>
+        {phaseIdx === 1 && (
+          <div className="flex gap-2 mt-3">
+            <a
+              href="App-prefs:root=DISPLAY"
+              className="text-xs font-bold uppercase tracking-wider px-3 py-1 border border-white hover:bg-white hover:text-[#0A0A0A] transition-colors"
+            >
+              iOS Settings →
+            </a>
+            <a
+              href="intent://settings"
+              className="text-xs font-bold uppercase tracking-wider px-3 py-1 border border-white hover:bg-white hover:text-[#0A0A0A] transition-colors"
+            >
+              Android Settings →
+            </a>
+          </div>
+        )}
+      </div>
+      <div className="flex-shrink-0 text-right">
+        {isUpcoming ? (
+          <p className="font-mono font-black text-2xl text-white leading-none">{countdown}</p>
+        ) : (
+          <div className="flex flex-col items-end gap-1">
+            <div className="w-3 h-3 bg-[#E8FF00] animate-pulse" />
+            <p className="text-xs font-bold uppercase tracking-wider text-[#E8FF00]">ACTIVE NOW</p>
+          </div>
+        )}
+      </div>
+    </div>
   );
 }
 
@@ -469,22 +510,19 @@ function PerformanceSummary({ report }: { report: PerformanceReport }) {
 // ── Main Dashboard ────────────────────────────────────────────────────────────
 
 export default function DashboardPage() {
-  const { data: session, status } = useSession();
+  const { status } = useSession();
   const router = useRouter();
   const [data, setData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState<"sleep" | "history" | "performance">("sleep");
-  const [historyLogs, setHistoryLogs] = useState<any[] | null>(null);
+  const [activeTab, setActiveTab] = useState<"sleep" | "performance">("sleep");
   const [stravaStatus, setStravaStatus] = useState<{ connected: boolean; recentActivities?: { name: string; startDate: string; distance: number; averageSpeed: number; averageHeartrate?: number | null }[] } | null>(null);
   const [perfReport, setPerfReport] = useState<PerformanceReport | null>(null);
   const [perfLoading, setPerfLoading] = useState(false);
 
-  // Morning card / intervention card state
   const [streakData, setStreakData] = useState<any>(null);
   const [morningCardDismissed, setMorningCardDismissed] = useState(false);
   const [interventionDismissed, setInterventionDismissed] = useState(false);
 
-  // Day card dismiss + modal state
   const [dismissedDays, setDismissedDays] = useState<string[]>([]);
   const [selectedDay, setSelectedDay] = useState<DailySleepPlan | null>(null);
   const [selectedDayActivity, setSelectedDayActivity] = useState<any | null>(null);
@@ -522,15 +560,6 @@ export default function DashboardPage() {
   }, [activeTab, stravaStatus, perfReport]);
 
   useEffect(() => {
-    if (activeTab !== "history" || historyLogs) return;
-    const start = new Date();
-    start.setDate(start.getDate() - 14);
-    fetch(`/api/sleep-log?startDate=${start.toISOString().slice(0, 10)}`)
-      .then((r) => r.json())
-      .then((d) => setHistoryLogs(Array.isArray(d) ? d : []));
-  }, [activeTab, historyLogs]);
-
-  useEffect(() => {
     try {
       const stored = localStorage.getItem("prform-dismissed-days");
       if (stored) setDismissedDays(JSON.parse(stored));
@@ -548,7 +577,6 @@ export default function DashboardPage() {
     localStorage.removeItem("prform-dismissed-days");
   }, []);
 
-  // Determine which card to show
   const yesterdayPlan = data?.yesterdayPlan as DailySleepPlan | undefined;
   const showMorning = !morningCardDismissed && yesterdayPlan && !yesterdayPlan.sleepConfirmed;
 
@@ -582,7 +610,7 @@ export default function DashboardPage() {
 
   if (!data) return null;
 
-  const { plan, meets, conflicts } = data;
+  const { plan, meets, meetPredictions = {} } = data;
   const today = plan[0] as DailySleepPlan;
 
   const week = Array.from({ length: 7 }, (_, i) => plan[i] ?? null);
@@ -590,13 +618,19 @@ export default function DashboardPage() {
   const nextMeet = meets?.find((m: any) => new Date(m.date) >= new Date());
 
   const recoveryScore = today.recoveryScore;
-  const recoveryLabel = recoveryScore >= 80
-    ? "Peak readiness. You are primed to run a PR."
+
+  // Recovery factor text for Race Readiness card
+  const recoveryFactorText = recoveryScore >= 80
+    ? "Peak readiness. Ready to race."
+    : today.recoveryFactors?.length > 0
+    ? today.recoveryFactors[0]
     : recoveryScore >= 60
-    ? "Moderate fatigue accumulating. Follow your wind-down to protect meet-day performance."
-    : "High fatigue. Prioritize rest to protect your PR window.";
-  const fatigueBanner = (today as any).fatigueSleepBoost;
-  const planAgg = data.user?.planAggressiveness ?? 85;
+    ? "Moderate fatigue accumulating."
+    : "High fatigue. Prioritize rest.";
+
+  const recoveryBarColor = recoveryScore >= 80 ? "#E8FF00" : recoveryScore >= 50 ? "#6B6B6B" : "#FF6B6B";
+
+  const nextMeetPred: PerformancePrediction | null = nextMeet ? (meetPredictions[nextMeet.id] ?? null) : null;
 
   return (
     <div className="min-h-screen bg-white dark:bg-[#1a1a1a]">
@@ -605,10 +639,10 @@ export default function DashboardPage() {
       {/* Tab toggle */}
       <div className="border-b border-[#E5E5E5] dark:border-[#333] px-6">
         <div className="max-w-[1200px] mx-auto flex">
-          {(["sleep", "history", "performance"] as const).map((tab) => (
+          {(["sleep", "performance"] as const).map((tab) => (
             <button
               key={tab}
-              onClick={() => setActiveTab(tab as any)}
+              onClick={() => setActiveTab(tab)}
               className={`px-6 py-3 text-xs font-black uppercase tracking-widest transition-colors border-b-2 ${
                 activeTab === tab
                   ? "border-[#0A0A0A] dark:border-[#F5F5F5] text-[#0A0A0A] dark:text-[#F5F5F5]"
@@ -620,19 +654,6 @@ export default function DashboardPage() {
           ))}
         </div>
       </div>
-
-      {/* Fatigue boost banner */}
-      {activeTab === "sleep" && fatigueBanner && (
-        <div className="bg-[#0A0A0A] text-white px-6 py-3">
-          <div className="max-w-[1200px] mx-auto">
-            <p className="text-xs font-bold uppercase tracking-wider text-[#E8FF00] mb-0.5">High Training Load Detected</p>
-            <p className="text-xs font-mono text-[#AAAAAA]">
-              Your training stress is elevated with {today.daysUntilNextMeet} days until {today.nextMeetName}.
-              PRform has added {(today as any).fatigueSleepBoostMinutes} minutes to your sleep target tonight to accelerate recovery.
-            </p>
-          </div>
-        </div>
-      )}
 
       {/* Performance tab */}
       {activeTab === "performance" && (
@@ -675,76 +696,9 @@ export default function DashboardPage() {
         </div>
       )}
 
-      {activeTab === "history" && (
-        <div className="max-w-[1200px] mx-auto px-6 py-10">
-          <FadeUp>
-            <p className="text-xs font-bold uppercase tracking-[0.3em] text-[#6B6B6B] dark:text-[#A0A0A0] mb-2">Sleep Log</p>
-            <div className="flex items-center justify-between mb-6">
-              <h2 className="font-black text-2xl uppercase">Last 14 Nights</h2>
-              {streakData && (
-                <div className="flex gap-6 text-right">
-                  <div>
-                    <p className="font-mono font-black text-2xl">{streakData.currentStreak ?? 0}</p>
-                    <p className="text-[10px] uppercase tracking-wider text-[#6B6B6B] dark:text-[#A0A0A0]">Night Streak</p>
-                  </div>
-                  <div>
-                    <p className="font-mono font-black text-2xl">{streakData.last7Rate ?? 0}%</p>
-                    <p className="text-[10px] uppercase tracking-wider text-[#6B6B6B] dark:text-[#A0A0A0]">Last 7 Days</p>
-                  </div>
-                </div>
-              )}
-            </div>
-          </FadeUp>
-
-          {!historyLogs ? (
-            <p className="font-mono text-sm text-[#6B6B6B] dark:text-[#A0A0A0]">Loading…</p>
-          ) : historyLogs.length === 0 ? (
-            <div className="border border-dashed border-[#E5E5E5] dark:border-[#444] p-8 text-center">
-              <p className="text-sm text-[#6B6B6B] dark:text-[#A0A0A0]">No sleep logs yet. Confirm last night&apos;s sleep from the card on the Sleep tab.</p>
-            </div>
-          ) : (
-            <div className="border border-[#E5E5E5] dark:border-[#333]">
-              <div className="grid grid-cols-4 gap-px bg-[#E5E5E5] dark:bg-[#333] text-[10px] font-bold uppercase tracking-wider text-[#6B6B6B] dark:text-[#A0A0A0]">
-                <div className="bg-white dark:bg-[#242424] px-4 py-2">Date</div>
-                <div className="bg-white dark:bg-[#242424] px-4 py-2">Target</div>
-                <div className="bg-white dark:bg-[#242424] px-4 py-2">Actual</div>
-                <div className="bg-white dark:bg-[#242424] px-4 py-2">Status</div>
-              </div>
-              {historyLogs.slice().reverse().map((log: any) => {
-                const dateStr = new Date(log.date).toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" });
-                const hitTarget = log.hitTarget;
-                const statusLabel = hitTarget === true ? "HIT" : hitTarget === false ? "MISSED" : "UNLOGGED";
-                const statusClass = hitTarget === true
-                  ? "bg-[#0A0A0A] dark:bg-[#F5F5F5] text-white dark:text-[#0A0A0A]"
-                  : hitTarget === false
-                  ? "border border-[#0A0A0A] dark:border-[#F5F5F5] text-[#0A0A0A] dark:text-[#F5F5F5]"
-                  : "bg-[#F5F5F5] dark:bg-[#2a2a2a] text-[#6B6B6B] dark:text-[#A0A0A0]";
-                return (
-                  <div key={log.id} className="grid grid-cols-4 gap-px bg-[#E5E5E5] dark:bg-[#333] border-t border-[#E5E5E5] dark:border-[#333]">
-                    <div className="bg-white dark:bg-[#242424] px-4 py-3 font-mono text-xs text-[#6B6B6B] dark:text-[#A0A0A0]">{dateStr}</div>
-                    <div className="bg-white dark:bg-[#242424] px-4 py-3 font-mono text-xs">{log.recommendedBedtime ? formatTime12h(log.recommendedBedtime) : "—"}</div>
-                    <div className="bg-white dark:bg-[#242424] px-4 py-3 font-mono text-xs text-[#6B6B6B] dark:text-[#A0A0A0]">{log.actualBedtime ? formatTime12h(log.actualBedtime) : log.hitTarget === true ? formatTime12h(log.recommendedBedtime) : "—"}</div>
-                    <div className="bg-white dark:bg-[#242424] px-4 py-3">
-                      <span className={`px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider ${statusClass}`}>{statusLabel}</span>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          )}
-
-          <div className="flex justify-end mt-4">
-            <a href="/schedule/history"
-              className="text-[10px] font-mono uppercase tracking-wider border border-[#E5E5E5] dark:border-[#333] px-3 py-1.5 text-[#6B6B6B] dark:text-[#A0A0A0] hover:border-[#0A0A0A] dark:hover:border-[#F5F5F5] transition-colors">
-              VIEW ALL →
-            </a>
-          </div>
-        </div>
-      )}
-
       {activeTab === "sleep" && (
         <>
-          {/* Intervention card (takes precedence over morning card) */}
+          {/* 1. Intervention card */}
           {showIntervention && yesterdayPlan && (
             <InterventionCard
               consecutiveMisses={streakData.consecutiveMisses}
@@ -757,7 +711,7 @@ export default function DashboardPage() {
             />
           )}
 
-          {/* Morning confirmation card */}
+          {/* 2. Morning confirmation card */}
           {showMorning && !showIntervention && yesterdayPlan && (
             <MorningConfirmationCard
               yesterdayPlan={yesterdayPlan}
@@ -765,7 +719,7 @@ export default function DashboardPage() {
             />
           )}
 
-          {/* Hero Card */}
+          {/* 3. Hero Card */}
           <motion.section
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
@@ -773,6 +727,7 @@ export default function DashboardPage() {
             className="bg-[#0A0A0A] text-white px-6 py-10"
           >
             <div className="max-w-[1200px] mx-auto grid grid-cols-1 md:grid-cols-2 gap-8 items-center">
+              {/* Left: bedtime */}
               <div>
                 <p className="text-xs font-bold uppercase tracking-[0.3em] text-[#6B6B6B] mb-3">Tonight&apos;s Target</p>
                 <MonoClock
@@ -788,9 +743,24 @@ export default function DashboardPage() {
                 <p className="text-[#6B6B6B] text-xs mt-1 font-mono">
                   {today.totalSleepHours}h sleep target tonight
                 </p>
+                {/* Circadian drift note — inline, conditional */}
+                {today.circadianDelayMinutes > 30 && (
+                  <div className="mt-3">
+                    <span className="text-[10px] font-bold uppercase tracking-widest" style={{ color: "#b8cc00" }}>
+                      CIRCADIAN DRIFT DETECTED
+                    </span>
+                    <p className="text-[10px] font-mono text-[#6B6B6B] mt-0.5">
+                      Ramp adjusted for {Math.round(today.circadianDelayMinutes / 60 * 10) / 10}hr circadian delay
+                    </p>
+                  </div>
+                )}
               </div>
 
-              <Link href="/meets" className="cursor-pointer hover:opacity-80 transition-opacity duration-150">
+              {/* Right: next meet */}
+              <div
+                className="cursor-pointer hover:opacity-80 transition-opacity duration-150"
+                onClick={() => router.push("/meets")}
+              >
                 {nextMeet ? (
                   <div className="border border-[#333] p-6">
                     <p className="text-xs font-bold uppercase tracking-[0.3em] text-[#6B6B6B] mb-4">Next Meet</p>
@@ -817,61 +787,89 @@ export default function DashboardPage() {
                         Sleep shift in progress ↗
                       </p>
                     )}
+                    {/* Prediction block */}
+                    {(() => {
+                      const pred: PerformancePrediction | null = meetPredictions[nextMeet.id] ?? null;
+                      if (pred) {
+                        const isSlower = pred.timeDifference > 0.5;
+                        const isFaster = pred.timeDifference < -0.5;
+                        const diffColor = isSlower ? "text-[#FF6B6B]" : isFaster ? "text-[#E8FF00]" : "text-[#6B6B6B]";
+                        const refLabel = pred.referenceLabel === "Season Best" ? "SB" : "PR";
+                        return (
+                          <div className="mt-5 pt-4 border-t border-[#222]">
+                            <p className="text-[10px] font-bold uppercase tracking-[0.3em] text-[#6B6B6B] mb-2">Predicted Finish</p>
+                            <p className="font-mono font-black text-3xl text-white leading-none mb-1">
+                              {formatTimeFromSeconds(pred.predictedTime, pred.unit)}
+                            </p>
+                            <p className={`font-mono text-sm ${diffColor}`}>
+                              {isSlower || isFaster
+                                ? `${formatTimeDifference(pred.timeDifference)} vs ${refLabel}`
+                                : `On track for ${refLabel}`}
+                            </p>
+                            <p className="text-[9px] font-mono text-[#444] mt-2">
+                              Based on {pred.confidenceNights}/{pred.totalNights} nights of sleep data
+                              {pred.isEstimated ? " (estimated)" : ""}
+                            </p>
+                          </div>
+                        );
+                      }
+                      if (nextMeet.primaryEvent && !(nextMeet.recentBest || nextMeet.personalBest)) {
+                        return (
+                          <div className="mt-5 pt-4 border-t border-[#222]">
+                            <button
+                              onClick={(e) => { e.stopPropagation(); router.push(`/meets?edit=${nextMeet.id}`); }}
+                              className="text-xs font-bold uppercase tracking-wider text-[#6B6B6B] hover:text-white px-3 py-2 border border-[#333] hover:border-[#555] transition-colors"
+                            >
+                              ADD PR →
+                            </button>
+                          </div>
+                        );
+                      }
+                      if (!nextMeet.primaryEvent) {
+                        return (
+                          <div className="mt-5 pt-4 border-t border-[#222]">
+                            <button
+                              onClick={(e) => { e.stopPropagation(); router.push(`/meets?edit=${nextMeet.id}`); }}
+                              className="text-xs font-bold uppercase tracking-wider text-[#6B6B6B] hover:text-white px-3 py-2 border border-[#333] hover:border-[#555] transition-colors"
+                            >
+                              ADD EVENT + PR →
+                            </button>
+                          </div>
+                        );
+                      }
+                      return null;
+                    })()}
                   </div>
                 ) : (
                   <div className="border border-[#333] p-6 flex items-center justify-center">
                     <p className="text-[#6B6B6B] text-sm uppercase tracking-wider">No upcoming meets</p>
                   </div>
                 )}
-              </Link>
+              </div>
             </div>
           </motion.section>
 
-          {/* Circadian drift banner */}
-          {today.circadianDelayMinutes > 30 && today.circadianDetectedBedtime && (
-            <div className="bg-[#0A0A0A] text-white px-6 py-3 border-b border-[#222]">
-              <div className="max-w-[1200px] mx-auto">
-                <p className="text-xs font-bold uppercase tracking-wider text-[#E8FF00] mb-0.5">Circadian Drift Detected</p>
-                <p className="text-xs font-mono text-[#AAAAAA]">
-                  Your recent sleep logs show you&apos;ve been going to bed around{" "}
-                  {formatTime12h(today.circadianDetectedBedtime as string)} on average, which is{" "}
-                  {Math.round(today.circadianDelayMinutes / 60 * 10) / 10} hours later than your baseline.
-                  {today.nextMeetName ? ` PRform has adjusted your ramp to correct this before your ${today.nextMeetName} meet.` : ""}
-                </p>
-              </div>
-            </div>
-          )}
-
-          {/* Wind-Down Timeline */}
+          {/* 4. Wind-Down — single active phase */}
           <section className="border-b border-[#E5E5E5] dark:border-[#333] px-6 py-10">
             <div className="max-w-[1200px] mx-auto">
               <FadeUp>
                 <p className="text-xs font-bold uppercase tracking-[0.3em] text-[#6B6B6B] dark:text-[#A0A0A0] mb-2">Tonight&apos;s Wind-Down</p>
-                <h2 className="font-black text-2xl uppercase mb-6">3-Hour Protocol</h2>
+                <h2 className="font-black text-2xl uppercase mb-6">Wind-Down Protocol</h2>
               </FadeUp>
               <FadeUp delay={80}>
-                <WindDownTimeline windDown={today.windDown} />
+                <WindDownSinglePhase windDown={today.windDown} bedtime={today.recommendedBedtime} />
+              </FadeUp>
+              <FadeUp delay={100}>
+                <p className="mt-4">
+                  <a href="/sleep" className="text-xs font-mono text-[#6B6B6B] dark:text-[#A0A0A0] hover:text-[#0A0A0A] dark:hover:text-[#F5F5F5] transition-colors">
+                    See full wind-down protocol →
+                  </a>
+                </p>
               </FadeUp>
             </div>
           </section>
 
-          {today.circadian && <CircadianProtocolSection circadian={today.circadian} />}
-
-          {/* Conflict banner */}
-          {conflicts?.length > 0 && (
-            <div className="bg-[#0A0A0A] border-b border-[#222] px-6 py-3">
-              <div className="max-w-[1200px] mx-auto flex items-center justify-between flex-wrap gap-2">
-                <p className="text-xs font-bold uppercase tracking-wider text-[#E8FF00]">
-                  {conflicts.length} workout conflict{conflicts.length > 1 ? "s" : ""} — Strava and manual entries overlap.
-                </p>
-                <a href="/schedule" className="text-xs font-bold uppercase tracking-wider text-white underline hover:text-[#E8FF00] transition-colors">
-                  Resolve in Schedule →
-                </a>
-              </div>
-            </div>
-          )}
-
-          {/* This Week's Sleep Schedule */}
+          {/* 5. Weekly Sleep Schedule */}
           <section className="px-6 py-10 border-b border-[#E5E5E5] dark:border-[#333]">
             <div className="max-w-[1200px] mx-auto">
               <FadeUp>
@@ -959,7 +957,7 @@ export default function DashboardPage() {
                                       </p>
                                       {isToday && !yesterdayPlan?.sleepConfirmed && (
                                         <a
-                                          href="/sleep-history"
+                                          href="/sleep"
                                           onClick={(e) => e.stopPropagation()}
                                           className="block text-[9px] font-bold uppercase tracking-widest text-[#E8FF00] hover:text-white transition-colors mb-2"
                                         >
@@ -1007,96 +1005,79 @@ export default function DashboardPage() {
             </div>
           </section>
 
-          {/* Plan Ahead card */}
+          {/* 6. Race Readiness Card */}
           <section className="px-6 py-10 border-b border-[#E5E5E5] dark:border-[#333]">
             <div className="max-w-[1200px] mx-auto">
               <FadeUp>
-                <div className="border border-[#E5E5E5] dark:border-[#333] p-6 flex items-center justify-between gap-6">
-                  <div>
-                    <p className="text-xs font-bold uppercase tracking-[0.3em] text-[#6B6B6B] dark:text-[#A0A0A0] mb-1">14-Day Outlook</p>
-                    <h2 className="font-black text-xl uppercase">Plan Ahead</h2>
-                    <p className="text-xs text-[#6B6B6B] dark:text-[#A0A0A0] mt-2 font-mono max-w-md">
-                      Add planned workouts to your schedule so PRform can optimise sleep targets before they happen.
-                    </p>
-                  </div>
-                  <a
-                    href="/schedule"
-                    className="flex-shrink-0 inline-block border border-[#0A0A0A] dark:border-[#F5F5F5] text-[#0A0A0A] dark:text-[#F5F5F5] font-black text-xs uppercase tracking-widest px-6 py-3 hover:bg-[#0A0A0A] dark:hover:bg-[#F5F5F5] hover:text-white dark:hover:text-[#0A0A0A] transition-colors"
-                  >
-                    Open Schedule →
-                  </a>
-                </div>
-              </FadeUp>
-            </div>
-          </section>
+                <div className="bg-[#0A0A0A] text-white border border-[#333333] p-6">
+                  <p className="text-[10px] font-bold uppercase tracking-[0.3em] text-[#6B6B6B] mb-6">RACE READINESS</p>
+                  <div className="grid grid-cols-2 gap-6">
+                    {/* Left: Recovery */}
+                    <div className="border-r border-[#333333] pr-6">
+                      <p className="text-[10px] font-bold uppercase tracking-wider text-[#6B6B6B] mb-2">RECOVERY</p>
+                      <div className="flex items-end gap-2 mb-1">
+                        <p className="font-mono font-black text-4xl leading-none">{recoveryScore}</p>
+                        <p className="text-[#6B6B6B] text-lg mb-1">/ 100</p>
+                      </div>
+                      <p className="text-xs font-mono text-[#6B6B6B] mt-1 mb-3">{recoveryFactorText}</p>
+                      <div className="w-full h-0.5 bg-[#333333]">
+                        <div
+                          className="h-0.5 transition-all duration-700"
+                          style={{ width: `${recoveryScore}%`, backgroundColor: recoveryBarColor }}
+                        />
+                      </div>
+                    </div>
 
-          {/* Recovery Score */}
-          <section className="px-6 py-10 border-b border-[#E5E5E5] dark:border-[#333]">
-            <div className="max-w-[1200px] mx-auto grid grid-cols-1 md:grid-cols-2 gap-10">
-              <FadeUp>
-                <p className="text-xs font-bold uppercase tracking-[0.3em] text-[#6B6B6B] dark:text-[#A0A0A0] mb-2">Recovery</p>
-                <h2 className="font-black text-2xl uppercase mb-6">Recovery Score</h2>
-                {today.allRecentMissed && (
-                  <p className="text-[10px] font-mono font-bold uppercase tracking-widest text-[#E8FF00] bg-[#0A0A0A] px-2 py-1 inline-block mb-4">
-                    Your sleep is affecting your score
-                  </p>
-                )}
-                <div className="flex items-end gap-4 mb-4">
-                  <span className="font-mono font-black text-8xl leading-none">{recoveryScore}</span>
-                  <span className="text-[#6B6B6B] dark:text-[#A0A0A0] text-sm uppercase tracking-wider mb-2">/ 100</span>
-                </div>
-                <div className="w-full h-2 bg-[#E5E5E5] dark:bg-[#444] mb-4">
-                  <div
-                    className="h-2 bg-[#0A0A0A] transition-all duration-700"
-                    style={{ width: `${recoveryScore}%` }}
-                  />
-                </div>
-                <p className="text-sm text-[#6B6B6B] dark:text-[#A0A0A0]">{recoveryLabel}</p>
-                {today.recoveryFactors?.length > 0 ? (
-                  <div className="space-y-0.5 mt-2">
-                    {today.recoveryFactors.map((factor: string, i: number) => (
-                      <p key={i} className="text-[10px] font-mono text-[#6B6B6B] dark:text-[#A0A0A0]">{factor}</p>
-                    ))}
+                    {/* Right: Race Prediction */}
+                    <div>
+                      {nextMeetPred ? (
+                        (() => {
+                          const isSlower = nextMeetPred.timeDifference > 0.5;
+                          const isFaster = nextMeetPred.timeDifference < -0.5;
+                          const diffColor = isSlower ? "#FF6B6B" : isFaster ? "#E8FF00" : "#6B6B6B";
+                          const refLabel = nextMeetPred.referenceLabel === "Season Best" ? "SB" : "PR";
+                          const daysOut = Math.round((new Date(nextMeet.date).getTime() - Date.now()) / 86400000);
+                          return (
+                            <>
+                              <p className="text-[10px] font-bold uppercase tracking-wider text-[#6B6B6B] mb-2">PREDICTED FINISH</p>
+                              <p className="font-mono font-black text-4xl leading-none mb-1">
+                                {formatTimeFromSeconds(nextMeetPred.predictedTime, nextMeetPred.unit)}
+                              </p>
+                              <p className="text-xs font-mono mt-1" style={{ color: diffColor }}>
+                                {isSlower || isFaster
+                                  ? `${formatTimeDifference(nextMeetPred.timeDifference)} vs ${refLabel}`
+                                  : `On track for ${refLabel}`}
+                              </p>
+                              <p className="text-[10px] font-mono text-[#6B6B6B] mt-2">
+                                Based on {nextMeetPred.confidenceNights} nights of sleep data
+                              </p>
+                              <p className="text-[10px] font-mono text-[#6B6B6B]">
+                                {nextMeet.name} · {daysOut} days away
+                              </p>
+                            </>
+                          );
+                        })()
+                      ) : (
+                        <>
+                          <p className="text-[10px] font-bold uppercase tracking-wider text-[#6B6B6B] mb-2">RACE PREDICTION</p>
+                          <p className="text-sm font-mono text-[#6B6B6B] mb-3">Add your event and PR to a meet</p>
+                          <a
+                            href="/meets"
+                            className="inline-block text-xs font-bold uppercase tracking-wider text-[#6B6B6B] border border-[#333] px-3 py-1.5 hover:border-[#555] hover:text-white transition-colors"
+                          >
+                            SET UP →
+                          </a>
+                        </>
+                      )}
+                    </div>
                   </div>
-                ) : today.recoverySleepNote ? (
-                  <p className="text-[10px] font-mono text-[#6B6B6B] dark:text-[#A0A0A0] mt-2">{today.recoverySleepNote}</p>
-                ) : null}
-                {planAgg < 100 && (
-                  <p className="text-[10px] font-mono text-[#6B6B6B] dark:text-[#A0A0A0] mt-3 pl-3">
-                    Plan running at {planAgg}% aggressiveness. Your theoretical maximum recovery score at 100% would be{" "}
-                    {Math.min(100, Math.round(recoveryScore * (1 + (100 - planAgg) / 200)))}.
-                  </p>
-                )}
-                <p className="text-[10px] font-mono text-[#6B6B6B] dark:text-[#A0A0A0] mt-2">
-                  <a href="/sleep-history" className="underline hover:text-[#0A0A0A] dark:hover:text-[#F5F5F5]">View sleep history →</a>
-                </p>
-              </FadeUp>
 
-              <FadeUp delay={80}>
-                <p className="text-xs font-bold uppercase tracking-[0.3em] text-[#6B6B6B] dark:text-[#A0A0A0] mb-2">Upcoming</p>
-                <h2 className="font-black text-2xl uppercase mb-6">Meets</h2>
-                {meets?.length ? (
-                  <div className="space-y-3">
-                    {meets.slice(0, 4).map((m: any) => {
-                      const daysOut = Math.round((new Date(m.date).getTime() - Date.now()) / 86400000);
-                      return (
-                        <div key={m.id} className="border border-[#E5E5E5] dark:border-[#333] p-4 flex items-center justify-between hover:border-[#0A0A0A] dark:hover:border-[#F5F5F5] transition-colors">
-                          <div>
-                            <p className="font-bold text-sm">{m.name}</p>
-                            <p className="text-xs text-[#6B6B6B] dark:text-[#A0A0A0] mt-0.5">{formatDate(m.date)}</p>
-                          </div>
-                          <div className="flex items-center gap-3">
-                            <Badge label={m.priority} variant={m.priority as "A" | "B" | "C"} />
-                            <span className="font-mono font-bold text-xl">{daysOut}</span>
-                            <span className="text-xs text-[#6B6B6B] dark:text-[#A0A0A0] uppercase">days</span>
-                          </div>
-                        </div>
-                      );
-                    })}
+                  <div className="mt-6 pt-4 border-t border-[#333333]">
+                    <a href="/schedule?tab=history" className="text-[10px] font-mono text-[#6B6B6B] hover:text-white transition-colors">
+                      View sleep history →
+                    </a>
                   </div>
-                ) : (
-                  <p className="text-[#6B6B6B] dark:text-[#A0A0A0] text-sm">No meets scheduled. <a href="/meets" className="font-bold text-[#0A0A0A] dark:text-[#F5F5F5] link-wipe">Add a meet →</a></p>
-                )}
+                </div>
               </FadeUp>
             </div>
           </section>

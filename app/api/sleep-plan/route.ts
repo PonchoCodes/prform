@@ -5,6 +5,7 @@ import { prisma } from "@/lib/prisma";
 import { calculateSleepPlan } from "@/lib/sleepAlgorithm";
 import type { SleepLogForPlan } from "@/lib/sleepAlgorithm";
 import { getWorkoutsForDateRange } from "@/lib/workoutDataSource";
+import { calculatePerformancePrediction } from "@/lib/performancePrediction";
 
 export async function GET() {
   const session = await getServerSession(authOptions);
@@ -17,7 +18,6 @@ export async function GET() {
     return NextResponse.json({ redirect: "/onboarding" }, { status: 200 });
   }
 
-  // Fresh DB read for algorithm inputs — not taken from session token
   const freshUser = await prisma.user.findUnique({
     where: { id: userId },
     select: {
@@ -72,7 +72,6 @@ export async function GET() {
     recommendedBedtime: l.recommendedBedtime,
   }));
 
-  // Full plan: yesterday (offset -1) through today+13, 15 entries
   const allPlans = calculateSleepPlan(
     {
       age: freshUser?.age ?? user.age ?? 25,
@@ -94,8 +93,44 @@ export async function GET() {
     { startDayOffset: -1, sleepLogs: sleepLogsForPlan, recentSleepLogs: recentSleepLogsForPlan },
   );
 
-  const yesterdayPlan = allPlans[0];  // dayOffset = -1
-  const plan = allPlans.slice(1);     // dayOffset 0..13
+  const yesterdayPlan = allPlans[0];
+  const plan = allPlans.slice(1);
+
+  // Compute performance predictions for upcoming meets with event/time data
+  const upcomingMeetsWithEvents = meets
+    .filter((m) => m.primaryEvent && (m.recentBest || m.personalBest) && new Date(m.date) >= today)
+    .slice(0, 3);
+
+  let meetPredictions: Record<string, any> = {};
+
+  if (upcomingMeetsWithEvents.length > 0) {
+    const earliestWindowStart = upcomingMeetsWithEvents.reduce((earliest, m) => {
+      const d = new Date(m.date);
+      d.setDate(d.getDate() - 10);
+      return d < earliest ? d : earliest;
+    }, new Date(today));
+
+    const predSleepLogs = await prisma.sleepLog.findMany({
+      where: { userId, date: { gte: earliestWindowStart, lt: today } },
+      orderBy: { date: "asc" },
+    });
+
+    const predLogsForCalc = predSleepLogs.map((l) => ({
+      date: new Date(l.date).toISOString().slice(0, 10),
+      hitTarget: l.hitTarget,
+      actualBedtime: l.actualBedtime,
+      recommendedBedtime: l.recommendedBedtime,
+    }));
+
+    for (const meet of upcomingMeetsWithEvents) {
+      const prediction = calculatePerformancePrediction(
+        meet,
+        predLogsForCalc,
+        { currentBedTime: user.currentBedTime },
+      );
+      if (prediction) meetPredictions[meet.id] = prediction;
+    }
+  }
 
   return NextResponse.json({
     plan,
@@ -103,5 +138,6 @@ export async function GET() {
     meets,
     conflicts,
     yesterdayPlan,
+    meetPredictions,
   });
 }

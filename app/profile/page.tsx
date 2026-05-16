@@ -169,7 +169,7 @@ export default function ProfilePage() {
                 </div>
               </div>
               <div>
-                <label className="block text-xs font-bold uppercase tracking-wider mb-3">Weekly Mileage</label>
+                <label className="block text-xs font-bold uppercase tracking-wider mb-3">Weekly Mileage <span className="text-[#6B6B6B] dark:text-[#A0A0A0] normal-case font-normal">(optional)</span></label>
                 <div className="grid grid-cols-2 gap-3">
                   {["0-30", "30-50", "50-70", "70+"].map((m) => (
                     <button
@@ -180,6 +180,27 @@ export default function ProfilePage() {
                       }`}
                     >
                       {m} mi/wk
+                    </button>
+                  ))}
+                </div>
+              </div>
+              <div>
+                <label className="block text-xs font-bold uppercase tracking-wider mb-3">Experience Level <span className="text-[#6B6B6B] dark:text-[#A0A0A0] normal-case font-normal">(optional)</span></label>
+                <div className="grid grid-cols-2 gap-3">
+                  {[
+                    { value: "high_school", label: "High School" },
+                    { value: "collegiate", label: "Collegiate" },
+                    { value: "post_collegiate", label: "Post-Collegiate" },
+                    { value: "masters", label: "Masters" },
+                  ].map((e) => (
+                    <button
+                      key={e.value}
+                      onClick={() => update("experienceLevel", e.value)}
+                      className={`py-3 text-xs font-bold uppercase tracking-wider border transition-colors ${
+                        profile.experienceLevel === e.value ? "bg-[#0A0A0A] text-white border-[#0A0A0A]" : "border-[#E5E5E5] dark:border-[#444] hover:border-[#0A0A0A] dark:hover:border-[#F5F5F5]"
+                      }`}
+                    >
+                      {e.label}
                     </button>
                   ))}
                 </div>
@@ -434,7 +455,7 @@ export default function ProfilePage() {
                 <p className="font-black text-lg uppercase">Sleep History</p>
                 <p className="text-xs font-mono text-[#6B6B6B] dark:text-[#A0A0A0] mt-1">Review and log past nights. Track your consistency streak.</p>
               </div>
-              <a href="/sleep-history" className="flex-shrink-0 inline-block border border-[#0A0A0A] dark:border-[#F5F5F5] text-[#0A0A0A] dark:text-[#F5F5F5] font-black text-xs uppercase tracking-widest px-6 py-2 hover:bg-[#0A0A0A] dark:hover:bg-[#F5F5F5] hover:text-white dark:hover:text-[#0A0A0A] transition-colors">
+              <a href="/sleep" className="flex-shrink-0 inline-block border border-[#0A0A0A] dark:border-[#F5F5F5] text-[#0A0A0A] dark:text-[#F5F5F5] font-black text-xs uppercase tracking-widest px-6 py-2 hover:bg-[#0A0A0A] dark:hover:bg-[#F5F5F5] hover:text-white dark:hover:text-[#0A0A0A] transition-colors">
                 View History →
               </a>
             </div>

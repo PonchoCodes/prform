@@ -12,6 +12,15 @@ const nextConfig = {
   experimental: {
     serverComponentsExternalPackages: ["ws", "@neondatabase/serverless", "@prisma/adapter-neon", "@prisma/client"],
   },
+  async redirects() {
+    return [
+      {
+        source: "/sleep-history",
+        destination: "/sleep",
+        permanent: true,
+      },
+    ];
+  },
 };
 
 export default nextConfig;

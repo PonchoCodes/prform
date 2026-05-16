@@ -9,6 +9,7 @@ import { PMCChart } from "@/components/charts/PMCChart";
 import { IntensityDistributionBar } from "@/components/charts/IntensityDistributionBar";
 import { PaceComplianceTable } from "@/components/charts/PaceComplianceTable";
 import { SleepPaceScatterChart } from "@/components/charts/SleepPaceScatterChart";
+import { CircadianProtocolSection } from "@/components/CircadianProtocolSection";
 import type { PerformanceReport } from "@/lib/performanceAnalysis";
 import { formatPace } from "@/lib/unitUtils";
 import type { UnitPreference } from "@/lib/unitUtils";
@@ -49,6 +50,7 @@ export default function AnalysisPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [window, setWindow] = useState<WindowDays>(90);
+  const [circadian, setCircadian] = useState<any>(null);
 
   useEffect(() => {
     if (status === "unauthenticated") router.push("/login");
@@ -70,6 +72,17 @@ export default function AnalysisPage() {
       })
       .finally(() => setLoading(false));
   }, [status, window]);
+
+  useEffect(() => {
+    if (status !== "authenticated") return;
+    fetch("/api/sleep-plan", { cache: "no-store" })
+      .then((r) => r.json())
+      .then((d) => {
+        const c = d?.plan?.[0]?.circadian;
+        if (c) setCircadian(c);
+      })
+      .catch(() => {});
+  }, [status]);
 
   if (status === "loading") {
     return (
@@ -129,6 +142,10 @@ export default function AnalysisPage() {
             </a>
           )}
         </div>
+      )}
+
+      {circadian && !loading && (
+        <CircadianProtocolSection circadian={circadian} />
       )}
 
       {report && !loading && (
