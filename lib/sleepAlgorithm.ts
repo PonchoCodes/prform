@@ -237,7 +237,7 @@ function sleepExtensionBonus(
   if (daysUntilMeet === null || !meetPriority) return 0;
   const windowStart = EXTENSION_WINDOW_DAYS[meetPriority];
   if (windowStart === 0) return 0;
-  if (daysUntilMeet > windowStart) return 0;
+  if (daysUntilMeet < 0 || daysUntilMeet > windowStart) return 0;
   if (daysUntilMeet <= 10) return 0; // PRC phase advance takes over
 
   const range = windowStart - EXTENSION_HANDOFF_DAY;
@@ -277,6 +277,7 @@ interface MeetShiftSchedule {
   totalAdvanceMin: number;
   actualDailyRateMin: number;
   shiftWindowDays: number;
+  bedtimeOnlyAdvance: boolean;
 }
 
 function buildMeetShiftSchedule(
@@ -285,20 +286,38 @@ function buildMeetShiftSchedule(
   aggFactor: number = 1,
 ): MeetShiftSchedule {
   let targetWakeMinutes: number;
+  let totalAdvanceMin: number;
+  let bedtimeOnlyAdvance = false;
 
+  // SOURCE: Burgess et al. (2010) — phase advance only makes sense when the race
+  // requires an earlier wake than the athlete's baseline. For afternoon/evening races
+  // where targetWake > baseWake, a wake-time advance is physiologically unnecessary
+  // and counterproductive. Fall back to priority-based default advance instead.
   if (meet.raceTime) {
-    // SOURCE: 3 h pre-gun wake = standard race-morning routine for track athletes.
     const raceMin = timeToMinutes(meet.raceTime);
+    // SOURCE: 3 h pre-gun wake = standard race-morning routine for track athletes.
     targetWakeMinutes = raceMin - RACE_MORNING_WAKE_OFFSET_MINUTES;
-  } else {
-    const defaultAdv = meet.priority === "A" ? 30 : meet.priority === "B" ? 15 : 0;
-    targetWakeMinutes = baseWakeMinutes - defaultAdv;
-  }
+    const rawAdvanceMin = baseWakeMinutes - targetWakeMinutes;
 
-  // SOURCE: Burgess et al. (2010) — total-advance ceiling by priority.
-  const totalCap = MAX_TOTAL_ADVANCE_MINUTES[meet.priority];
-  const rawAdvanceMin = Math.max(0, Math.min(totalCap, baseWakeMinutes - targetWakeMinutes));
-  const totalAdvanceMin = Math.round(rawAdvanceMin * aggFactor);
+    if (rawAdvanceMin <= 0) {
+      // Afternoon/evening race — race-time anchoring not applicable.
+      // Use priority default: shift bedtime earlier to maximize pre-race sleep quality
+      // without changing wake time. A=45min, B=30min, C=15min bedtime-only advance.
+      const defaultBedtimeAdvance = { A: 45, B: 30, C: 15 }[meet.priority];
+      totalAdvanceMin = Math.round(defaultBedtimeAdvance * aggFactor);
+      bedtimeOnlyAdvance = true;
+    } else {
+      totalAdvanceMin = Math.min(
+        MAX_TOTAL_ADVANCE_MINUTES[meet.priority],
+        Math.round(rawAdvanceMin * aggFactor)
+      );
+    }
+  } else {
+    // No raceTime set — use priority default advance
+    const defaultAdvance = { A: 45, B: 30, C: 15 }[meet.priority];
+    targetWakeMinutes = baseWakeMinutes;
+    totalAdvanceMin = Math.round(defaultAdvance * aggFactor);
+  }
 
   const maxDailyRate = MAX_DAILY_ADVANCE_MINUTES[meet.priority];
 
@@ -313,6 +332,7 @@ function buildMeetShiftSchedule(
     totalAdvanceMin,
     actualDailyRateMin,
     shiftWindowDays,
+    bedtimeOnlyAdvance,
   };
 }
 
@@ -400,8 +420,8 @@ export function calculateSleepPlan(
   const workoutMap = new Map<string, NormalizedWorkout>();
   for (const w of workoutDataSource) {
     const d = new Date(w.date);
-    d.setHours(0, 0, 0, 0);
-    workoutMap.set(d.toISOString(), w);
+    const key = new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate())).toISOString();
+    workoutMap.set(key, w);
   }
 
   // Build SleepLog lookup map: YYYY-MM-DD → log
@@ -445,14 +465,16 @@ export function calculateSleepPlan(
   );
   const baselineBedtimeMinutes = timeToMinutes(user.currentBedTime ?? "22:30");
   const circadianDelay = Math.max(0, actualPhaseMinutes - baselineBedtimeMinutes);
-  const cappedDelay = Math.min(circadianDelay, 240);
+  const cappedDelay = Math.min(60, circadianDelay);
   const circadianDetectedBedtime = cappedDelay > 0
     ? minutesToTime(actualPhaseMinutes % 1440)
     : null;
 
-  const futureMeets = meets
-    .map((m) => ({ ...m, date: new Date(m.date) }))
-    .sort((a, b) => a.date.getTime() - b.date.getTime());
+  const normalizedMeets = meets.map(m => {
+    const d = new Date(m.date);
+    return { ...m, date: new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate())) };
+  });
+  const futureMeets = normalizedMeets.sort((a, b) => a.date.getTime() - b.date.getTime());
 
   const meetShiftSchedules = futureMeets.map((m) =>
     buildMeetShiftSchedule(m, baseWakeMinutes, aggFactor)
@@ -464,9 +486,11 @@ export function calculateSleepPlan(
 
   for (let i = 0; i < dayCount; i++) {
     const dayOffset = startDayOffset + i;
-    const date = new Date(today);
-    date.setDate(today.getDate() + dayOffset);
-    date.setHours(0, 0, 0, 0);
+    const date = new Date(Date.UTC(
+      today.getUTCFullYear(),
+      today.getUTCMonth(),
+      today.getUTCDate() + dayOffset,
+    ));
 
     const dateKey = date.toISOString();
     const dateStr = date.toISOString().slice(0, 10);
@@ -475,9 +499,11 @@ export function calculateSleepPlan(
     const workoutSource = nw?.source ?? "rest";
     const workoutTentative = nw?.isTentative ?? false;
 
-    const yesterday = new Date(date);
-    yesterday.setDate(date.getDate() - 1);
-    yesterday.setHours(0, 0, 0, 0);
+    const yesterday = new Date(Date.UTC(
+      date.getUTCFullYear(),
+      date.getUTCMonth(),
+      date.getUTCDate() - 1,
+    ));
     const yesterdayWorkout = workoutMap.get(yesterday.toISOString());
     const dayAfterBonus = dayAfterZoneBonus(yesterdayWorkout, aggFactor);
 
@@ -528,6 +554,8 @@ export function calculateSleepPlan(
       const prevFraction = phaseAdvanceFraction(daysOut + 1);
       const dailyShift = (raceFraction - prevFraction) * (mss.totalAdvanceMin + cappedDelay);
 
+      console.log(`[shift debug] dayOffset=${dayOffset} meet=${mss.meet.name} daysOut=${daysOut} mss.totalAdvanceMin=${mss.totalAdvanceMin} mss.targetWakeMinutes=${mss.targetWakeMinutes} baseWakeMinutes=${baseWakeMinutes} raceFraction=${raceFraction} preRaceCumulative=${preRaceCumulative} bestPreRaceShift before=${bestPreRaceShift}`);
+
       if (preRaceCumulative > bestPreRaceShift) {
         bestPreRaceShift = preRaceCumulative;
         bestCircadianShift = circadianCumulative;
@@ -537,13 +565,17 @@ export function calculateSleepPlan(
     }
 
     const totalBedtimeShift = bestPreRaceShift + bestCircadianShift;
-    // Wake only advances for race alignment — circadian correction stays in bedtime only
-    const dayWakeMinutes = baseWakeMinutes - bestPreRaceShift;
-    const rawBedtimeMinutes = dayWakeMinutes - sleepNeed - bestCircadianShift - recoveryShift;
+    // For afternoon/evening races wake stays at baseline — only bedtime shifts earlier.
+    const isBedtimeOnly = controllingSchedule?.bedtimeOnlyAdvance ?? false;
+    const dayWakeMinutes = isBedtimeOnly ? baseWakeMinutes : baseWakeMinutes - bestPreRaceShift;
+    // When bedtime-only, fold preRaceShift into bedtime offset so the total shift is preserved.
+    const bedtimeOnlyExtra = isBedtimeOnly ? bestPreRaceShift : 0;
+    const rawBedtimeMinutes = dayWakeMinutes - sleepNeed - bestCircadianShift - bedtimeOnlyExtra - recoveryShift;
     let bedtimeMinutes = Math.round(rawBedtimeMinutes + bedtimeAdj);
     if (plans.length > 0) {
       const prevBedMin = timeToMinutes(plans[plans.length - 1].recommendedBedtime);
-      if (prevBedMin - bedtimeMinutes > 45) {
+      const wrappedBedtime = ((bedtimeMinutes % 1440) + 1440) % 1440;
+      if (prevBedMin - wrappedBedtime > 45) {
         bedtimeMinutes = prevBedMin - 45;
       }
     }
@@ -580,9 +612,7 @@ export function calculateSleepPlan(
     let zone3Streak = 0;
     let zone2Streak = 0;
     for (let j = 0; j < dayOffset; j++) {
-      const d = new Date(today);
-      d.setDate(today.getDate() + j);
-      d.setHours(0, 0, 0, 0);
+      const d = new Date(Date.UTC(today.getUTCFullYear(), today.getUTCMonth(), today.getUTCDate() + j));
       const w = workoutMap.get(d.toISOString());
       const zone = seilerZone(w);
       if (zone === 1) {
@@ -610,9 +640,7 @@ export function calculateSleepPlan(
 
     // SOURCE: Addleman/JFMK (2024) — rest restores HRV faster than light training.
     for (let j = Math.max(0, dayOffset - 3); j < dayOffset; j++) {
-      const d = new Date(today);
-      d.setDate(today.getDate() + j);
-      d.setHours(0, 0, 0, 0);
+      const d = new Date(Date.UTC(today.getUTCFullYear(), today.getUTCMonth(), today.getUTCDate() + j));
       const w = workoutMap.get(d.toISOString());
       if (!w || w.type === "rest") recovery += 6;
     }
