@@ -31,7 +31,8 @@ const ROAD_EVENTS = ["5K", "10K", "15K", "Half Marathon", "Marathon"];
 const XC_EVENTS = ["3 Mile", "4K", "5K", "6K", "8K"];
 
 function daysUntil(date: Date): number {
-  return Math.round((new Date(date).getTime() - Date.now()) / 86400000);
+  if (isNaN(date.getTime())) return 0;
+  return Math.round((date.getTime() - Date.now()) / 86400000);
 }
 
 function formatDate(date: Date): string {
@@ -238,6 +239,8 @@ export default function MeetsPage() {
       personalBestUnit: unit || null,
     };
 
+    console.log("[meets form] submitting date:", payload.date, "→ new Date would be:", new Date(payload.date), "→ ISO:", new Date(payload.date).toISOString());
+
     if (editMeet) {
       const res = await fetch("/api/meets", {
         method: "PUT",
@@ -278,10 +281,15 @@ export default function MeetsPage() {
 
   const openEdit = (m: Meet) => {
     const unit = m.personalBestUnit ?? "mmss";
+    const dateFromDB = m.date;
+    const dateAsISO = new Date(dateFromDB + 'T00:00:00').toISOString();
+    const dateForForm = dateAsISO.split("T")[0];
+    console.log("[meets openEdit] from DB:", dateFromDB, "→ new Date():", new Date(dateFromDB + 'T00:00:00'), "→ ISO:", dateAsISO, "→ form value:", dateForForm);
+
     setEditMeet(m);
     setForm({
       name: m.name,
-      date: new Date(m.date).toISOString().split("T")[0],
+      date: dateForForm,
       distances: m.distances,
       priority: m.priority,
       raceTime: m.raceTime ?? "",
@@ -298,7 +306,7 @@ export default function MeetsPage() {
     setShowForm(true);
   };
 
-  const sortedMeets = [...meets].sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+  const sortedMeets = [...meets].sort((a, b) => new Date(a.date + 'T00:00:00').getTime() - new Date(b.date + 'T00:00:00').getTime());
 
   const selectedEventUnit = form.primaryEvent ? getUnitForEvent(form.primaryEvent) : null;
   const pbPlaceholder = form.primaryEvent ? getPlaceholderForEvent(form.primaryEvent) : "Select an event first";
@@ -458,10 +466,10 @@ export default function MeetsPage() {
             ) : (
               <div className="space-y-px bg-[#E5E5E5]">
                 {sortedMeets.map((m) => {
-                  const days = daysUntil(new Date(m.date));
+                  const days = daysUntil(new Date(m.date + 'T00:00:00'));
                   const isPast = days < 0;
                   const isExpanded = expandedId === m.id;
-                  const rampData = buildSleepRamp(new Date(m.date), m.priority, userData?.currentWakeTime ?? "06:00");
+                  const rampData = buildSleepRamp(new Date(m.date + 'T00:00:00'), m.priority, userData?.currentWakeTime ?? "06:00");
                   const prediction = meetPredictions[m.id] ?? null;
                   const hasPrediction = !!prediction;
                   const hasEventData = !!m.primaryEvent;
@@ -479,7 +487,7 @@ export default function MeetsPage() {
                             <Badge label={m.priority} variant={m.priority as "A" | "B" | "C"} />
                             <div>
                               <p className="font-black text-base">{m.name}</p>
-                              <p className="text-xs text-[#6B6B6B]">{formatDate(new Date(m.date))} · {m.distances}</p>
+                              <p className="text-xs text-[#6B6B6B]">{formatDate(new Date(m.date + 'T00:00:00'))} · {m.distances}</p>
                               {m.primaryEvent && (
                                 <p className="text-xs font-mono text-[#6B6B6B] mt-0.5">
                                   {m.primaryEvent}

@@ -3,6 +3,15 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 
+function normalizeMeet(meet: any) {
+  return {
+    ...meet,
+    date: (meet.date instanceof Date ? meet.date : new Date(meet.date))
+      .toISOString()
+      .split("T")[0],
+  };
+}
+
 export async function GET() {
   const session = await getServerSession(authOptions);
   if (!session?.user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -12,7 +21,7 @@ export async function GET() {
     where: { userId },
     orderBy: { date: "asc" },
   });
-  return NextResponse.json(meets);
+  return NextResponse.json(meets.map(normalizeMeet));
 }
 
 export async function POST(req: Request) {
@@ -21,11 +30,13 @@ export async function POST(req: Request) {
   const userId = (session.user as any).id;
 
   const body = await req.json();
+  const dateObject = new Date(body.date + "T12:00:00");
+
   const meet = await prisma.meet.create({
     data: {
       userId,
       name: body.name,
-      date: new Date(body.date),
+      date: dateObject,
       distances: body.distances,
       priority: body.priority,
       raceTime: body.raceTime || null,
@@ -35,7 +46,7 @@ export async function POST(req: Request) {
       personalBestUnit: body.personalBestUnit || null,
     },
   });
-  return NextResponse.json(meet);
+  return NextResponse.json(normalizeMeet(meet));
 }
 
 export async function PUT(req: Request) {
@@ -44,11 +55,13 @@ export async function PUT(req: Request) {
   const userId = (session.user as any).id;
 
   const body = await req.json();
+  const dateObject = new Date(body.date + "T12:00:00");
+
   const meet = await prisma.meet.update({
     where: { id: body.id, userId },
     data: {
       name: body.name,
-      date: new Date(body.date),
+      date: dateObject,
       distances: body.distances,
       priority: body.priority,
       raceTime: body.raceTime || null,
@@ -58,7 +71,7 @@ export async function PUT(req: Request) {
       personalBestUnit: body.personalBestUnit || null,
     },
   });
-  return NextResponse.json(meet);
+  return NextResponse.json(normalizeMeet(meet));
 }
 
 export async function DELETE(req: Request) {
