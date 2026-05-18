@@ -218,13 +218,13 @@ export default function AnalysisPage() {
               </FadeUp>
 
               <FadeUp delay={60}>
-                <div className="grid grid-cols-3 gap-px bg-[#E5E5E5] mb-6">
-                  <div className="bg-white p-6">
+                <div className="grid grid-cols-3 gap-px bg-[#E5E5E5] dark:bg-[#333] mb-6">
+                  <div className="bg-white dark:bg-[#242424] p-6">
                     <p className="text-xs font-bold uppercase tracking-[0.3em] text-[#6B6B6B] mb-1">Zone 1</p>
                     <p className="font-mono font-black text-5xl leading-none">{report.polarized.zone1Pct}<span className="text-2xl">%</span></p>
                     <p className="text-xs text-[#6B6B6B] mt-1 font-mono">{report.polarized.zone1Min} min</p>
                   </div>
-                  <div className="bg-white p-6">
+                  <div className="bg-white dark:bg-[#242424] p-6">
                     <p className="text-xs font-bold uppercase tracking-[0.3em] text-[#6B6B6B] mb-1">Zone 2</p>
                     <p className="font-mono font-black text-5xl leading-none">{report.polarized.zone2Pct}<span className="text-2xl">%</span></p>
                     <p className="text-xs text-[#6B6B6B] mt-1 font-mono">{report.polarized.zone2Min} min</p>

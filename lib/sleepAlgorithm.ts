@@ -579,6 +579,8 @@ export function calculateSleepPlan(
         bedtimeMinutes = prevBedMin - 45;
       }
     }
+    // Emergency floor: bedtime can never be earlier than 8 PM (1200 min)
+    if (((bedtimeMinutes % 1440) + 1440) % 1440 < 1200) bedtimeMinutes = 1200;
     const recommendedBedtime = minutesToTime(bedtimeMinutes);
     const recommendedWakeTime = minutesToTime(dayWakeMinutes);
     const totalSleepHours = Math.round((sleepNeed / 60) * 10) / 10;
