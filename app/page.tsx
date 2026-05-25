@@ -4,7 +4,7 @@ import { motion } from "framer-motion";
 import { FadeUp } from "@/components/FadeUp";
 import { Ticker } from "@/components/Ticker";
 import { Button } from "@/components/Button";
-import { WebGLShader } from "@/components/ui/web-gl-shader";
+import { GameOfLife } from "@/components/GameOfLife";
 
 const meets = [
   "Penn Relays",
@@ -66,11 +66,10 @@ export default function LandingPage() {
         className="bg-[#0A0A0A] text-white relative overflow-hidden"
         style={{ minHeight: "100vh" }}
       >
-        {/* WebGL chromatic-aberration shader background */}
-        <WebGLShader />
+        <GameOfLife />
 
-        {/* Gradient overlay — keeps text legible over the shader */}
-        <div className="absolute inset-0 z-10 bg-gradient-to-r from-[#0A0A0A] via-[#0A0A0A]/70 to-transparent pointer-events-none" />
+        {/* Gradient overlay so text stays legible */}
+        <div className="absolute inset-0 z-10 bg-gradient-to-r from-[#0A0A0A] via-[#0A0A0A]/80 to-transparent pointer-events-none" />
 
         {/* Content */}
         <div className="relative z-20 max-w-[1200px] mx-auto px-6 py-24 md:py-36 flex flex-col justify-center min-h-screen">
