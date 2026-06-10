@@ -31,7 +31,7 @@ export function Navbar() {
                 <Link
                   key={link.href}
                   href={link.href}
-                  className={`link-wipe text-xs md:text-sm font-bold uppercase tracking-wider ${
+                  className={`link-wipe text-xs md:text-sm font-bold uppercase tracking-wider focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#E8FF00] ${
                     pathname === link.href ? "text-[#0A0A0A] dark:text-[#F5F5F5]" : "text-[#6B6B6B] dark:text-[#A0A0A0] hover:text-[#0A0A0A] dark:hover:text-[#F5F5F5]"
                   }`}
                 >
@@ -41,7 +41,7 @@ export function Navbar() {
               <ThemeToggle />
               <button
                 onClick={() => signOut({ callbackUrl: "/" })}
-                className="text-xs md:text-sm font-bold uppercase tracking-wider text-[#6B6B6B] dark:text-[#A0A0A0] hover:text-[#0A0A0A] dark:hover:text-[#F5F5F5] link-wipe"
+                className="text-xs md:text-sm font-bold uppercase tracking-wider text-[#6B6B6B] dark:text-[#A0A0A0] hover:text-[#0A0A0A] dark:hover:text-[#F5F5F5] link-wipe focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#E8FF00]"
               >
                 Sign Out
               </button>
@@ -50,12 +50,12 @@ export function Navbar() {
         ) : (
           <div className="flex items-center gap-4">
             <ThemeToggle />
-            <Link href="/login" className="link-wipe text-sm font-bold uppercase tracking-wider text-[#6B6B6B] dark:text-[#A0A0A0] hover:text-[#0A0A0A] dark:hover:text-[#F5F5F5]">
+            <Link href="/login" className="link-wipe text-sm font-bold uppercase tracking-wider text-[#6B6B6B] dark:text-[#A0A0A0] hover:text-[#0A0A0A] dark:hover:text-[#F5F5F5] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#E8FF00]">
               Log In
             </Link>
             <Link
               href="/signup"
-              className="bg-[#0A0A0A] text-white px-4 py-2 text-xs font-bold uppercase tracking-wider hover:bg-[#E8FF00] hover:text-[#0A0A0A] transition-colors"
+              className="bg-[#0A0A0A] text-white px-4 py-2 text-xs font-bold uppercase tracking-wider hover:bg-[#E8FF00] hover:text-[#0A0A0A] transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#E8FF00]"
             >
               Sign Up
             </Link>

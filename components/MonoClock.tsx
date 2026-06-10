@@ -10,7 +10,8 @@ interface MonoClockProps {
 }
 
 export function MonoClock({ time24, className = "", accent = false, animate = false }: MonoClockProps) {
-  const [displayed, setDisplayed] = useState(animate ? "0:00 AM" : formatTime12h(time24));
+  const formattedTime = formatTime12h(time24);
+  const [displayed, setDisplayed] = useState(animate ? "" : formattedTime);
   const ref = useRef<HTMLSpanElement>(null);
   const animatedRef = useRef(false);
 
@@ -60,6 +61,7 @@ export function MonoClock({ time24, className = "", accent = false, animate = fa
     <span
       ref={ref}
       className={`font-mono ${accent ? "text-[#0A0A0A] dark:text-[#E8FF00] accent-pulse" : ""} ${className}`}
+      aria-label={formattedTime}
     >
       {displayed}
     </span>

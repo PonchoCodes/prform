@@ -1,7 +1,7 @@
 "use client";
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import { motion } from "framer-motion";
-import { AnimatePresence } from "framer-motion";
+import { AnimatePresence, useReducedMotion } from "framer-motion";
 import type { DailySleepPlan } from "@/lib/sleepAlgorithm";
 import { formatTime12h } from "@/lib/sleepAlgorithm";
 import { formatPace, formatDistance } from "@/lib/unitUtils";
@@ -38,10 +38,27 @@ const DAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 
 export function DayDetailModal({ day, activity, unit = "imperial", onClose }: DayDetailModalProps) {
+  const shouldReduceMotion = useReducedMotion();
+  const modalRef = useRef<HTMLDivElement>(null);
+  const triggerRef = useRef<HTMLElement | null>(null);
+
   useEffect(() => {
+    triggerRef.current = document.activeElement as HTMLElement;
+    if (modalRef.current) {
+      const focusableElements = modalRef.current.querySelectorAll(
+        "button, [href], input, select, textarea, [tabindex]:not([tabindex='-1'])"
+      );
+      if (focusableElements.length > 0) {
+        (focusableElements[0] as HTMLElement).focus();
+      }
+    }
+
     const handler = (e: KeyboardEvent) => { if (e.key === "Escape") onClose(); };
     document.addEventListener("keydown", handler);
-    return () => document.removeEventListener("keydown", handler);
+    return () => {
+      document.removeEventListener("keydown", handler);
+      triggerRef.current?.focus();
+    };
   }, [onClose]);
 
   const d = new Date(day.date);
@@ -72,10 +89,14 @@ export function DayDetailModal({ day, activity, unit = "imperial", onClose }: Da
         onClick={onClose}
       >
         <motion.div
+          ref={modalRef}
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           exit={{ opacity: 0, y: 20 }}
-          transition={{ duration: 0.25 }}
+          transition={{ duration: shouldReduceMotion ? 0 : 0.25 }}
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="day-modal-title"
           className="bg-white dark:bg-[#242424] border border-[#E5E5E5] dark:border-[#333] max-w-[480px] w-full mx-4"
           onClick={(e) => e.stopPropagation()}
         >
@@ -83,11 +104,12 @@ export function DayDetailModal({ day, activity, unit = "imperial", onClose }: Da
           <div className="flex items-center justify-between px-6 py-4 border-b border-[#E5E5E5] dark:border-[#333]">
             <div>
               <p className="text-xs font-bold uppercase tracking-[0.3em] text-[#6B6B6B] dark:text-[#A0A0A0]">{dayName} / {monthDay}</p>
-              <h3 className="font-black text-xl uppercase">{day.nextMeetName ? "Meet Week" : "Training Day"}</h3>
+              <h3 id="day-modal-title" className="font-black text-xl uppercase">{day.nextMeetName ? "Meet Week" : "Training Day"}</h3>
             </div>
             <button
               onClick={onClose}
-              className="w-8 h-8 flex items-center justify-center border border-[#E5E5E5] dark:border-[#333] text-[#6B6B6B] dark:text-[#A0A0A0] hover:border-[#0A0A0A] dark:hover:border-[#F5F5F5] transition-colors font-bold"
+              aria-label="Close"
+              className="w-8 h-8 flex items-center justify-center border border-[#E5E5E5] dark:border-[#333] text-[#6B6B6B] dark:text-[#A0A0A0] hover:border-[#0A0A0A] dark:hover:border-[#F5F5F5] transition-colors font-bold focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#E8FF00]"
             >
               ×
             </button>

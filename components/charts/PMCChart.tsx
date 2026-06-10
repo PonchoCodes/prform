@@ -24,7 +24,7 @@ const CustomTooltip = ({ active, payload, label }: any) => {
       <p className="text-[#6B6B6B] mb-2">{label}</p>
       <p className="text-white">CTL <span className="text-white font-bold">{d.ctl}</span></p>
       <p className="text-[#E8FF00]">ATL <span className="font-bold">{d.atl}</span></p>
-      <p className={d.tsb >= 0 ? "text-green-400" : "text-red-400"}>
+      <p className={d.tsb >= 0 ? "text-[#E8FF00]" : "text-[#FF6B6B]"}>
         TSB <span className="font-bold">{d.tsb}</span>
       </p>
       {d.tss > 0 && <p className="text-[#6B6B6B] mt-1">TSS {d.tss}</p>}
@@ -57,9 +57,9 @@ export function PMCChart({ data }: Props) {
         />
         <Tooltip content={<CustomTooltip />} />
         <ReferenceLine y={0} stroke="#333" strokeDasharray="3 3" />
-        <Bar dataKey="tsb" name="TSB" radius={0} isAnimationActive={false} fill="#16a34a">
+        <Bar dataKey="tsb" name="TSB" radius={0} isAnimationActive={false} fill="#E8FF00">
           {data.map((entry, index) => (
-            <Cell key={index} fill={entry.tsb >= 0 ? "#16a34a" : "#dc2626"} />
+            <Cell key={index} fill={entry.tsb >= 0 ? "#E8FF00" : "#FF6B6B"} />
           ))}
         </Bar>
         <Line dataKey="ctl" name="CTL" stroke="#FFFFFF" strokeWidth={2} dot={false} isAnimationActive={false} />

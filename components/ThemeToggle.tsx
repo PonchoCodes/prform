@@ -32,12 +32,14 @@ const SystemIcon = () => (
 );
 
 export function ThemeToggle() {
-  const [theme, setTheme] = useState<Theme>("system");
-
-  useEffect(() => {
-    const stored = (localStorage.getItem("prform-theme") as Theme) ?? "system";
-    setTheme(stored);
-  }, []);
+  const [theme, setTheme] = useState<Theme>(() => {
+    if (typeof window === "undefined") return "system";
+    try {
+      return (localStorage.getItem("prform-theme") as Theme) ?? "system";
+    } catch {
+      return "system";
+    }
+  });
 
   const cycle = () => {
     const next: Theme = theme === "system" ? "light" : theme === "light" ? "dark" : "system";
@@ -51,8 +53,8 @@ export function ThemeToggle() {
   return (
     <button
       onClick={cycle}
-      title={theme.toUpperCase()}
-      className="w-8 h-8 flex items-center justify-center border border-[#E5E5E5] dark:border-[#333] hover:border-[#0A0A0A] dark:hover:border-[#F5F5F5] transition-colors text-[#6B6B6B] dark:text-[#A0A0A0]"
+      aria-label={`Theme: ${theme.charAt(0).toUpperCase() + theme.slice(1)}`}
+      className="w-8 h-8 flex items-center justify-center border border-[#E5E5E5] dark:border-[#333] hover:border-[#0A0A0A] dark:hover:border-[#F5F5F5] transition-colors text-[#6B6B6B] dark:text-[#A0A0A0] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#E8FF00]"
     >
       {theme === "light" ? <SunIcon /> : theme === "dark" ? <MoonIcon /> : <SystemIcon />}
     </button>

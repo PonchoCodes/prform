@@ -49,7 +49,7 @@ export default function AnalysisPage() {
   const [report, setReport] = useState<PerformanceReport | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [window, setWindow] = useState<WindowDays>(90);
+  const [windowDays, setWindowDays] = useState<WindowDays>(90);
   const [circadian, setCircadian] = useState<any>(null);
 
   useEffect(() => {
@@ -59,7 +59,7 @@ export default function AnalysisPage() {
   useEffect(() => {
     if (status !== "authenticated") return;
     setLoading(true);
-    fetch(`/api/analysis?days=${window}`)
+    fetch(`/api/analysis?days=${windowDays}`)
       .then(async (r) => {
         const data = await r.json();
         if (!r.ok) {
@@ -71,7 +71,7 @@ export default function AnalysisPage() {
         }
       })
       .finally(() => setLoading(false));
-  }, [status, window]);
+  }, [status, windowDays]);
 
   useEffect(() => {
     if (status !== "authenticated") return;
@@ -86,8 +86,11 @@ export default function AnalysisPage() {
 
   if (status === "loading") {
     return (
-      <div className="min-h-screen bg-white dark:bg-[#1a1a1a] flex items-center justify-center">
-        <p className="font-mono text-sm uppercase tracking-wider text-[#6B6B6B] dark:text-[#A0A0A0]">Loading…</p>
+      <div className="min-h-screen bg-white dark:bg-[#1a1a1a]">
+        <Navbar />
+        <div className="flex items-center justify-center py-20">
+          <p className="font-mono text-sm uppercase tracking-wider text-[#6B6B6B] dark:text-[#A0A0A0]">Loading…</p>
+        </div>
       </div>
     );
   }
@@ -105,9 +108,9 @@ export default function AnalysisPage() {
             {([30, 60, 90] as WindowDays[]).map((d) => (
               <button
                 key={d}
-                onClick={() => setWindow(d)}
+                onClick={() => setWindowDays(d)}
                 className={`px-5 py-2 text-xs font-bold uppercase tracking-wider transition-colors ${
-                  window === d
+                  windowDays === d
                     ? "bg-[#E8FF00] text-[#0A0A0A]"
                     : "border border-[#333] text-[#6B6B6B] hover:border-[#999]"
                 }`}
@@ -118,7 +121,7 @@ export default function AnalysisPage() {
           </div>
           {report && !loading && (
             <p className="text-[10px] font-mono text-[#6B6B6B]">
-              {report.totalSynced} total runs synced · {report.activityCount} in {window}d window
+              {report.totalSynced} total runs synced · {report.activityCount} in {windowDays}d window
             </p>
           )}
         </div>
@@ -159,17 +162,17 @@ export default function AnalysisPage() {
               </FadeUp>
 
               {report.activityCount < 5 ? (
-                <div className="border border-[#E5E5E5] p-8 text-center">
+                <div className="border border-dashed border-[#E5E5E5] dark:border-[#333] p-8 text-center">
                   <p className="text-xs font-mono text-[#6B6B6B] mb-4">
-                    Only {report.activityCount} run{report.activityCount !== 1 ? "s" : ""} in the last {window}d window.
+                    Only {report.activityCount} run{report.activityCount !== 1 ? "s" : ""} in the last {windowDays}d window.
                     {report.totalSynced >= 5 ? " Try a wider window:" : " Sync at least 5 runs to unlock this chart."}
                   </p>
                   {report.totalSynced >= 5 && (
                     <div className="flex justify-center gap-px">
-                      {([30, 60, 90] as WindowDays[]).filter((d) => d > window).map((d) => (
+                      {([30, 60, 90] as WindowDays[]).filter((d) => d > windowDays).map((d) => (
                         <button
                           key={d}
-                          onClick={() => setWindow(d)}
+                          onClick={() => setWindowDays(d)}
                           className="px-4 py-1.5 text-xs font-bold uppercase tracking-wider border border-[#0A0A0A] hover:bg-[#0A0A0A] hover:text-white transition-colors"
                         >
                           {d}d

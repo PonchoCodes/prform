@@ -30,13 +30,13 @@ const phases: Phase[] = [
       <div className="flex gap-2 mt-2">
         <a
           href="App-prefs:root=DISPLAY"
-          className="text-xs font-bold uppercase tracking-wider px-3 py-1 border border-[#0A0A0A] hover:bg-[#0A0A0A] hover:text-white dark:border-[#F5F5F5] dark:hover:bg-[#F5F5F5] dark:hover:text-[#0A0A0A] transition-colors"
+          className="text-xs font-bold uppercase tracking-wider px-3 py-1 border border-[#0A0A0A] hover:bg-[#0A0A0A] hover:text-white dark:border-[#F5F5F5] dark:hover:bg-[#F5F5F5] dark:hover:text-[#0A0A0A] transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#E8FF00]"
         >
           iOS Settings →
         </a>
         <a
           href="intent://settings"
-          className="text-xs font-bold uppercase tracking-wider px-3 py-1 border border-[#0A0A0A] hover:bg-[#0A0A0A] hover:text-white dark:border-[#F5F5F5] dark:hover:bg-[#F5F5F5] dark:hover:text-[#0A0A0A] transition-colors"
+          className="text-xs font-bold uppercase tracking-wider px-3 py-1 border border-[#0A0A0A] hover:bg-[#0A0A0A] hover:text-white dark:border-[#F5F5F5] dark:hover:bg-[#F5F5F5] dark:hover:text-[#0A0A0A] transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#E8FF00]"
         >
           Android Settings →
         </a>
@@ -117,7 +117,7 @@ export function WindDownTimeline({ windDown }: WindDownTimelineProps) {
                 </span>
               </div>
               <p className="text-xs font-bold uppercase tracking-wider mb-1 dark:text-[#F5F5F5]">{phase.label}</p>
-              <p className={`text-sm leading-relaxed ${status === "now" ? "text-[#CCCCCC]" : "text-[#6B6B6B] dark:text-[#A0A0A0]"}`}>
+              <p className={`text-sm leading-relaxed ${status === "now" ? "text-[#A0A0A0]" : "text-[#6B6B6B] dark:text-[#A0A0A0]"}`}>
                 {phase.description}
               </p>
               {phase.extra && status !== "done" && (

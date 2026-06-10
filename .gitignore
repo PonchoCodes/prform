@@ -36,6 +36,7 @@ yarn-error.log*
 
 # large media
 public/hero.mov
+/15941890_1920_1080_30fps(2).mp4
 
 # vercel
 .vercel

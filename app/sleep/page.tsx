@@ -240,7 +240,7 @@ export default function SleepPage() {
       {/* Sleep History */}
       <section className="bg-[#0A0A0A] text-white px-6 py-10 border-b border-[#222]">
         <div className="max-w-[1200px] mx-auto">
-          <p className="text-xs font-bold uppercase tracking-[0.3em] text-[#6B6B6B] mb-2">PRform Core</p>
+          <p className="text-xs font-bold uppercase tracking-[0.3em] text-[#6B6B6B] mb-2">History</p>
           <h2 className="font-black text-3xl uppercase leading-none mb-6">Sleep History</h2>
 
           {streak && (

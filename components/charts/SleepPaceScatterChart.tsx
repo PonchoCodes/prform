@@ -56,7 +56,7 @@ function regressionLine(data: ScatterPoint[]): { x: number; y: number }[] {
 export function SleepPaceScatterChart({ data, correlation, unit = "imperial" }: Props) {
   const isDark = useDarkMode();
   const axisColor = isDark ? "#A0A0A0" : "#6B6B6B";
-  const gridColor = isDark ? "#333" : "#333";
+  const gridColor = isDark ? "#333" : "#E5E5E5";
   const bgColor = isDark ? "#242424" : "#0A0A0A";
   const regLine = regressionLine(data);
   const confirmedData = data.filter((d) => d.confirmed);
@@ -179,9 +179,9 @@ export function SleepPaceScatterChart({ data, correlation, unit = "imperial" }: 
       </div>
 
       <div className="flex gap-px mt-2 text-[9px] font-mono uppercase tracking-wider">
-        <div className="flex-1 bg-red-50 text-red-400 text-center py-0.5">← Late</div>
-        <div className="flex-1 bg-white border-x border-[#E5E5E5] text-[#6B6B6B] text-center py-0.5">On Target</div>
-        <div className="flex-1 bg-green-50 text-green-600 text-center py-0.5">Early →</div>
+        <div className="flex-1 bg-[#F5F5F5] dark:bg-[#2a2a2a] text-[#6B6B6B] dark:text-[#A0A0A0] text-center py-0.5">← Late</div>
+        <div className="flex-1 bg-white dark:bg-[#242424] border-x border-[#E5E5E5] dark:border-[#333] text-[#0A0A0A] dark:text-[#F5F5F5] text-center py-0.5">On Target</div>
+        <div className="flex-1 bg-[#F5F5F5] dark:bg-[#2a2a2a] text-[#6B6B6B] dark:text-[#A0A0A0] text-center py-0.5">Early →</div>
       </div>
     </div>
   );

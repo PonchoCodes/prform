@@ -1,10 +1,10 @@
 "use client";
 import Link from "next/link";
+import { useEffect, useRef } from "react";
 import { motion } from "framer-motion";
 import { FadeUp } from "@/components/FadeUp";
 import { Ticker } from "@/components/Ticker";
 import { Button } from "@/components/Button";
-import { GameOfLife } from "@/components/GameOfLife";
 
 const meets = [
   "Penn Relays",
@@ -39,6 +39,13 @@ const features = [
 
 export function LandingPage({ earlyAccess }: { earlyAccess: boolean }) {
   const ctaHref = earlyAccess ? "/request-access" : "/signup";
+  const videoRef = useRef<HTMLVideoElement>(null);
+
+  useEffect(() => {
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+      videoRef.current?.pause();
+    }
+  }, []);
 
   return (
     <div className="min-h-screen bg-white dark:bg-[#1a1a1a]">
@@ -68,10 +75,20 @@ export function LandingPage({ earlyAccess }: { earlyAccess: boolean }) {
         className="bg-[#0A0A0A] text-white relative overflow-hidden"
         style={{ minHeight: "100vh" }}
       >
-        <GameOfLife />
+        <video
+          ref={videoRef}
+          autoPlay
+          muted
+          loop
+          playsInline
+          preload="auto"
+          aria-hidden="true"
+          className="absolute inset-0 z-0 h-full w-full object-cover"
+          src="/hero.mp4"
+        />
 
         {/* Gradient overlay so text stays legible */}
-        <div className="absolute inset-0 z-10 bg-gradient-to-r from-[#0A0A0A] via-[#0A0A0A]/80 to-transparent pointer-events-none" />
+        <div className="absolute inset-0 z-10 bg-gradient-to-r from-[#0A0A0A] via-[#0A0A0A]/70 to-[#0A0A0A]/30 pointer-events-none" />
 
         {/* Content */}
         <div className="relative z-20 max-w-[1200px] mx-auto px-6 py-24 md:py-36 flex flex-col justify-center min-h-screen">

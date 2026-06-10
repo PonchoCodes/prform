@@ -253,7 +253,7 @@ export default function ProfilePage() {
             </div>
 
             {/* Notification Toggles */}
-            <h2 className="font-black text-xl uppercase mt-10 mb-6 border-b border-[#E5E5E5] pb-3">Wind-Down Notifications</h2>
+            <h2 className="font-black text-xl uppercase mt-10 mb-6 border-b border-[#E5E5E5] dark:border-[#333] pb-3">Wind-Down Notifications</h2>
             <div className="space-y-3">
               {[
                 { key: "notifPhase1", label: "2 hrs before: Dim Lights" },
@@ -284,7 +284,7 @@ export default function ProfilePage() {
         {/* Plan Aggressiveness */}
         <div className="max-w-[1200px] mx-auto px-6 pb-10">
           <FadeUp delay={120}>
-            <h2 className="font-black text-xl uppercase mb-3 border-b border-[#E5E5E5] pb-3">Plan Aggressiveness</h2>
+            <h2 className="font-black text-xl uppercase mb-3 border-b border-[#E5E5E5] dark:border-[#333] pb-3">Plan Aggressiveness</h2>
             <p className="text-xs text-[#6B6B6B] dark:text-[#A0A0A0] font-mono mb-6 max-w-xl">
               Controls how much PRform shifts your bedtime before races and after hard workouts.
               Higher = closer to the scientific optimum. Lower = more compatible with a busy schedule.
@@ -338,13 +338,6 @@ export default function ProfilePage() {
               </div>
             </div>
 
-            <button
-              onClick={handleSave}
-              disabled={saving}
-              className="w-full py-3 bg-[#0A0A0A] text-white font-black text-xs uppercase tracking-widest hover:bg-[#333] transition-colors disabled:opacity-50 mb-3"
-            >
-              {saved ? "✓ Saved" : saving ? "Saving…" : "Save Changes"}
-            </button>
             <p className="text-[10px] font-mono text-[#6B6B6B] dark:text-[#A0A0A0]">
               PRform set this to {onboardingAgg}% based on your experience level.
               The scientific optimum is always 100%.
@@ -382,7 +375,7 @@ export default function ProfilePage() {
                       <button
                         onClick={handleDisconnectStrava}
                         disabled={disconnecting}
-                        className="text-xs font-bold uppercase tracking-wider text-[#6B6B6B] px-4 py-2 border border-[#E5E5E5] hover:border-red-300 hover:text-red-600 transition-colors disabled:opacity-50"
+                        className="text-xs font-bold uppercase tracking-wider text-[#6B6B6B] px-4 py-2 border border-[#E5E5E5] hover:border-[#FF4444] hover:text-[#FF4444] transition-colors disabled:opacity-50"
                       >
                         {disconnecting ? "Disconnecting…" : "Disconnect"}
                       </button>

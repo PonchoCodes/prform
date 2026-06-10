@@ -20,7 +20,7 @@ export function CircadianProtocolSection({ circadian }: { circadian: CircadianPl
             <p className="text-xs text-[#6B6B6B] dark:text-[#A0A0A0] uppercase tracking-wider mb-4">Core body temp minimum</p>
             <div className="space-y-1 text-xs font-mono text-[#6B6B6B] dark:text-[#A0A0A0]">
               <p><span className="text-[#E8FF00] bg-[#0A0A0A] px-1">ADVANCE ZONE</span> after {formatTime12h(circadian.advanceWindowStart)}</p>
-              <p><span className="text-red-400 bg-[#0A0A0A] px-1">DELAY ZONE</span> before {formatTime12h(circadian.delayZoneEnd)}</p>
+              <p><span className="text-[#FF6B6B] bg-[#0A0A0A] px-1">DELAY ZONE</span> before {formatTime12h(circadian.delayZoneEnd)}</p>
             </div>
           </FadeUp>
 
@@ -33,7 +33,7 @@ export function CircadianProtocolSection({ circadian }: { circadian: CircadianPl
             <p className="text-xs text-[#6B6B6B] uppercase tracking-wider mb-4">
               {circadian.lightExposure.durationMin} min &middot; {circadian.lightExposure.type === "outdoor" ? "Outdoor sunlight" : "10,000 lux lamp"}
             </p>
-            <p className="text-xs text-[#6B6B6B] dark:text-[#AAAAAA] font-mono leading-relaxed">{circadian.lightExposure.instruction}</p>
+            <p className="text-xs text-[#6B6B6B] dark:text-[#A0A0A0] font-mono leading-relaxed">{circadian.lightExposure.instruction}</p>
           </FadeUp>
 
           <FadeUp delay={120} className="bg-white dark:bg-[#242424] p-6">
@@ -42,7 +42,7 @@ export function CircadianProtocolSection({ circadian }: { circadian: CircadianPl
               <p className="font-mono font-black text-5xl leading-none">{circadian.cumulativeShiftMin}</p>
               <p className="text-[#6B6B6B] dark:text-[#A0A0A0] text-sm mb-1">min advanced</p>
             </div>
-            <div className="w-full h-1.5 bg-[#E5E5E5] dark:bg-[#444] mb-4">
+            <div className="w-full h-1.5 bg-[#E5E5E5] dark:bg-[#444] mb-4" role="progressbar" aria-valuenow={circadian.cumulativeShiftMin} aria-valuemin={0} aria-valuemax={90}>
               <div
                 className="h-1.5 bg-[#E8FF00] transition-all duration-700"
                 style={{ width: `${Math.min(100, (circadian.cumulativeShiftMin / Math.max(circadian.cumulativeShiftMin, 90)) * 100)}%` }}

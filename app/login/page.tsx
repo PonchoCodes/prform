@@ -33,7 +33,7 @@ export default function LoginPage() {
 
   return (
     <div className="min-h-screen bg-white dark:bg-[#1a1a1a] flex flex-col">
-      <nav className="border-b border-[#E5E5E5] dark:border-[#333333] px-6 h-14 flex items-center">
+      <nav className="border-b border-[#E5E5E5] dark:border-[#333] px-6 h-14 flex items-center">
         <Link href="/" className="font-black text-xl uppercase tracking-tight">
           PR<span className="text-[#E8FF00] bg-[#0A0A0A] px-1">form</span>
         </Link>
@@ -49,7 +49,7 @@ export default function LoginPage() {
           <p className="text-xs font-bold uppercase tracking-[0.3em] text-[#6B6B6B] dark:text-[#A0A0A0] mb-3">Welcome Back</p>
           <h1 className="font-black text-4xl uppercase mb-8 dark:text-[#F5F5F5]">Log In</h1>
 
-          <div className="border border-[#E5E5E5] dark:border-[#333333] p-4 mb-6 bg-[#F9F9F9] dark:bg-[#242424]">
+          <div className="border border-[#E5E5E5] dark:border-[#333] p-4 mb-6 bg-[#F5F5F5] dark:bg-[#242424]">
             <p className="text-xs font-bold uppercase tracking-wider text-[#6B6B6B] dark:text-[#A0A0A0] mb-1">Demo Account</p>
             <p className="font-mono text-sm dark:text-[#A0A0A0]">demo@prform.com / demo1234</p>
           </div>
@@ -78,7 +78,7 @@ export default function LoginPage() {
               />
             </div>
             {error && (
-              <p className="text-xs font-bold text-red-600 uppercase tracking-wider">{error}</p>
+              <p className="text-xs font-bold text-[#FF4444] uppercase tracking-wider">{error}</p>
             )}
             <Button type="submit" variant="secondary" size="lg" className="w-full" disabled={loading}>
               {loading ? "Logging in..." : "Log In"}

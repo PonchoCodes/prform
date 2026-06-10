@@ -56,6 +56,14 @@ export async function GET() {
     }),
   ]);
 
+  console.log("[sleep-plan GET] raw meets from DB:", meets.map(m => ({
+    id: m.id,
+    name: m.name,
+    date: m.date,
+    dateType: typeof m.date,
+    dateISO: m.date instanceof Date ? m.date.toISOString() : new Date(m.date).toISOString(),
+  })));
+
   const sleepLogsForPlan: SleepLogForPlan[] = sleepLogs.map((l) => ({
     date: new Date(l.date).toISOString().slice(0, 10),
     hitTarget: l.hitTarget,
@@ -72,6 +80,23 @@ export async function GET() {
     recommendedBedtime: l.recommendedBedtime,
   }));
 
+  const meetsForPlan = meets.map((m) => ({
+    date: m.date,
+    priority: m.priority as "A" | "B" | "C",
+    name: m.name,
+    raceTime: m.raceTime ?? null,
+  }));
+
+  console.log('=== SLEEP PLAN DEBUG ===');
+  console.log('Server now:', new Date().toISOString());
+  const serverToday = new Date(); serverToday.setHours(0,0,0,0);
+  console.log('Server today midnight:', serverToday.toISOString());
+  for (const m of meets) {
+    const daysOut = Math.round((new Date(m.date).getTime() - serverToday.getTime()) / 86400000);
+    console.log(`Meet: ${m.name} | raw date: ${m.date} | type: ${typeof m.date} | ISO: ${new Date(m.date).toISOString()} | daysOut: ${daysOut}`);
+  }
+  console.log('=== END DEBUG ===');
+
   const allPlans = calculateSleepPlan(
     {
       age: freshUser?.age ?? user.age ?? 25,
@@ -82,12 +107,7 @@ export async function GET() {
       planAggressiveness: freshUser?.planAggressiveness ?? user.planAggressiveness ?? 85,
       bedtimeAdjustmentMinutes: freshUser?.bedtimeAdjustmentMinutes ?? user.bedtimeAdjustmentMinutes ?? 0,
     },
-    meets.map((m) => ({
-      date: m.date,
-      priority: m.priority as "A" | "B" | "C",
-      name: m.name,
-      raceTime: m.raceTime ?? null,
-    })),
+    meetsForPlan,
     workouts,
     undefined,
     { startDayOffset: -1, sleepLogs: sleepLogsForPlan, recentSleepLogs: recentSleepLogsForPlan },

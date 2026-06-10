@@ -13,12 +13,12 @@ export function Button({
   ...props
 }: ButtonProps) {
   const base =
-    "inline-flex items-center justify-center font-bold uppercase tracking-wider transition-transform duration-150 active:scale-[0.97] select-none cursor-pointer border";
+    "inline-flex items-center justify-center font-bold uppercase tracking-wider transition-transform transition-colors duration-150 active:scale-[0.97] select-none cursor-pointer border focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#E8FF00] disabled:opacity-40 disabled:cursor-not-allowed disabled:pointer-events-none";
 
   const variants = {
     primary: "bg-[#E8FF00] text-[#0A0A0A] border-[#E8FF00] hover:bg-[#0A0A0A] hover:text-[#E8FF00]",
     secondary: "bg-[#0A0A0A] text-white border-[#0A0A0A] hover:bg-white hover:text-[#0A0A0A]",
-    ghost: "bg-transparent text-[#0A0A0A] border-[#E5E5E5] hover:border-[#0A0A0A]",
+    ghost: "bg-transparent text-[#0A0A0A] border-[#E5E5E5] hover:border-[#0A0A0A] hover:text-[#0A0A0A] dark:text-[#F5F5F5] dark:hover:text-[#0A0A0A]",
   };
 
   const sizes = {

@@ -8,6 +8,7 @@
     "start": "next start",
     "lint": "next lint",
     "seed": "npx ts-node --project tsconfig.seed.json prisma/seed.ts",
+    "seed:analysis": "npx ts-node --project tsconfig.seed.json scripts/seedAnalysis.ts",
     "postinstall": "prisma generate"
   },
   "prisma": {

@@ -202,7 +202,7 @@ export default function SchedulePage() {
             <p className="text-xs font-bold uppercase tracking-[0.3em] text-[#6B6B6B] mb-2">Training</p>
             <h1 className="font-black text-4xl uppercase text-white">Schedule</h1>
             <p className="text-[#6B6B6B] text-xs font-mono mt-2">
-              Strava syncs automatically · Add planned workouts to optimise your sleep targets
+              Strava syncs automatically · Add planned workouts to optimize your sleep targets
             </p>
           </div>
         </section>
@@ -288,12 +288,12 @@ export default function SchedulePage() {
                         type="date"
                         value={addForm.date}
                         onChange={(e) => setAddForm({ ...addForm, date: e.target.value })}
-                        className="border border-[#E5E5E5] dark:border-[#444] dark:bg-[#2a2a2a] dark:text-[#F5F5F5] px-3 py-2 text-sm font-mono focus:outline-none focus:border-[#0A0A0A] dark:focus:border-[#F5F5F5]"
+                        className="border border-[#E5E5E5] dark:border-[#333] dark:bg-[#2a2a2a] dark:text-[#F5F5F5] px-3 py-2 text-sm font-mono focus:outline-none focus:border-[#0A0A0A] dark:focus:border-[#F5F5F5]"
                       />
                       <select
                         value={addForm.type}
                         onChange={(e) => setAddForm({ ...addForm, type: e.target.value as WorkoutType })}
-                        className="border border-[#E5E5E5] dark:border-[#444] dark:bg-[#2a2a2a] dark:text-[#F5F5F5] px-3 py-2 text-xs font-bold uppercase focus:outline-none focus:border-[#0A0A0A] dark:focus:border-[#F5F5F5] bg-white"
+                        className="border border-[#E5E5E5] dark:border-[#333] dark:bg-[#2a2a2a] dark:text-[#F5F5F5] px-3 py-2 text-xs font-bold uppercase focus:outline-none focus:border-[#0A0A0A] dark:focus:border-[#F5F5F5] bg-white"
                       >
                         {getWorkoutTypes(sport).map((t) => (
                           <option key={t.value} value={t.value}>{t.label}</option>
@@ -304,7 +304,7 @@ export default function SchedulePage() {
                         placeholder="Distance (mi)"
                         value={addForm.distance}
                         onChange={(e) => setAddForm({ ...addForm, distance: e.target.value })}
-                        className="border border-[#E5E5E5] dark:border-[#444] dark:bg-[#2a2a2a] dark:text-[#F5F5F5] px-3 py-2 text-sm focus:outline-none focus:border-[#0A0A0A] dark:focus:border-[#F5F5F5]"
+                        className="border border-[#E5E5E5] dark:border-[#333] dark:bg-[#2a2a2a] dark:text-[#F5F5F5] px-3 py-2 text-sm focus:outline-none focus:border-[#0A0A0A] dark:focus:border-[#F5F5F5]"
                       />
                       <Button variant="secondary" size="sm" onClick={handleAddPlanned} disabled={!addForm.date || saving}>
                         {saving ? "Saving..." : "Save"}
@@ -315,7 +315,7 @@ export default function SchedulePage() {
               )}
 
               {plannedWorkouts.length === 0 ? (
-                <p className="text-[#6B6B6B] dark:text-[#A0A0A0] text-sm py-8 text-center border border-dashed border-[#E5E5E5] dark:border-[#444]">
+                <p className="text-[#6B6B6B] dark:text-[#A0A0A0] text-sm py-8 text-center border border-dashed border-[#E5E5E5] dark:border-[#333]">
                   No planned workouts yet. Add one above or connect Strava to sync upcoming runs.
                 </p>
               ) : (
@@ -332,7 +332,7 @@ export default function SchedulePage() {
                             <button
                               onClick={() => w.id && handleDelete(w.id)}
                               disabled={deletingId === w.id}
-                              className="text-xs font-bold uppercase tracking-wider text-[#0A0A0A] dark:text-[#F5F5F5] hover:text-red-600 transition-colors"
+                              className="text-xs font-bold uppercase tracking-wider text-[#0A0A0A] dark:text-[#F5F5F5] hover:text-[#FF4444] transition-colors"
                             >
                               YES
                             </button>
@@ -363,7 +363,7 @@ export default function SchedulePage() {
                               {w.id && w.source === "manual" && (
                                 <button
                                   onClick={() => setConfirmDeleteId(w.id!)}
-                                  className="text-[10px] font-bold uppercase tracking-wider border border-[#E5E5E5] dark:border-[#444] px-2 py-0.5 text-[#6B6B6B] dark:text-[#A0A0A0] hover:border-[#0A0A0A] dark:hover:border-[#F5F5F5] hover:text-[#0A0A0A] dark:hover:text-[#F5F5F5] transition-colors"
+                                  className="text-[10px] font-bold uppercase tracking-wider border border-[#E5E5E5] dark:border-[#333] px-2 py-0.5 text-[#6B6B6B] dark:text-[#A0A0A0] hover:border-[#0A0A0A] dark:hover:border-[#F5F5F5] hover:text-[#0A0A0A] dark:hover:text-[#F5F5F5] transition-colors"
                                 >
                                   Remove
                                 </button>
@@ -390,7 +390,7 @@ export default function SchedulePage() {
               </div>
 
               {pastWorkouts.length === 0 ? (
-                <p className="text-[#6B6B6B] dark:text-[#A0A0A0] text-sm py-8 text-center border border-dashed border-[#E5E5E5] dark:border-[#444]">
+                <p className="text-[#6B6B6B] dark:text-[#A0A0A0] text-sm py-8 text-center border border-dashed border-[#E5E5E5] dark:border-[#333]">
                   No past activities found.{" "}
                   <a href="/strava" className="font-bold text-[#0A0A0A] dark:text-[#F5F5F5]">Sync Strava →</a>
                 </p>
@@ -408,7 +408,7 @@ export default function SchedulePage() {
                             <button
                               onClick={() => w.id && handleDelete(w.id)}
                               disabled={deletingId === w.id}
-                              className="text-xs font-bold uppercase tracking-wider text-[#0A0A0A] dark:text-[#F5F5F5] hover:text-red-600 transition-colors"
+                              className="text-xs font-bold uppercase tracking-wider text-[#0A0A0A] dark:text-[#F5F5F5] hover:text-[#FF4444] transition-colors"
                             >
                               YES
                             </button>
@@ -443,7 +443,7 @@ export default function SchedulePage() {
                               {w.id && w.source === "manual" && (
                                 <button
                                   onClick={() => setConfirmDeleteId(w.id!)}
-                                  className="text-[10px] font-bold uppercase tracking-wider border border-[#E5E5E5] dark:border-[#444] px-2 py-0.5 text-[#6B6B6B] dark:text-[#A0A0A0] hover:border-[#0A0A0A] dark:hover:border-[#F5F5F5] hover:text-[#0A0A0A] dark:hover:text-[#F5F5F5] transition-colors"
+                                  className="text-[10px] font-bold uppercase tracking-wider border border-[#E5E5E5] dark:border-[#333] px-2 py-0.5 text-[#6B6B6B] dark:text-[#A0A0A0] hover:border-[#0A0A0A] dark:hover:border-[#F5F5F5] hover:text-[#0A0A0A] dark:hover:text-[#F5F5F5] transition-colors"
                                 >
                                   Remove
                                 </button>
