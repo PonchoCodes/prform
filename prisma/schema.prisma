@@ -48,11 +48,38 @@ model User {
   subscriptionStatus     String?
   trialEndsAt            DateTime?
 
+  approved          Boolean @default(false)
+  earlyAccessUser   Boolean @default(false)
+
   workouts         Workout[]
   meets            Meet[]
   sessions         Session[]
   stravaActivities StravaActivity[]
   sleepLogs        SleepLog[]
+}
+
+enum WaitlistRole {
+  RUNNER
+  COACH
+}
+
+enum WaitlistStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+model Waitlist {
+  id            String         @id @default(cuid())
+  email         String         @unique
+  name          String
+  role          WaitlistRole
+  weeklyMileage Int?
+  usesStrava    Boolean
+  notes         String?
+  status        WaitlistStatus @default(PENDING)
+  createdAt     DateTime       @default(now())
+  approvedAt    DateTime?
 }
 
 model StravaActivity {

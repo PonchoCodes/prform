@@ -14,8 +14,13 @@ export async function requiresSubscription(): Promise<
   const userId = (session.user as any).id as string;
   const user = await prisma.user.findUnique({
     where: { id: userId },
-    select: { subscriptionStatus: true },
+    select: { subscriptionStatus: true, earlyAccessUser: true },
   });
+
+  // Early-access users are grandfathered into free access permanently.
+  if (user?.earlyAccessUser) {
+    return { userId };
+  }
 
   const status = user?.subscriptionStatus;
   if (status !== "trialing" && status !== "active") {

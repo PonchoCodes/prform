@@ -149,13 +149,16 @@ export default function OnboardingPage() {
       unitPreference,
     };
 
-    await fetch("/api/user/onboarding", {
+    const res = await fetch("/api/user/onboarding", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(payload),
     });
+    const data = await res.json().catch(() => ({}));
 
-    router.push("/subscribe");
+    // Early-access users are grandfathered into free access — never route
+    // them to Stripe.
+    router.push(data.earlyAccessUser ? "/dashboard" : "/subscribe");
   };
 
   const progress = (step / 3) * 100;

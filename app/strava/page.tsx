@@ -95,7 +95,9 @@ export default function StravaPage() {
       {connectionError && (
         <div className="bg-[#0A0A0A] px-6 py-3">
           <p className="max-w-[1200px] mx-auto text-xs font-bold uppercase tracking-wider text-white">
-            Connection failed ({connectionError}). Please try again.
+            {connectionError === "athlete_cap"
+              ? "Strava connections are at capacity right now. We'll open more slots soon."
+              : `Connection failed (${connectionError}). Please try again.`}
           </p>
         </div>
       )}

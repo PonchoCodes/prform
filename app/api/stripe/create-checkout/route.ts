@@ -14,11 +14,20 @@ export async function POST() {
     const userId = (session.user as any).id as string;
     const user = await prisma.user.findUnique({
       where: { id: userId },
-      select: { email: true, name: true, stripeCustomerId: true },
+      select: { email: true, name: true, stripeCustomerId: true, earlyAccessUser: true },
     });
 
     if (!user) {
       return NextResponse.json({ error: "User not found" }, { status: 404 });
+    }
+
+    // Early-access users are grandfathered into free access — never send
+    // them to Stripe checkout.
+    if (user.earlyAccessUser) {
+      return NextResponse.json(
+        { error: "Early access accounts have free access — no subscription needed." },
+        { status: 403 }
+      );
     }
 
     if (!process.env.STRIPE_SECRET_KEY) {

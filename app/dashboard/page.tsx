@@ -300,7 +300,7 @@ function InterventionCard({
                     className="w-full p-4 bg-[#E8FF00] text-[#0A0A0A] text-left hover:bg-[#d4e800] transition-colors disabled:opacity-50"
                   >
                     <p className="font-black text-xs uppercase tracking-widest">Yes — Adjust My Targets</p>
-                    <p className="text-xs mt-1 text-[#1a1a00]">
+                    <p className="text-xs mt-1 text-[#0A0A0A]">
                       PRform will shift your recommended bedtime{" "}
                       {Math.abs(Math.min(45, Math.round(avgDeviationMinutes / 5) * 5))} minutes later to match your actual pattern, while minimising performance impact.
                     </p>
@@ -514,7 +514,7 @@ export default function DashboardPage() {
   const router = useRouter();
   const [data, setData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState<"sleep" | "performance">("sleep");
+  const [activeTab, setActiveTab] = useState<"Sleep" | "Performance">("Sleep");
   const [stravaStatus, setStravaStatus] = useState<{ connected: boolean; recentActivities?: { name: string; startDate: string; distance: number; averageSpeed: number; averageHeartrate?: number | null }[] } | null>(null);
   const [perfReport, setPerfReport] = useState<PerformanceReport | null>(null);
   const [perfLoading, setPerfLoading] = useState(false);
@@ -550,7 +550,7 @@ export default function DashboardPage() {
   }, [status, router]);
 
   useEffect(() => {
-    if (activeTab !== "performance" || !stravaStatus?.connected) return;
+    if (activeTab !== "Performance" || !stravaStatus?.connected) return;
     if (perfReport) return;
     setPerfLoading(true);
     fetch("/api/analysis?days=90")
@@ -603,7 +603,7 @@ export default function DashboardPage() {
   if (status === "loading" || loading) {
     return (
       <div className="min-h-screen bg-white dark:bg-[#1a1a1a] flex items-center justify-center">
-        <p className="font-mono text-sm uppercase tracking-wider text-[#6B6B6B]">Loading…</p>
+        <p className="font-mono text-sm uppercase tracking-wider text-[#6B6B6B] dark:text-[#A0A0A0]">Loading…</p>
       </div>
     );
   }
@@ -615,7 +615,12 @@ export default function DashboardPage() {
 
   const week = Array.from({ length: 7 }, (_, i) => plan[i] ?? null);
 
-  const nextMeet = meets?.find((m: any) => new Date(m.date) >= new Date());
+  const nextMeet = meets?.find((m: any) => {
+    const meetDate = new Date(m.date + 'T00:00:00');
+    const todayMidnight = new Date();
+    todayMidnight.setHours(0, 0, 0, 0);
+    return meetDate >= todayMidnight;
+  });
 
   const recoveryScore = today.recoveryScore;
 
@@ -633,6 +638,7 @@ export default function DashboardPage() {
   const nextMeetPred: PerformancePrediction | null = nextMeet ? (meetPredictions[nextMeet.id] ?? null) : null;
 
   const subscriptionStatus = data?.user?.subscriptionStatus as string | null | undefined;
+  const isEarlyAccessUser = Boolean(data?.user?.earlyAccessUser);
   const trialEndsAt = data?.user?.trialEndsAt ? new Date(data.user.trialEndsAt) : null;
   const trialDaysLeft = trialEndsAt
     ? Math.max(0, Math.ceil((trialEndsAt.getTime() - Date.now()) / (1000 * 60 * 60 * 24)))
@@ -653,7 +659,7 @@ export default function DashboardPage() {
           </a>
         </div>
       )}
-      {subscriptionStatus !== "trialing" && subscriptionStatus !== "active" && (
+      {!isEarlyAccessUser && subscriptionStatus !== "trialing" && subscriptionStatus !== "active" && (
         <div className="bg-[#E8FF00] px-6 py-3 flex items-center justify-between">
           <p className="font-black text-xs uppercase tracking-widest text-[#0A0A0A]">
             Start your 30-day free trial to unlock PRform
@@ -670,7 +676,7 @@ export default function DashboardPage() {
       {/* Tab toggle */}
       <div className="border-b border-[#E5E5E5] dark:border-[#333] px-6">
         <div className="max-w-[1200px] mx-auto flex">
-          {(["sleep", "performance"] as const).map((tab) => (
+          {(["Sleep", "Performance"] as const).map((tab) => (
             <button
               key={tab}
               onClick={() => setActiveTab(tab)}
@@ -687,7 +693,7 @@ export default function DashboardPage() {
       </div>
 
       {/* Performance tab */}
-      {activeTab === "performance" && (
+      {activeTab === "Performance" && (
         <div className="max-w-[1200px] mx-auto px-6 py-10">
           {!stravaStatus?.connected ? (
             <FadeUp>
@@ -727,7 +733,7 @@ export default function DashboardPage() {
         </div>
       )}
 
-      {activeTab === "sleep" && (
+      {activeTab === "Sleep" && (
         <>
           {/* 1. Intervention card */}
           {showIntervention && yesterdayPlan && (
@@ -777,7 +783,7 @@ export default function DashboardPage() {
                 {/* Circadian drift note — inline, conditional */}
                 {today.circadianDelayMinutes > 30 && (
                   <div className="mt-3">
-                    <span className="text-[10px] font-bold uppercase tracking-widest text-[#6B6B6B] dark:text-[#b8cc00]">
+                    <span className="text-[10px] font-bold uppercase tracking-widest text-[#6B6B6B] dark:text-[#E8FF00]">
                       CIRCADIAN DRIFT DETECTED
                     </span>
                     <p className="text-[10px] font-mono text-[#6B6B6B] mt-0.5">
@@ -980,7 +986,7 @@ export default function DashboardPage() {
                                   const hoursLabel = isConfirmedPast ? "actual" : "target";
                                   return (
                                     <>
-                                      <p className={`text-xs font-bold mb-1 ${isToday ? "text-[#0A0A0A] dark:text-[#CCCCCC]" : "text-[#6B6B6B] dark:text-[#A0A0A0]"}`}>
+                                      <p className={`text-xs font-bold mb-1 ${isToday ? "text-[#0A0A0A] dark:text-[#A0A0A0]" : "text-[#6B6B6B] dark:text-[#A0A0A0]"}`}>
                                         {displayHours}h
                                       </p>
                                       <p className={`text-[10px] font-mono mb-2 ${isToday ? "text-[#6B6B6B]" : "text-[#AAAAAA] dark:text-[#555]"}`}>
@@ -1068,7 +1074,7 @@ export default function DashboardPage() {
                           const diffColor = isSlower ? "#FF6B6B" : isFaster ? "#0A0A0A" : "#6B6B6B";
                           const diffColorDark = isSlower ? "#FF6B6B" : isFaster ? "#E8FF00" : "#6B6B6B";
                           const refLabel = nextMeetPred.referenceLabel === "Season Best" ? "SB" : "PR";
-                          const daysOut = Math.round((new Date(nextMeet.date).getTime() - Date.now()) / 86400000);
+                          const daysOut = Math.round((new Date(nextMeet.date + 'T00:00:00').getTime() - Date.now()) / 86400000);
                           return (
                             <>
                               <p className="text-[10px] font-bold uppercase tracking-wider text-[#6B6B6B] mb-2">PREDICTED FINISH</p>

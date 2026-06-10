@@ -25,6 +25,10 @@ export default function SignUpPage() {
 
     if (!res.ok) {
       const data = await res.json();
+      if (data.code === "WAITLIST") {
+        router.push("/request-access?status=waitlist");
+        return;
+      }
       setError(data.error || "Registration failed");
       setLoading(false);
       return;
@@ -46,7 +50,7 @@ export default function SignUpPage() {
 
   return (
     <div className="min-h-screen bg-white dark:bg-[#1a1a1a] flex flex-col">
-      <nav className="border-b border-[#E5E5E5] dark:border-[#333333] px-6 h-14 flex items-center">
+      <nav className="border-b border-[#E5E5E5] dark:border-[#333] px-6 h-14 flex items-center">
         <Link href="/" className="font-black text-xl uppercase tracking-tight">
           PR<span className="text-[#E8FF00] bg-[#0A0A0A] px-1">form</span>
         </Link>
@@ -98,7 +102,7 @@ export default function SignUpPage() {
               />
             </div>
             {error && (
-              <p className="text-xs font-bold text-red-600 uppercase tracking-wider">{error}</p>
+              <p className="text-xs font-bold text-[#FF4444] uppercase tracking-wider">{error}</p>
             )}
             <Button type="submit" variant="secondary" size="lg" className="w-full" disabled={loading}>
               {loading ? "Creating..." : "Create Account"}

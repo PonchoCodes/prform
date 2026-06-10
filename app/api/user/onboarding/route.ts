@@ -12,7 +12,7 @@ export async function POST(req: Request) {
   const body = await req.json();
   const { age, biologicalSex, weeklyMileage, experienceLevel, currentWakeTime, currentBedTime, restedFeeling, weekTemplate, meets, sport, unitPreference } = body;
 
-  await prisma.user.update({
+  const updatedUser = await prisma.user.update({
     where: { id: userId },
     data: {
       age,
@@ -27,6 +27,7 @@ export async function POST(req: Request) {
       planAggressiveness: aggressivenessForExperienceLevel(experienceLevel ?? ""),
       ...(unitPreference === "imperial" || unitPreference === "metric" ? { unitPreference } : {}),
     },
+    select: { earlyAccessUser: true },
   });
 
   await prisma.workout.deleteMany({ where: { userId, isTemplate: true } });
@@ -59,5 +60,5 @@ export async function POST(req: Request) {
     });
   }
 
-  return NextResponse.json({ ok: true });
+  return NextResponse.json({ ok: true, earlyAccessUser: updatedUser.earlyAccessUser });
 }

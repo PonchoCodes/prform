@@ -32,6 +32,8 @@ STRAVA_CLIENT_ID      # Strava API app ID
 STRAVA_CLIENT_SECRET  # Strava API app secret
 STRAVA_REDIRECT_URI   # http://localhost:3000/api/strava/callback for local dev
 STRAVA_WEBHOOK_VERIFY_TOKEN
+EARLY_ACCESS          # "true" = invite-only gate active (see EARLY ACCESS TOGGLE below)
+ADMIN_EMAIL           # Email allowed into /admin (waitlist approval UI)
 ```
 
 Production is deployed at **https://prformm.vercel.app** (Vercel project `prform-o3m8`).
@@ -112,3 +114,16 @@ Defined in `tailwind.config.ts`:
 - Section labels: `text-xs font-bold uppercase tracking-[0.3em] text-[#6B6B6B]`
 - Toggle buttons: selected = `bg-[#0A0A0A] text-white border-[#0A0A0A]`, unselected = `border-[#E5E5E5] hover:border-[#0A0A0A]`
 - Dark mode via `dark:` variants — background `#1a1a1a`, cards `#242424`
+
+## Early Access Toggle
+
+The `EARLY_ACCESS` env var controls an invite-only beta gate (`lib/earlyAccess.ts`):
+
+- **`EARLY_ACCESS=true`** — allowlist gate active. Registration (`/api/auth/register`) and Strava OAuth (`/api/strava/connect`) require an APPROVED `Waitlist` entry for the email. The landing page CTA becomes "Request Access" → `/request-access`, which feeds `POST /api/waitlist`. Approvals happen at `/admin` (restricted to `ADMIN_EMAIL`) and are capped at 10.
+- **`EARLY_ACCESS=false`** — gate disabled, open registration. New users go through the existing Stripe flow (card required, 30-day trial, then $5/month).
+
+**Grandfathering**: approving a waitlist entry sets `earlyAccessUser=true` (and `approved=true`) on the User — at approval time if the account exists, otherwise when they register with the approved email. The payment bypass is tied to `earlyAccessUser` on the User, NOT to the `EARLY_ACCESS` flag: flipping the flag to false must never route early-access users to Stripe, charge them, or start a trial. Their accounts, data, and Strava connections are untouched by the flip.
+
+**Strava cap**: the Strava Standard tier allows 10 connected athletes. `/api/strava/connect` enforces this cap (`STRAVA_ATHLETE_CAP`) independently of `EARLY_ACCESS` — setting the flag to false does NOT lift it.
+
+**Pausing the beta**: keep `EARLY_ACCESS=true` and simply stop approving waitlist entries.
