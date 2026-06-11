@@ -1,7 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
+import { waitUntil } from "@vercel/functions";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { ensureWebhookSubscription } from "@/lib/stravaWebhook";
 import { createHmac } from "crypto";
 
 export const dynamic = "force-dynamic";
@@ -82,32 +84,11 @@ export async function GET(req: NextRequest) {
       },
     });
 
-    // Register webhook subscription (best-effort; don't block on failure).
-    // Origin from the live request — Strava will call our webhook back at the
-    // same deployment that handled this callback.
-    const baseUrl = new URL(req.url).origin;
-    if (baseUrl && process.env.STRAVA_WEBHOOK_VERIFY_TOKEN) {
-      fetch("https://www.strava.com/api/v3/push_subscriptions", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          client_id: process.env.STRAVA_CLIENT_ID,
-          client_secret: process.env.STRAVA_CLIENT_SECRET,
-          callback_url: `${baseUrl}/api/strava/webhook`,
-          verify_token: process.env.STRAVA_WEBHOOK_VERIFY_TOKEN,
-        }),
-      })
-        .then((r) => r.json())
-        .then((sub) => {
-          if (sub?.id) {
-            return prisma.user.update({
-              where: { id: userId! },
-              data: { stravaWebhookSubscriptionId: String(sub.id) },
-            });
-          }
-        })
-        .catch(() => {});
-    }
+    // Ensure the app-level webhook subscription exists (one per application,
+    // shared by all athletes). waitUntil keeps the work alive on Vercel after
+    // the redirect is sent — a dangling promise would be frozen with the
+    // function.
+    waitUntil(ensureWebhookSubscription());
   } catch (err) {
     console.error("[strava/callback]", err);
     return NextResponse.redirect(new URL("/strava?error=callback_failed", req.url));

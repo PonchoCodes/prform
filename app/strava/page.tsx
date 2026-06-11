@@ -131,7 +131,7 @@ export default function StravaPage() {
                       {statusData.totalRuns} runs synced
                     </p>
                     <p className="font-mono text-xs text-[#6B6B6B] dark:text-[#A0A0A0] mt-0.5">
-                      Auto-sync: {statusData.webhookActive ? "active" : "inactive — new runs sync manually"}
+                      Auto-sync: {statusData.webhookActive ? "active — new runs appear automatically" : "unavailable — use Sync Now after your runs"}
                     </p>
                     {statusData.lastSyncedAt && (
                       <p className="font-mono text-xs text-[#6B6B6B] dark:text-[#A0A0A0] mt-0.5">
@@ -167,7 +167,7 @@ export default function StravaPage() {
                   >
                     Sync Full History (last 12 months)
                   </button>
-                  <p className="font-mono text-[10px] text-[#6B6B6B] dark:text-[#A0A0A0] mt-2">This may take a moment and uses more API requests.</p>
+                  <p className="font-mono text-[10px] text-[#6B6B6B] dark:text-[#A0A0A0] mt-2">This may take a moment.</p>
                 </div>
               </div>
             </FadeUp>

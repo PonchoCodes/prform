@@ -35,7 +35,7 @@ model User {
   stravaTokenExpiry   DateTime?
   stravaAthleteId     String?
   stravaConnected              Boolean   @default(false)
-  stravaWebhookSubscriptionId  String?
+  lastStravaSyncAt             DateTime?
   userMaxHR                    Int?
   userThresholdHR     Int?
 

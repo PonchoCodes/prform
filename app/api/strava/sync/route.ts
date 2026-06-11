@@ -96,5 +96,12 @@ export async function POST(req: NextRequest) {
     synced++;
   }
 
+  // Record the sync time even when nothing new came back — "last sync" means
+  // when we last checked Strava, not when an activity last appeared
+  await prisma.user.update({
+    where: { id: userId },
+    data: { lastStravaSyncAt: new Date() },
+  });
+
   return NextResponse.json({ synced, total: runs.length });
 }

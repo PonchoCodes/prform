@@ -32,7 +32,6 @@ export async function DELETE() {
       stravaTokenExpiry: null,
       stravaAthleteId: null,
       stravaConnected: false,
-      stravaWebhookSubscriptionId: null,
     },
   });
 

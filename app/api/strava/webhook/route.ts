@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { waitUntil } from "@vercel/functions";
 import { prisma } from "@/lib/prisma";
 import { getValidStravaToken } from "@/lib/stravaClient";
 
@@ -20,9 +21,11 @@ export async function GET(req: NextRequest) {
 
 // POST: Strava event push
 export async function POST(req: NextRequest) {
-  // Respond 200 immediately; process async to meet Strava's 2s requirement
+  // Respond 200 immediately to meet Strava's 2s requirement. waitUntil keeps
+  // the processing alive after the response — setImmediate work would be
+  // frozen when the Vercel function suspends.
   const body = await req.json().catch(() => ({}));
-  setImmediate(() => handleEvent(body));
+  waitUntil(handleEvent(body));
   return new NextResponse("OK", { status: 200 });
 }
 
@@ -36,8 +39,9 @@ async function handleEvent(body: any) {
     return;
   }
 
-  if (object_type === "activity" && aspect_type === "create") {
-    await handleActivityCreate(owner_id, object_id);
+  // Runs are often renamed/edited after upload — treat updates like creates
+  if (object_type === "activity" && (aspect_type === "create" || aspect_type === "update")) {
+    await handleActivityUpsert(owner_id, object_id);
     return;
   }
 
@@ -63,12 +67,11 @@ async function handleDeauthorization(stravaAthleteId: number) {
       stravaTokenExpiry: null,
       stravaConnected: false,
       stravaAthleteId: null,
-      stravaWebhookSubscriptionId: null,
     },
   });
 }
 
-async function handleActivityCreate(stravaAthleteId: number, activityId: number) {
+async function handleActivityUpsert(stravaAthleteId: number, activityId: number) {
   const user = await prisma.user.findFirst({
     where: { stravaAthleteId: String(stravaAthleteId) },
     select: { id: true },
@@ -117,6 +120,11 @@ async function handleActivityCreate(stravaAthleteId: number, activityId: number)
       sufferScore: run.suffer_score ?? null,
     },
   });
+
+  await prisma.user.update({
+    where: { id: user.id },
+    data: { lastStravaSyncAt: new Date() },
+  });
 }
 
 async function handleActivityDelete(stravaAthleteId: number, activityId: number) {
@@ -128,5 +136,10 @@ async function handleActivityDelete(stravaAthleteId: number, activityId: number)
 
   await prisma.stravaActivity.deleteMany({
     where: { stravaId: String(activityId), userId: user.id },
+  });
+
+  await prisma.user.update({
+    where: { id: user.id },
+    data: { lastStravaSyncAt: new Date() },
   });
 }
