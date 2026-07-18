@@ -33,7 +33,10 @@ export async function POST(req: Request) {
         name,
         email,
         password: hash,
-        ...(approved ? { approved: true, earlyAccessUser: true } : {}),
+        // approvedAt starts the reminder-cron clock for users approved off the
+        // waitlist before they registered (admin approval couldn't stamp a row
+        // that didn't exist yet).
+        ...(approved ? { approved: true, earlyAccessUser: true, approvedAt: new Date() } : {}),
       },
     });
 

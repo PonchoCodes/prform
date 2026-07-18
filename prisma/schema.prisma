@@ -51,6 +51,12 @@ model User {
   approved          Boolean @default(false)
   earlyAccessUser   Boolean @default(false)
 
+  // Strava connection follow-up: when the user was approved off the waitlist,
+  // and when each of the two connect-Strava reminder emails was sent.
+  approvedAt         DateTime?
+  stravaReminder1At  DateTime?
+  stravaReminder2At  DateTime?
+
   workouts         Workout[]
   meets            Meet[]
   sessions         Session[]

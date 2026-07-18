@@ -1,16 +1,35 @@
 "use client";
-import { useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
-import { signIn } from "next-auth/react";
+import { useSearchParams } from "next/navigation";
+import { signIn, useSession } from "next-auth/react";
 import { motion } from "framer-motion";
 import { Button } from "@/components/Button";
 
-export default function LoginPage() {
-  const router = useRouter();
+// Only allow same-origin relative paths as a post-login destination, so a
+// crafted ?callbackUrl can't turn login into an open redirect. Anything else
+// falls back to the dashboard.
+function safeCallbackUrl(raw: string | null): string {
+  if (raw && raw.startsWith("/") && !raw.startsWith("//")) return raw;
+  return "/dashboard";
+}
+
+function LoginForm() {
+  const searchParams = useSearchParams();
+  const { status } = useSession();
+  const callbackUrl = safeCallbackUrl(searchParams.get("callbackUrl"));
   const [form, setForm] = useState({ email: "", password: "" });
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+
+  // Already-authenticated users arriving via a deep link (e.g. a reminder
+  // email → /login?callbackUrl=/api/strava/connect) should skip the form and
+  // go straight to the destination.
+  useEffect(() => {
+    // Full navigation (not router.replace) so callbackUrl can point at a route
+    // handler like /api/strava/connect, which the client router can't render.
+    if (status === "authenticated") window.location.replace(callbackUrl);
+  }, [status, callbackUrl]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -24,7 +43,9 @@ export default function LoginPage() {
     });
 
     if (res?.ok) {
-      router.push("/dashboard");
+      // Full navigation so callbackUrl may target a route handler (e.g. the
+      // Strava OAuth deep link) as well as a normal page.
+      window.location.href = callbackUrl;
     } else {
       setError("Invalid email or password");
       setLoading(false);
@@ -94,5 +115,14 @@ export default function LoginPage() {
         </motion.div>
       </div>
     </div>
+  );
+}
+
+// useSearchParams requires a Suspense boundary in the App Router.
+export default function LoginPage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen bg-white dark:bg-[#1a1a1a]" />}>
+      <LoginForm />
+    </Suspense>
   );
 }

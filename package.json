@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "build": "next build",
+    "build": "prisma migrate deploy && next build",
     "start": "next start",
     "lint": "next lint",
     "seed": "npx ts-node --project tsconfig.seed.json prisma/seed.ts",
@@ -40,6 +40,7 @@
     "react": "^18",
     "react-dom": "^18",
     "recharts": "^3.8.1",
+    "resend": "^6.17.2",
     "stripe": "^22.1.1",
     "tailwind-merge": "^3.5.0",
     "three": "^0.184.0",

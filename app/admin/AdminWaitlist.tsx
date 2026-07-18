@@ -13,6 +13,21 @@ interface WaitlistEntry {
   status: "PENDING" | "APPROVED" | "REJECTED";
   createdAt: string;
   approvedAt: string | null;
+  hasAccount: boolean;
+  userApprovedAt: string | null;
+  stravaConnected: boolean;
+  remindersSent: number;
+}
+
+// 0 = approved but not connected (highest priority), 1 = approved + connected,
+// 2 = rejected (bottom).
+function sortRank(e: WaitlistEntry): number {
+  if (e.status === "REJECTED") return 2;
+  return e.stravaConnected ? 1 : 0;
+}
+
+function formatDate(iso: string | null): string {
+  return iso ? new Date(iso).toLocaleDateString() : "—";
 }
 
 export function AdminWaitlist() {
@@ -58,7 +73,11 @@ export function AdminWaitlist() {
   };
 
   const pending = entries.filter((e) => e.status === "PENDING");
-  const decided = entries.filter((e) => e.status !== "PENDING");
+  // Sort decided so unconnected approved users float to the top — they're the
+  // ones the reminder system is chasing and the ones an admin should watch.
+  const decided = entries
+    .filter((e) => e.status !== "PENDING")
+    .sort((a, b) => sortRank(a) - sortRank(b));
   const capReached = approvedCount >= cap;
 
   return (
@@ -86,7 +105,7 @@ export function AdminWaitlist() {
         {capReached && (
           <div className="bg-[#0A0A0A] px-4 py-3 mb-6">
             <p className="text-xs font-bold uppercase tracking-wider text-[#E8FF00]">
-              Approval cap reached — Strava Standard tier allows {cap} connected athletes
+              Approval cap reached — {cap} early-access members approved
             </p>
           </div>
         )}
@@ -152,16 +171,36 @@ export function AdminWaitlist() {
                       <div className="min-w-0">
                         <p className="font-black text-sm uppercase dark:text-[#F5F5F5]">{e.name}</p>
                         <p className="font-mono text-xs text-[#6B6B6B] break-all">{e.email}</p>
+                        {e.status === "APPROVED" && (
+                          <p className="font-mono text-xs text-[#6B6B6B] mt-1">
+                            {`Approved ${formatDate(e.userApprovedAt ?? e.approvedAt)}`}
+                            {!e.hasAccount && " · no account yet"}
+                            {e.remindersSent > 0 && ` · ${e.remindersSent} reminder${e.remindersSent > 1 ? "s" : ""} sent`}
+                          </p>
+                        )}
                       </div>
-                      <span
-                        className={`text-xs font-bold uppercase tracking-wider px-2 py-1 shrink-0 ${
-                          e.status === "APPROVED"
-                            ? "bg-[#0A0A0A] text-[#E8FF00]"
-                            : "border border-[#E5E5E5] dark:border-[#444] text-[#6B6B6B]"
-                        }`}
-                      >
-                        {e.status}
-                      </span>
+                      <div className="flex items-center gap-2 shrink-0">
+                        {e.status === "APPROVED" && (
+                          <span
+                            className={`text-xs font-bold uppercase tracking-wider px-2 py-1 ${
+                              e.stravaConnected
+                                ? "bg-[#E8FF00] text-[#0A0A0A]"
+                                : "border border-[#FF4444] text-[#FF4444]"
+                            }`}
+                          >
+                            {e.stravaConnected ? "Connected" : "Not connected"}
+                          </span>
+                        )}
+                        <span
+                          className={`text-xs font-bold uppercase tracking-wider px-2 py-1 ${
+                            e.status === "APPROVED"
+                              ? "bg-[#0A0A0A] text-[#E8FF00]"
+                              : "border border-[#E5E5E5] dark:border-[#444] text-[#6B6B6B]"
+                          }`}
+                        >
+                          {e.status}
+                        </span>
+                      </div>
                     </div>
                   ))}
                 </div>

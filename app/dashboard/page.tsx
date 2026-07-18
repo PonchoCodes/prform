@@ -648,6 +648,23 @@ export default function DashboardPage() {
     <div className="min-h-screen bg-white dark:bg-[#1a1a1a]">
       <Navbar />
 
+      {/* Connect-Strava banner — shown until the user completes Strava OAuth.
+          Training load drives the sleep plan, so this is the highest-priority
+          nudge and sits above the subscription banner. */}
+      {stravaStatus && !stravaStatus.connected && (
+        <div className="bg-[#0A0A0A] px-6 py-3 flex items-center justify-between gap-4">
+          <p className="font-black text-xs uppercase tracking-widest text-[#E8FF00]">
+            Connect Strava to personalize tonight&apos;s plan
+          </p>
+          <a
+            href="/api/strava/connect"
+            className="bg-[#E8FF00] text-[#0A0A0A] font-black text-[10px] uppercase tracking-widest px-4 py-2 hover:bg-[#d4e800] transition-colors shrink-0"
+          >
+            Connect Strava →
+          </a>
+        </div>
+      )}
+
       {/* Subscription banner */}
       {subscriptionStatus === "trialing" && trialDaysLeft !== null && (
         <div className="border-b border-[#E5E5E5] dark:border-[#333] px-6 py-2 flex items-center justify-between max-w-full">
