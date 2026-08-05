@@ -151,24 +151,6 @@ export default function ProfilePage() {
                 </div>
               </div>
               <div>
-                <label className="block text-xs font-bold uppercase tracking-wider mb-3">Sport</label>
-                <div className="flex gap-3">
-                  {[{ value: "track", label: "Track & Field" }, { value: "swimming", label: "Swimming" }].map((s) => (
-                    <button
-                      key={s.value}
-                      onClick={() => update("sport", s.value)}
-                      className={`flex-1 py-3 text-xs font-bold uppercase tracking-wider border transition-colors ${
-                        profile.sport === s.value
-                          ? "bg-[#0A0A0A] text-white border-[#0A0A0A]"
-                          : "border-[#E5E5E5] dark:border-[#444] hover:border-[#0A0A0A] dark:hover:border-[#F5F5F5]"
-                      }`}
-                    >
-                      {s.label}
-                    </button>
-                  ))}
-                </div>
-              </div>
-              <div>
                 <label className="block text-xs font-bold uppercase tracking-wider mb-3">Weekly Mileage <span className="text-[#6B6B6B] dark:text-[#A0A0A0] normal-case font-normal">(optional)</span></label>
                 <div className="grid grid-cols-2 gap-3">
                   {["0-30", "30-50", "50-70", "70+"].map((m) => (

@@ -15,7 +15,6 @@ export interface UserInput {
   biologicalSex: string;
   currentWakeTime: string; // "HH:MM" 24h
   currentBedTime: string;  // "HH:MM" 24h
-  sport?: string;
   planAggressiveness?: number;       // 50–100, default 85
   bedtimeAdjustmentMinutes?: number; // -45 to +45, default 0
 }
@@ -135,7 +134,7 @@ function daysApart(a: Date, b: Date): number {
 // baseline but reported 7.83 h (systematic underestimation of ~70 min). Performance
 // gains appeared when sleep was extended to satiety, averaging 8.5 h.
 function baseSleepMinutes(user: UserInput): number {
-  const { age, biologicalSex, sport } = user;
+  const { age, biologicalSex } = user;
 
   let base: number;
   if (age <= 17) {
@@ -151,9 +150,6 @@ function baseSleepMinutes(user: UserInput): number {
 
   // SOURCE: Burgard & Ailshire (2013) — females average +0.5 h vs males.
   if (biologicalSex === "female") base += 30;
-
-  // Sport modifier: swimming requires additional thermoregulatory recovery.
-  if (sport === "swimming") base += 20;
 
   return base;
 }

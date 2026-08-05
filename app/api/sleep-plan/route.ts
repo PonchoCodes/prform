@@ -6,6 +6,7 @@ import { calculateSleepPlan } from "@/lib/sleepAlgorithm";
 import type { SleepLogForPlan } from "@/lib/sleepAlgorithm";
 import { getWorkoutsForDateRange } from "@/lib/workoutDataSource";
 import { calculatePerformancePrediction } from "@/lib/performancePrediction";
+import { toClientUser, CLIENT_USER_SELECT } from "@/lib/clientUser";
 
 export async function GET() {
   const session = await getServerSession(authOptions);
@@ -13,24 +14,27 @@ export async function GET() {
 
   const userId = (session.user as any).id;
 
-  const user = await prisma.user.findUnique({ where: { id: userId } });
+  // Explicit select — the User row holds the bcrypt password, live Strava
+  // OAuth tokens and Stripe identifiers, none of which may leave the server.
+  // Covers what the sleep plan needs internally plus what the client is
+  // allowed to see; the response itself is narrowed again by `toClientUser`.
+  const user = await prisma.user.findUnique({
+    where: { id: userId },
+    select: {
+      onboardingDone: true,
+      age: true,
+      biologicalSex: true,
+      currentWakeTime: true,
+      currentBedTime: true,
+      sport: true,
+      planAggressiveness: true,
+      bedtimeAdjustmentMinutes: true,
+      ...CLIENT_USER_SELECT,
+    },
+  });
   if (!user || !user.onboardingDone) {
     return NextResponse.json({ redirect: "/onboarding" }, { status: 200 });
   }
-
-  const freshUser = await prisma.user.findUnique({
-    where: { id: userId },
-    select: {
-      planAggressiveness: true,
-      bedtimeAdjustmentMinutes: true,
-      currentWakeTime: true,
-      currentBedTime: true,
-      age: true,
-      biologicalSex: true,
-      experienceLevel: true,
-      weeklyMileage: true,
-    },
-  });
 
   const today = new Date();
   today.setHours(0, 0, 0, 0);
@@ -56,14 +60,6 @@ export async function GET() {
     }),
   ]);
 
-  console.log("[sleep-plan GET] raw meets from DB:", meets.map(m => ({
-    id: m.id,
-    name: m.name,
-    date: m.date,
-    dateType: typeof m.date,
-    dateISO: m.date instanceof Date ? m.date.toISOString() : new Date(m.date).toISOString(),
-  })));
-
   const sleepLogsForPlan: SleepLogForPlan[] = sleepLogs.map((l) => ({
     date: new Date(l.date).toISOString().slice(0, 10),
     hitTarget: l.hitTarget,
@@ -87,25 +83,14 @@ export async function GET() {
     raceTime: m.raceTime ?? null,
   }));
 
-  console.log('=== SLEEP PLAN DEBUG ===');
-  console.log('Server now:', new Date().toISOString());
-  const serverToday = new Date(); serverToday.setHours(0,0,0,0);
-  console.log('Server today midnight:', serverToday.toISOString());
-  for (const m of meets) {
-    const daysOut = Math.round((new Date(m.date).getTime() - serverToday.getTime()) / 86400000);
-    console.log(`Meet: ${m.name} | raw date: ${m.date} | type: ${typeof m.date} | ISO: ${new Date(m.date).toISOString()} | daysOut: ${daysOut}`);
-  }
-  console.log('=== END DEBUG ===');
-
   const allPlans = calculateSleepPlan(
     {
-      age: freshUser?.age ?? user.age ?? 25,
-      biologicalSex: freshUser?.biologicalSex ?? user.biologicalSex ?? "male",
-      currentWakeTime: freshUser?.currentWakeTime ?? user.currentWakeTime ?? "06:00",
-      currentBedTime: freshUser?.currentBedTime ?? user.currentBedTime ?? "22:00",
-      sport: user.sport ?? "track",
-      planAggressiveness: freshUser?.planAggressiveness ?? user.planAggressiveness ?? 85,
-      bedtimeAdjustmentMinutes: freshUser?.bedtimeAdjustmentMinutes ?? user.bedtimeAdjustmentMinutes ?? 0,
+      age: user.age ?? 25,
+      biologicalSex: user.biologicalSex ?? "male",
+      currentWakeTime: user.currentWakeTime ?? "06:00",
+      currentBedTime: user.currentBedTime ?? "22:00",
+      planAggressiveness: user.planAggressiveness ?? 85,
+      bedtimeAdjustmentMinutes: user.bedtimeAdjustmentMinutes ?? 0,
     },
     meetsForPlan,
     workouts,
@@ -154,7 +139,7 @@ export async function GET() {
 
   return NextResponse.json({
     plan,
-    user,
+    user: toClientUser(user),
     meets,
     conflicts,
     yesterdayPlan,

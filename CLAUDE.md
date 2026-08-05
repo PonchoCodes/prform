@@ -6,8 +6,10 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ```bash
 npm run dev          # Start dev server at http://localhost:3000
-npm run build        # Production build
+npm run build        # Production build (runs `prisma migrate deploy` first — see warning below)
 npm run lint         # ESLint via Next.js
+npm run test         # Vitest unit tests (lib/**/*.test.ts)
+npm run test:watch   # Vitest in watch mode
 npm run seed         # Seed demo user (demo@prform.com / demo1234)
 
 npx prisma migrate dev --name <name>   # Create and apply a migration
@@ -18,7 +20,11 @@ npx prisma migrate deploy              # Apply pending migrations to production 
 vercel --prod        # Deploy to production (linked to ponchocodes-projects/prform-o3m8)
 ```
 
-There are no tests.
+Unit tests cover the VDOT/pace model (`lib/vdot.test.ts`, `lib/paceSource.test.ts`) and run
+under Vitest. The rest of the app has no test coverage.
+
+**`npm run build` runs `prisma migrate deploy` against whatever `DATABASE_URL` points at.**
+To compile without touching the database, run `npx next build` directly.
 
 ## Environment
 
@@ -40,20 +46,26 @@ Production is deployed at **https://prformm.vercel.app** (Vercel project `prform
 
 ## Architecture
 
-**PRform** is a sleep optimization app for competitive runners and swimmers. The core product is a 14-day sleep plan algorithm in `lib/sleepAlgorithm.ts`.
+**PRform** is a sleep optimization app for competitive distance runners. The core product is a 14-day sleep plan algorithm in `lib/sleepAlgorithm.ts`.
+
+Swimming was removed from scope, including the sleep-need modifier it carried. `User.sport`
+remains a schema column and is always written as `"track"`, but nothing reads it — it is no
+longer part of `UserInput` in `lib/sleepAlgorithm.ts`. One swimming reference is deliberate:
+`swim` in `CROSS_RE` in `lib/workoutDataSource.ts`, which classifies a runner's cross-training
+swim and is still correct.
 
 ### The Sleep Algorithm
 
 `calculateSleepPlan(user, meets, workouts, currentTSB?, opts?)` is the most important function. It returns a `DailySleepPlan[]` array where index 0 is `startDayOffset` (typically yesterday at `-1`) and the rest are today through day +13.
 
 How it computes each day's bedtime:
-- **Base sleep need**: 8–9h from age brackets, +30 min female, +20 min swimming
+- **Base sleep need**: 8–9h from age brackets, +30 min female
 - **Training load bonus**: +15 min moderate, +20 min tempo/track, +30 min long_run, +15 min day-after-hard
 - **Meet ramp**: bedtime shifted progressively earlier over 10 days before each meet (up to 60 min for A-priority). Uses `SHIFT_FRACTIONS` lookup table for the phase schedule
 - **Circadian correction**: if recent sleep logs show the athlete's actual phase is delayed, the ramp compensates for the delay on top of the meet advance
 - **Recovery score** (0–100): deducted by consecutive hard days, meet proximity, and a `globalSleepPenalty` computed from recent missed nights; boosted by sleep streak
 
-The internal `WorkoutType` values (`easy`, `moderate`, `tempo`, `long_run`, `track`, `race`, `rest`, `cross_train`) drive the algorithm. The UI maps sport-specific labels to these — swimmers see "Threshold" but the stored value is `tempo`.
+The internal `WorkoutType` values (`easy`, `moderate`, `tempo`, `long_run`, `track`, `race`, `rest`, `cross_train`) drive the algorithm.
 
 ### Data Flow
 
@@ -73,6 +85,37 @@ The internal `WorkoutType` values (`easy`, `moderate`, `tempo`, `long_run`, `tra
 - Falling back to manual one-off workouts (`isTemplate: false`)
 - Falling back to template workouts expanded by `dayOfWeek` (`isTemplate: true`)
 - Flagging Strava/manual conflicts for the UI to resolve
+
+### VDOT and Training Paces
+
+`lib/vdot.ts` is the single source of truth for the Daniels/Gilbert model — VDOT from a race
+performance, race times from a VDOT, and the full training pace table. Nothing else should
+implement these formulas.
+
+- Training paces come from inverting the oxygen-cost regression at a target %VO2max. The
+  previous linear approximation (`vVDOT ≈ 0.072·vdot + 0.27`) ran 7–13% slow across the usable
+  range and was replaced; correcting it made every displayed pace faster.
+- Marathon pace is derived by inverting the model at 42195 m, not from a fixed %VO2max, because
+  the sustainable fraction rises with fitness.
+- `PaceTable` fields are all `*Ms` (metres/second). Format them with `formatPace(ms, unit)` from
+  `lib/unitUtils.ts` so the athlete's imperial/metric preference is honoured. The old
+  `*MinKm` string fields were removed — they held min/**mile** values despite the name.
+- 800m is flagged unreliable via `prDistanceGuidance` (too anaerobic for the %VO2max curve). The
+  UI warns and offers longer distances but still allows it.
+
+`lib/paceSource.ts` resolves which paces to actually show. Two signals feed it: the athlete's
+declared PR (`User.prDistanceId` / `prTimeSeconds` / `prSetOn`) and VDOT inferred from workout
+history. They are blended **in VDOT space**, never pace space — blending five paces independently
+can invert their ordering.
+
+- Declared-PR confidence decays linearly from 1.0 at 3 months old to a 0.2 floor at 24 months.
+  A decay, not an expiry: a hard cutoff would make paces jump on an arbitrary date.
+- Observed data ramps in over `OBSERVED_FULL_WEIGHT_EFFORTS` (8) qualifying hard efforts, and a
+  staler PR is displaced sooner.
+- `PerformanceReport.resolved` carries the paces plus a `source` with `label`/`detail` strings —
+  every surface that shows a pace shows where it came from.
+- `calculateVDOT` deliberately returns null rather than falling back to "most recent run of any
+  kind". A confidently wrong VDOT from an easy shakeout is worse than none.
 
 ### Performance Prediction
 
@@ -119,7 +162,7 @@ Defined in `tailwind.config.ts`:
 
 The `EARLY_ACCESS` env var controls an invite-only beta gate (`lib/earlyAccess.ts`):
 
-- **`EARLY_ACCESS=true`** — allowlist gate active. Registration (`/api/auth/register`) and Strava OAuth (`/api/strava/connect`) require an APPROVED `Waitlist` entry for the email. The landing page CTA becomes "Request Access" → `/request-access`, which feeds `POST /api/waitlist`. Approvals happen at `/admin` (restricted to `ADMIN_EMAIL`) and are capped at 10.
+- **`EARLY_ACCESS=true`** — allowlist gate active. Registration (`/api/auth/register`) and Strava OAuth (`/api/strava/connect`) require an APPROVED `Waitlist` entry for the email. The landing page CTA becomes "Request Access" → `/request-access`, which feeds `POST /api/waitlist`. Approvals happen at `/admin` (restricted to `ADMIN_EMAIL`) and are capped at `EARLY_ACCESS_APPROVAL_CAP` (currently 25). This is intentionally higher than the Strava athlete cap (10) — members past 10 use the app with manual/template workouts until the Strava tier is raised.
 - **`EARLY_ACCESS=false`** — gate disabled, open registration. New users go through the existing Stripe flow (card required, 30-day trial, then $5/month).
 
 **Grandfathering**: approving a waitlist entry sets `earlyAccessUser=true` (and `approved=true`) on the User — at approval time if the account exists, otherwise when they register with the approved email. The payment bypass is tied to `earlyAccessUser` on the User, NOT to the `EARLY_ACCESS` flag: flipping the flag to false must never route early-access users to Stripe, charge them, or start a trial. Their accounts, data, and Strava connections are untouched by the flip.

@@ -31,14 +31,7 @@ interface WorkoutConflict {
   conflictDismissed: boolean;
 }
 
-function getWorkoutLabel(type: WorkoutType, sport: string): string {
-  if (sport === "swimming") {
-    const map: Partial<Record<WorkoutType, string>> = {
-      easy: "Easy Swim", moderate: "Moderate Swim", tempo: "Threshold",
-      long_run: "Distance Swim", cross_train: "Dryland", race: "Race",
-    };
-    return map[type] ?? type;
-  }
+function getWorkoutLabel(type: WorkoutType): string {
   const map: Partial<Record<WorkoutType, string>> = {
     easy: "Easy Run", moderate: "Moderate", tempo: "Tempo",
     long_run: "Long Run", track: "Track", race: "Race",
@@ -47,20 +40,12 @@ function getWorkoutLabel(type: WorkoutType, sport: string): string {
   return map[type] ?? type;
 }
 
-function getWorkoutTypes(sport: string): { value: WorkoutType; label: string }[] {
-  if (sport === "swimming") return [
-    { value: "rest", label: "Rest" }, { value: "easy", label: "Easy Swim" },
-    { value: "moderate", label: "Moderate Swim" }, { value: "tempo", label: "Threshold" },
-    { value: "long_run", label: "Distance Swim" }, { value: "cross_train", label: "Dryland" },
-    { value: "race", label: "Race" },
-  ];
-  return [
-    { value: "rest", label: "Rest" }, { value: "easy", label: "Easy Run" },
-    { value: "moderate", label: "Moderate" }, { value: "tempo", label: "Tempo" },
-    { value: "long_run", label: "Long Run" }, { value: "track", label: "Track" },
-    { value: "race", label: "Race" }, { value: "cross_train", label: "Cross Train" },
-  ];
-}
+const WORKOUT_TYPES: { value: WorkoutType; label: string }[] = [
+  { value: "rest", label: "Rest" }, { value: "easy", label: "Easy Run" },
+  { value: "moderate", label: "Moderate" }, { value: "tempo", label: "Tempo" },
+  { value: "long_run", label: "Long Run" }, { value: "track", label: "Track" },
+  { value: "race", label: "Race" }, { value: "cross_train", label: "Cross Train" },
+];
 
 const LOAD_COLORS: Record<string, string> = {
   easy: "bg-[#F5F5F5] text-[#6B6B6B]",
@@ -95,7 +80,6 @@ export default function SchedulePage() {
   const [tab, setTab] = useState<"past" | "planned">("planned");
   const [workouts, setWorkouts] = useState<NormalizedWorkout[]>([]);
   const [conflicts, setConflicts] = useState<WorkoutConflict[]>([]);
-  const [sport, setSport] = useState("track");
   const [loading, setLoading] = useState(true);
   const [showAddForm, setShowAddForm] = useState(false);
   const [addForm, setAddForm] = useState({ date: "", type: "easy" as WorkoutType, distance: "", duration: "" });
@@ -110,15 +94,13 @@ export default function SchedulePage() {
 
   useEffect(() => {
     if (status !== "authenticated") return;
-    Promise.all([
-      fetch("/api/workouts/planned").then((r) => r.json()),
-      fetch("/api/user/profile").then((r) => r.json()),
-    ]).then(([planData, profileData]) => {
-      setWorkouts(planData.workouts ?? []);
-      setConflicts(planData.conflicts ?? []);
-      if (profileData?.sport) setSport(profileData.sport);
-      setLoading(false);
-    });
+    fetch("/api/workouts/planned")
+      .then((r) => r.json())
+      .then((planData) => {
+        setWorkouts(planData.workouts ?? []);
+        setConflicts(planData.conflicts ?? []);
+        setLoading(false);
+      });
   }, [status]);
 
   const pastWorkouts = workouts
@@ -295,7 +277,7 @@ export default function SchedulePage() {
                         onChange={(e) => setAddForm({ ...addForm, type: e.target.value as WorkoutType })}
                         className="border border-[#E5E5E5] dark:border-[#333] dark:bg-[#2a2a2a] dark:text-[#F5F5F5] px-3 py-2 text-xs font-bold uppercase focus:outline-none focus:border-[#0A0A0A] dark:focus:border-[#F5F5F5] bg-white"
                       >
-                        {getWorkoutTypes(sport).map((t) => (
+                        {WORKOUT_TYPES.map((t) => (
                           <option key={t.value} value={t.value}>{t.label}</option>
                         ))}
                       </select>
@@ -349,7 +331,7 @@ export default function SchedulePage() {
                             <div className="flex items-center gap-4 flex-1">
                               <p className="font-mono text-sm text-[#6B6B6B] dark:text-[#A0A0A0] w-28">{formatDate(w.date)}</p>
                               <span className={`text-xs font-bold uppercase tracking-wider px-2 py-1 ${LOAD_COLORS[w.type]}`}>
-                                {getWorkoutLabel(w.type, sport)}
+                                {getWorkoutLabel(w.type)}
                               </span>
                               {w.distance > 0 && (
                                 <span className="text-xs font-mono text-[#6B6B6B]">{(w.distance).toFixed(1)} km</span>
@@ -425,7 +407,7 @@ export default function SchedulePage() {
                             <div className="flex items-center gap-4 flex-1">
                               <p className="font-mono text-sm text-[#6B6B6B] dark:text-[#A0A0A0] w-28">{formatDate(w.date)}</p>
                               <span className={`text-xs font-bold uppercase tracking-wider px-2 py-1 ${LOAD_COLORS[w.type]}`}>
-                                {getWorkoutLabel(w.type, sport)}
+                                {getWorkoutLabel(w.type)}
                               </span>
                               {w.distance > 0 && (
                                 <span className="text-xs font-mono text-[#6B6B6B]">{(w.distance).toFixed(1)} km</span>

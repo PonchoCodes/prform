@@ -25,14 +25,25 @@ export async function GET(req: NextRequest) {
         currentBedTime: true,
         currentWakeTime: true,
         stravaConnected: true,
+        prDistanceId: true,
+        prTimeSeconds: true,
+        prRecency: true,
+        prSetOn: true,
       },
     }),
     prisma.stravaActivity.findMany({ where: { userId }, orderBy: { startDate: "desc" } }),
     prisma.sleepLog.findMany({ where: { userId }, orderBy: { date: "desc" } }),
   ]);
 
-  if (!user?.stravaConnected) {
-    return NextResponse.json({ error: "Strava not connected" }, { status: 400 });
+  if (!user) {
+    return NextResponse.json({ error: "User not found" }, { status: 404 });
+  }
+
+  // A declared PR is enough to produce a pace table on day one, so Strava is no
+  // longer required here — without either, the report simply comes back empty
+  // and the UI prompts for whichever is missing.
+  if (!user.stravaConnected && !user.prDistanceId) {
+    return NextResponse.json({ error: "No fitness data", code: "NO_DATA" }, { status: 400 });
   }
 
   const activityInputs: StravaActivityInput[] = activities.map((a) => ({

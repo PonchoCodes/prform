@@ -3,6 +3,8 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { aggressivenessForExperienceLevel } from "@/lib/sleepAlgorithm";
+import { buildDeclaredPrUpdate } from "@/lib/paceSource";
+import { prDistanceById } from "@/lib/vdot";
 
 export async function POST(req: Request) {
   const session = await getServerSession(authOptions);
@@ -10,7 +12,15 @@ export async function POST(req: Request) {
 
   const userId = (session.user as any).id;
   const body = await req.json();
-  const { age, biologicalSex, weeklyMileage, experienceLevel, currentWakeTime, currentBedTime, restedFeeling, weekTemplate, meets, sport, unitPreference } = body;
+  const {
+    age, biologicalSex, weeklyMileage, experienceLevel, currentWakeTime, currentBedTime,
+    restedFeeling, weekTemplate, meets, sport, unitPreference,
+    prDistanceId, prTimeSeconds, prRecency, goalRaceDistanceId,
+  } = body;
+
+  // Re-validate the declared PR server-side — the client can be bypassed, and a
+  // bad PR would silently poison every prescribed pace.
+  const declaredPr = buildDeclaredPrUpdate(prDistanceId, prTimeSeconds, prRecency);
 
   const updatedUser = await prisma.user.update({
     where: { id: userId },
@@ -26,6 +36,8 @@ export async function POST(req: Request) {
       sport,
       planAggressiveness: aggressivenessForExperienceLevel(experienceLevel ?? ""),
       ...(unitPreference === "imperial" || unitPreference === "metric" ? { unitPreference } : {}),
+      ...(goalRaceDistanceId && prDistanceById(goalRaceDistanceId) ? { goalRaceDistanceId } : {}),
+      ...declaredPr,
     },
     select: { earlyAccessUser: true },
   });
@@ -56,6 +68,7 @@ export async function POST(req: Request) {
         raceTime: m.raceTime || null,
         primaryEvent: m.primaryEvent || null,
         personalBest: m.personalBest || null,
+        personalBestUnit: m.personalBestUnit || null,
       })),
     });
   }

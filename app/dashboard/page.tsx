@@ -13,7 +13,10 @@ import { formatTime12h } from "@/lib/sleepAlgorithm";
 import type { PerformanceReport } from "@/lib/performanceAnalysis";
 import { formatTimeFromSeconds, formatTimeDifference } from "@/lib/performancePrediction";
 import type { PerformancePrediction } from "@/lib/performancePrediction";
+import { formatPace } from "@/lib/unitUtils";
+import type { UnitPreference } from "@/lib/unitUtils";
 import { DayDetailModal } from "@/components/DayDetailModal";
+import { PrPrompt } from "@/components/PrPrompt";
 
 const DAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 
@@ -429,8 +432,8 @@ function WindDownSinglePhase({ windDown, bedtime }: WindDownSinglePhaseProps) {
 
 // ── Performance Summary ───────────────────────────────────────────────────────
 
-function PerformanceSummary({ report }: { report: PerformanceReport }) {
-  const { pmc, polarized, vdot, decoupling, sleepPerf } = report;
+function PerformanceSummary({ report, unit }: { report: PerformanceReport; unit: UnitPreference }) {
+  const { pmc, polarized, resolved, decoupling, sleepPerf } = report;
   return (
     <div className="space-y-px bg-[#E5E5E5] dark:bg-[#333]">
       <div className="bg-white dark:bg-[#242424] p-6">
@@ -466,18 +469,17 @@ function PerformanceSummary({ report }: { report: PerformanceReport }) {
 
       <div className="bg-white dark:bg-[#242424] p-6">
         <p className="text-xs font-bold uppercase tracking-[0.3em] text-[#6B6B6B] dark:text-[#A0A0A0] mb-2">VDOT</p>
-        {vdot.vdot ? (
+        {resolved.vdot && resolved.paces ? (
           <>
-            <p className="font-mono font-black text-5xl leading-none mb-2">{vdot.vdot}</p>
-            <p className="text-xs text-[#6B6B6B] dark:text-[#A0A0A0]">{vdot.diagnosis}</p>
-            {vdot.paces && (
-              <p className="font-mono text-xs text-[#6B6B6B] dark:text-[#A0A0A0] mt-2">
-                T-pace: <span className="text-[#0A0A0A] dark:text-[#F5F5F5] font-bold">{vdot.paces.thresholdPaceMinKm}</span>
-              </p>
-            )}
+            <p className="font-mono font-black text-5xl leading-none mb-2">{resolved.vdot}</p>
+            <p className="text-xs font-bold uppercase tracking-wider">{resolved.source.label}</p>
+            <p className="text-xs text-[#6B6B6B] dark:text-[#A0A0A0] mt-1">{resolved.source.detail}</p>
+            <p className="font-mono text-xs text-[#6B6B6B] dark:text-[#A0A0A0] mt-2">
+              T-pace: <span className="text-[#0A0A0A] dark:text-[#F5F5F5] font-bold">{formatPace(resolved.paces.thresholdPaceMs, unit)}</span>
+            </p>
           </>
         ) : (
-          <p className="text-xs text-[#6B6B6B] dark:text-[#A0A0A0]">Sync a race or maximal effort to calculate VDOT.</p>
+          <p className="text-xs text-[#6B6B6B] dark:text-[#A0A0A0]">{resolved.source.detail}</p>
         )}
       </div>
 
@@ -549,15 +551,28 @@ export default function DashboardPage() {
     });
   }, [status, router]);
 
+  /** Re-pulls the user record so a newly saved PR is reflected immediately. */
+  const refreshDashboard = useCallback(() => {
+    fetch("/api/sleep-plan")
+      .then((r) => r.json())
+      .then((d) => { if (!d.redirect) setData(d); })
+      .catch(() => {});
+  }, []);
+
+  // A declared PR is enough to produce a report, so this no longer waits on Strava.
+  const hasDeclaredPr = Boolean(data?.user?.prDistanceId);
+  const showPrPrompt = !hasDeclaredPr && !data?.user?.prPromptDismissedAt;
+
   useEffect(() => {
-    if (activeTab !== "Performance" || !stravaStatus?.connected) return;
+    if (activeTab !== "Performance") return;
+    if (!stravaStatus?.connected && !hasDeclaredPr) return;
     if (perfReport) return;
     setPerfLoading(true);
     fetch("/api/analysis?days=90")
       .then((r) => r.json())
       .then((d) => { if (!d.error) setPerfReport(d); })
       .finally(() => setPerfLoading(false));
-  }, [activeTab, stravaStatus, perfReport]);
+  }, [activeTab, stravaStatus, perfReport, hasDeclaredPr]);
 
   useEffect(() => {
     try {
@@ -711,12 +726,22 @@ export default function DashboardPage() {
 
       {/* Performance tab */}
       {activeTab === "Performance" && (
-        <div className="max-w-[1200px] mx-auto px-6 py-10">
-          {!stravaStatus?.connected ? (
+        <div className="max-w-[1200px] mx-auto px-6 py-10 space-y-6">
+          {showPrPrompt && (
+            <FadeUp>
+              <PrPrompt
+                onResolved={() => {
+                  setPerfReport(null);
+                  refreshDashboard();
+                }}
+              />
+            </FadeUp>
+          )}
+          {!stravaStatus?.connected && !hasDeclaredPr ? (
             <FadeUp>
               <div className="border border-[#E5E5E5] dark:border-[#333] p-10 text-center max-w-lg mx-auto">
                 <h2 className="font-black text-2xl uppercase mb-3">Connect Strava</h2>
-                <p className="text-sm text-[#6B6B6B] dark:text-[#A0A0A0] mb-6">Sync your runs to unlock performance analysis.</p>
+                <p className="text-sm text-[#6B6B6B] dark:text-[#A0A0A0] mb-6">Sync your runs to unlock performance analysis, or add a race PR above to get your paces now.</p>
                 <a href="/api/strava/connect">
                   <img
                     src="/strava/btn_strava_connect.png"
@@ -730,7 +755,10 @@ export default function DashboardPage() {
             <p className="font-mono text-sm uppercase tracking-wider text-[#6B6B6B]">Computing performance…</p>
           ) : perfReport ? (
             <FadeUp>
-              <PerformanceSummary report={perfReport} />
+              <PerformanceSummary
+                report={perfReport}
+                unit={(data.user?.unitPreference ?? "imperial") as UnitPreference}
+              />
             </FadeUp>
           ) : (
             <FadeUp>
@@ -931,7 +959,7 @@ export default function DashboardPage() {
                 <div className="flex items-center gap-3 mb-6">
                   <h2 className="font-black text-2xl uppercase">Sleep Schedule</h2>
                   <span className="text-xs font-bold uppercase tracking-wider text-[#6B6B6B] dark:text-[#A0A0A0] border border-[#E5E5E5] dark:border-[#333] px-2 py-1">
-                    {data.user?.sport === "swimming" ? "Swimming" : "Track & Field"}
+                    Track &amp; Field
                   </span>
                 </div>
               </FadeUp>

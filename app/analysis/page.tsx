@@ -261,32 +261,38 @@ export default function AnalysisPage() {
                 <h2 className="font-black text-2xl uppercase mb-6">VDOT &amp; Pace Zones</h2>
               </FadeUp>
 
-              {!report.vdot.vdot ? (
-                <Placeholder message="Sync at least one race or maximal effort to calculate VDOT." />
+              {!report.resolved.vdot || !report.resolved.paces ? (
+                <Placeholder message={report.resolved.source.detail} />
               ) : (
                 <FadeUp delay={60}>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                     <div>
                       <p className="text-xs font-bold uppercase tracking-[0.3em] text-[#6B6B6B] mb-2">Current VDOT</p>
-                      <p className="font-mono font-black text-8xl leading-none mb-4">{report.vdot.vdot}</p>
+                      <p className="font-mono font-black text-8xl leading-none mb-2">{report.resolved.vdot}</p>
+
+                      {/* Where these paces came from — the athlete should never
+                          have to guess why a number moved. */}
+                      <div className="border-l-4 border-[#0A0A0A] dark:border-[#F5F5F5] pl-3 mb-4">
+                        <p className="text-xs font-bold uppercase tracking-wider">{report.resolved.source.label}</p>
+                        <p className="text-xs text-[#6B6B6B] dark:text-[#A0A0A0] mt-1">{report.resolved.source.detail}</p>
+                      </div>
+
                       <Diagnosis text={report.vdot.diagnosis} />
 
-                      {report.vdot.paces && (
-                        <div className="mt-6 border border-[#E5E5E5] dark:border-[#333]">
-                          {[
-                            ["Easy", report.vdot.paces.easyPaceMs],
-                            ["Marathon", report.vdot.paces.marathonPaceMs],
-                            ["Threshold", report.vdot.paces.thresholdPaceMs],
-                            ["Interval", report.vdot.paces.intervalPaceMs],
-                            ["Rep", report.vdot.paces.repPaceMs],
-                          ].map(([label, paceMs]) => (
-                            <div key={label as string} className="flex justify-between items-center px-4 py-2 border-b border-[#E5E5E5] dark:border-[#333] last:border-0">
-                              <span className="text-xs font-bold uppercase tracking-wider text-[#6B6B6B] dark:text-[#A0A0A0]">{label}</span>
-                              <span className="font-mono font-black text-lg">{formatPace(paceMs as number, unit)}</span>
-                            </div>
-                          ))}
-                        </div>
-                      )}
+                      <div className="mt-6 border border-[#E5E5E5] dark:border-[#333]">
+                        {[
+                          ["Easy", report.resolved.paces.easyPaceMs],
+                          ["Marathon", report.resolved.paces.marathonPaceMs],
+                          ["Threshold", report.resolved.paces.thresholdPaceMs],
+                          ["Interval", report.resolved.paces.intervalPaceMs],
+                          ["Rep", report.resolved.paces.repPaceMs],
+                        ].map(([label, paceMs]) => (
+                          <div key={label as string} className="flex justify-between items-center px-4 py-2 border-b border-[#E5E5E5] dark:border-[#333] last:border-0">
+                            <span className="text-xs font-bold uppercase tracking-wider text-[#6B6B6B] dark:text-[#A0A0A0]">{label}</span>
+                            <span className="font-mono font-black text-lg">{formatPace(paceMs as number, unit)}</span>
+                          </div>
+                        ))}
+                      </div>
                     </div>
 
                     <div>

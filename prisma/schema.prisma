@@ -25,6 +25,17 @@ model User {
   currentBedTime   String?
   restedFeeling    String?
 
+  // Declared personal best, used to derive training paces before any workout
+  // history exists. All nullable — existing users have none and fall back to
+  // history-inferred paces. VDOT is derived from these on read rather than
+  // stored, so a change to the model never leaves a stale cached value behind.
+  prDistanceId        String?
+  prTimeSeconds       Float?
+  prRecency           String?   // bucket id, e.g. "3_6m" — shown back to the user
+  prSetOn             DateTime? // representative date derived from prRecency
+  goalRaceDistanceId  String?
+  prPromptDismissedAt DateTime? // existing-user prompt, dismissed once and stays dismissed
+
   notifPhase1      Boolean @default(true)
   notifPhase2      Boolean @default(true)
   notifPhase3      Boolean @default(true)

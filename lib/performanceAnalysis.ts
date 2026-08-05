@@ -1,7 +1,8 @@
 // Performance analysis engine for PRform.
 // All algorithms: CTL/ATL/TSB, polarized zones, VDOT, aerobic decoupling, sleep-pace correlation.
 
-import { mpsToMinPerMile } from "@/lib/paceUtils";
+import { vdotFromPerformance, pacesFromVdot, round1, type PaceTable } from "@/lib/vdot";
+import { resolvePaces, type DeclaredPrFields, type ResolvedPaces } from "@/lib/paceSource";
 
 export interface StravaActivityInput {
   stravaId: string;
@@ -21,7 +22,7 @@ export interface StravaActivityInput {
   externalId?: string | null;
 }
 
-export interface UserForAnalysis {
+export interface UserForAnalysis extends DeclaredPrFields {
   age?: number | null;
   biologicalSex?: string | null;
   userMaxHR?: number | null;
@@ -242,18 +243,7 @@ export function calculatePolarizedDistribution(
 
 // ── ALGORITHM 3: VDOT and Training Pace Analysis ──────────────────────────────
 
-export interface PaceTable {
-  easyPaceMinKm: string;
-  marathonPaceMinKm: string;
-  thresholdPaceMinKm: string;
-  intervalPaceMinKm: string;
-  repPaceMinKm: string;
-  thresholdPaceMs: number;
-  easyPaceMs: number;
-  marathonPaceMs: number;
-  intervalPaceMs: number;
-  repPaceMs: number;
-}
+export type { PaceTable } from "@/lib/vdot";
 
 export type PaceCompliance = "ON_TARGET" | "TOO_FAST" | "TOO_SLOW";
 
@@ -261,7 +251,6 @@ export interface RunAnalysis {
   stravaId: string;
   name: string;
   date: string;
-  averagePaceMinKm: string;
   averageSpeed: number;
   compliance: PaceCompliance;
   intendedType: string;
@@ -273,47 +262,36 @@ export interface VDOTResult {
   recentRunAnalysis: RunAnalysis[];
   paceComplianceRate: number;
   diagnosis: string;
+  /**
+   * Hard efforts backing `vdot`. Drives how much weight observed fitness gets
+   * when blended against a declared PR — see `lib/paceSource.ts`.
+   */
+  qualifyingEfforts: number;
 }
 
-function calcVDOT(distanceM: number, timeSeconds: number): number {
-  const velocity = (distanceM / timeSeconds) * 60; // m/min
-  const vo2 = -4.60 + 0.182258 * velocity + 0.000104 * velocity * velocity;
-  const t = timeSeconds / 60;
-  const pctMax =
-    0.8 +
-    0.1894393 * Math.exp(-0.012778 * t) +
-    0.2989558 * Math.exp(-0.1932605 * t);
-  return vo2 / pctMax;
+/**
+ * An activity has to be long enough to say something about aerobic fitness
+ * before it can anchor a VDOT at all.
+ */
+const MIN_EFFORT_DISTANCE_M = 1500;
+const MIN_EFFORT_SECONDS = 300;
+/** Strava suffer score at which a run counts as a genuine hard effort. */
+const QUALIFYING_SUFFER_SCORE = 50;
+
+function isEligibleEffort(a: StravaActivityInput): boolean {
+  return a.distance >= MIN_EFFORT_DISTANCE_M && a.movingTime >= MIN_EFFORT_SECONDS;
 }
 
-function msToMinKm(ms: number): string {
-  return mpsToMinPerMile(ms);
-}
-
-function getPacesFromVDOT(vdot: number): PaceTable {
-  // vVDOT = speed at 100% VO2max. Solve: VDOT = calcVDOT(1000, 1000/vVDOT_ms * 60) — use approximation
-  // Simple linear approximation from Daniels' tables:
-  // At VDOT=50, vVO2max ≈ 3.87 m/s; roughly +0.072 m/s per VDOT point
-  const vVDOT_ms = 0.072 * vdot + 0.27;
-
-  const thresholdPaceMs = vVDOT_ms * 0.88;
-  const easyPaceMs = vVDOT_ms * 0.65;
-  const marathonPaceMs = vVDOT_ms * 0.80;
-  const intervalPaceMs = vVDOT_ms * 0.99;
-  const repPaceMs = vVDOT_ms * 1.05;
-
-  return {
-    easyPaceMinKm: msToMinKm(easyPaceMs),
-    marathonPaceMinKm: msToMinKm(marathonPaceMs),
-    thresholdPaceMinKm: msToMinKm(thresholdPaceMs),
-    intervalPaceMinKm: msToMinKm(intervalPaceMs),
-    repPaceMinKm: msToMinKm(repPaceMs),
-    thresholdPaceMs,
-    easyPaceMs,
-    marathonPaceMs,
-    intervalPaceMs,
-    repPaceMs,
-  };
+/**
+ * A race, or a run hard enough to be near-maximal. Easy runs are excluded
+ * deliberately: reading an easy shakeout as a maximal effort is what produced
+ * nonsense VDOTs for athletes with little history.
+ */
+function isQualifyingEffort(a: StravaActivityInput): boolean {
+  return (
+    isEligibleEffort(a) &&
+    (a.workoutType === 1 || (a.sufferScore ?? 0) >= QUALIFYING_SUFFER_SCORE)
+  );
 }
 
 const EASY_KEYWORDS = /easy|recovery|jog|base|aerobic/i;
@@ -341,28 +319,32 @@ export function calculateVDOT(
   cutoff.setDate(cutoff.getDate() - windowDays);
   const recent = activities.filter((a) => new Date(a.startDate) >= cutoff);
 
-  if (recent.length === 0) {
-    return { vdot: null, paces: null, recentRunAnalysis: [], paceComplianceRate: 0, diagnosis: "No recent runs to analyze." };
+  const empty = (diagnosis: string): VDOTResult => ({
+    vdot: null,
+    paces: null,
+    recentRunAnalysis: [],
+    paceComplianceRate: 0,
+    diagnosis,
+    qualifyingEfforts: 0,
+  });
+
+  if (recent.length === 0) return empty("No recent runs to analyze.");
+
+  const qualifying = recent.filter(isQualifyingEffort);
+  if (qualifying.length === 0) {
+    // Deliberately no fallback to "most recent run of any kind" — an easy run
+    // tells us nothing about maximal capacity, and a confidently wrong VDOT is
+    // worse than none. A declared PR covers this case instead.
+    return empty("No race or hard effort in this window yet — race or run a hard session to calculate VDOT from your training.");
   }
 
-  // Find best effort: race type or highest suffer score
-  const sufferScores = recent.map((a) => a.sufferScore ?? 0);
-  const p90SufferScore = sufferScores.sort((a, b) => a - b)[Math.floor(sufferScores.length * 0.9)];
-
-  const effortRuns = recent.filter(
-    (a) => a.workoutType === 1 || (a.sufferScore ?? 0) >= p90SufferScore,
-  );
-
-  const candidateRun = effortRuns.length > 0
-    ? effortRuns.sort((a, b) => new Date(b.startDate).getTime() - new Date(a.startDate).getTime())[0]
-    : recent.sort((a, b) => new Date(b.startDate).getTime() - new Date(a.startDate).getTime())[0];
-
-  if (candidateRun.distance < 1000 || candidateRun.movingTime < 120) {
-    return { vdot: null, paces: null, recentRunAnalysis: [], paceComplianceRate: 0, diagnosis: "Insufficient data to calculate VDOT." };
-  }
-
-  const vdot = Math.round(calcVDOT(candidateRun.distance, candidateRun.movingTime) * 10) / 10;
-  const paces = getPacesFromVDOT(vdot);
+  // Near-best rather than best: with enough efforts, drop the top decile so a
+  // single GPS glitch or downhill time-trial cannot inflate the estimate.
+  const scored = qualifying
+    .map((a) => vdotFromPerformance(a.distance, a.movingTime))
+    .sort((a, b) => b - a);
+  const vdot = round1(scored[Math.floor(scored.length * 0.1)]);
+  const paces = pacesFromVdot(vdot);
 
   // Analyze recent 30 days
   const recentCutoff = new Date();
@@ -379,16 +361,16 @@ export function calculateVDOT(
     switch (intendedType) {
       case "race":
       case "interval":
-        recommendedPaceMs = paces.thresholdPaceMs * (paces.thresholdPaceMs > 0 ? 1.0 / 0.88 * 0.99 : 1);
+        recommendedPaceMs = paces.intervalPaceMs;
         break;
       case "tempo":
         recommendedPaceMs = paces.thresholdPaceMs;
         break;
       case "long":
-        recommendedPaceMs = paces.thresholdPaceMs * 0.80 / 0.88;
+        recommendedPaceMs = paces.marathonPaceMs;
         break;
       default:
-        recommendedPaceMs = paces.thresholdPaceMs * 0.65 / 0.88;
+        recommendedPaceMs = paces.easyPaceMs;
     }
 
     let compliance: PaceCompliance;
@@ -404,7 +386,6 @@ export function calculateVDOT(
       stravaId: act.stravaId,
       name: act.name,
       date: new Date(act.startDate).toISOString().slice(0, 10),
-      averagePaceMinKm: msToMinKm(act.averageSpeed),
       averageSpeed: act.averageSpeed,
       compliance,
       intendedType,
@@ -424,7 +405,14 @@ export function calculateVDOT(
     diagnosis = `VDOT ${vdot}: Elite-level fitness. Optimize periodization and recovery.`;
   }
 
-  return { vdot, paces, recentRunAnalysis, paceComplianceRate, diagnosis };
+  return {
+    vdot,
+    paces,
+    recentRunAnalysis,
+    paceComplianceRate,
+    diagnosis,
+    qualifyingEfforts: qualifying.length,
+  };
 }
 
 // ── ALGORITHM 4: Aerobic Decoupling ──────────────────────────────────────────
@@ -525,7 +513,6 @@ export interface ScatterPoint {
   paceScore: number;      // z-score relative to athlete's average
   date: string;
   activityName: string;
-  paceMinKm: string;
   averageSpeed: number;   // m/s, for unit-aware display
   targetBedtime: string;  // HH:MM of PRform recommended bedtime for that day
   confirmed: boolean;     // true = derived from an actual SleepLog record
@@ -566,10 +553,6 @@ function computeRecommendedBedtimeMin(user: UserForAnalysis, load: "easy" | "mod
   if (user.biologicalSex === "female") baseSleepMin += 30;
   const loadOffsets: Record<string, number> = { easy: 0, moderate: 15, tempo: 20, long_run: 30 };
   return ((wakeMin - baseSleepMin - loadOffsets[load]) + 1440 * 2) % 1440;
-}
-
-function speedToMinKm(ms: number): string {
-  return mpsToMinPerMile(ms);
 }
 
 function minutesToTimeStr(m: number): string {
@@ -640,7 +623,6 @@ export function calculateSleepPerformanceCorrelation(
       paceScore: Math.round(paceScore * 100) / 100,
       date: new Date(act.startDate).toISOString().slice(0, 10),
       activityName: act.name,
-      paceMinKm: speedToMinKm(act.averageSpeed),
       averageSpeed: act.averageSpeed,
       targetBedtime: minutesToTimeStr(realRecMin),
       confirmed: true,
@@ -680,7 +662,13 @@ function parseTimeToMinutes(time: string): number {
 export interface PerformanceReport {
   pmc: PMCResult;
   polarized: PolarizedResult;
+  /** VDOT inferred from workout history alone. */
   vdot: VDOTResult;
+  /**
+   * The paces actually shown to the athlete, blending the declared PR with
+   * observed fitness, plus where they came from.
+   */
+  resolved: ResolvedPaces;
   decoupling: DecouplingResult;
   sleepPerf: SleepPerfResult;
   activityCount: number;
@@ -695,7 +683,14 @@ export function analyzePerformance(
   sleepLogs?: SleepLogForCorrelation[],
 ): PerformanceReport {
   const vdotResult = calculateVDOT(activities, windowDays);
-  const thresholdPaceMs = vdotResult.paces?.thresholdPaceMs ?? 3.5; // ~4:45/km default
+  const resolved = resolvePaces(user, {
+    vdot: vdotResult.vdot,
+    qualifyingEfforts: vdotResult.qualifyingEfforts,
+  });
+
+  // Zone boundaries key off the resolved threshold, so a new athlete with a
+  // declared PR gets real zones instead of the generic fallback.
+  const thresholdPaceMs = resolved.paces?.thresholdPaceMs ?? 3.5; // ~4:45/km default
 
   const cutoff = new Date();
   cutoff.setDate(cutoff.getDate() - windowDays);
@@ -705,6 +700,7 @@ export function analyzePerformance(
     pmc: calculatePMC(activities, user, thresholdPaceMs, windowDays),
     polarized: calculatePolarizedDistribution(windowActivities, user, thresholdPaceMs, Math.min(windowDays, 30)),
     vdot: vdotResult,
+    resolved,
     decoupling: calculateDecoupling(windowActivities, Math.min(windowDays, 30)),
     sleepPerf: calculateSleepPerformanceCorrelation(activities, user, thresholdPaceMs, sleepLogs),
     activityCount: windowActivities.length,

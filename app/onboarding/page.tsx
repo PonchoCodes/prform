@@ -4,6 +4,9 @@ import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Button } from "@/components/Button";
+import { PrForm, EMPTY_PR, validatePrForm, isPrFormEmpty, type PrFormValue } from "@/components/PrForm";
+import { PR_DISTANCES, meetEventForPrDistance, prDistanceGuidance } from "@/lib/vdot";
+import { parseTimeToSeconds, getUnitForEvent } from "@/lib/performancePrediction";
 
 type WorkoutType = "easy" | "moderate" | "tempo" | "long_run" | "track" | "race" | "rest" | "cross_train";
 
@@ -11,28 +14,18 @@ interface WeekTemplate {
   [day: number]: { type: WorkoutType; distance: string };
 }
 
-function getWorkoutTypes(sport: string): { value: WorkoutType; label: string }[] {
-  if (sport === "swimming") return [
-    { value: "rest",        label: "Rest" },
-    { value: "easy",        label: "Easy Swim" },
-    { value: "moderate",    label: "Moderate Swim" },
-    { value: "tempo",       label: "Threshold" },
-    { value: "long_run",    label: "Distance Swim" },
-    { value: "cross_train", label: "Dryland" },
-    { value: "race",        label: "Race" },
-    { value: "cross_train", label: "Cross Train" },
-  ];
-  return [
-    { value: "rest",        label: "Rest" },
-    { value: "easy",        label: "Easy Run" },
-    { value: "moderate",    label: "Moderate Run" },
-    { value: "tempo",       label: "Tempo" },
-    { value: "long_run",    label: "Long Run" },
-    { value: "track",       label: "Track Workout" },
-    { value: "race",        label: "Race" },
-    { value: "cross_train", label: "Cross Train" },
-  ];
-}
+const WORKOUT_TYPES: { value: WorkoutType; label: string }[] = [
+  { value: "rest",        label: "Rest" },
+  { value: "easy",        label: "Easy Run" },
+  { value: "moderate",    label: "Moderate Run" },
+  { value: "tempo",       label: "Tempo" },
+  { value: "long_run",    label: "Long Run" },
+  { value: "track",       label: "Track Workout" },
+  { value: "race",        label: "Race" },
+  { value: "cross_train", label: "Cross Train" },
+];
+
+const WEEKLY_MILEAGE_OPTIONS = ["0-20", "20-40", "40-60", "60-80", "80+"];
 
 const DAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 
@@ -49,7 +42,6 @@ const defaultWeek: WeekTemplate = {
 const COMMON_EVENTS = [
   "100m", "200m", "400m", "800m", "1500m", "Mile", "3000m", "5000m", "10000m",
   "110m Hurdles", "400m Hurdles", "4×100m", "4×400m",
-  "100m Fly", "200m Fly", "400m IM", "200m Free", "500m Free", "1650m Free",
 ];
 
 interface Meet {
@@ -67,13 +59,19 @@ export default function OnboardingPage() {
   const [step, setStep] = useState(1);
 
   // Step 1: Essentials
-  const [sport, setSport] = useState("track");
   const [age, setAge] = useState("");
   const [biologicalSex, setBiologicalSex] = useState("");
   const [wakeTime, setWakeTime] = useState("06:00");
   const [bedTime, setBedTime] = useState("22:00");
 
-  // Step 2: Your Next Race
+  // Step 2: Current Fitness
+  const [pr, setPr] = useState<PrFormValue>(EMPTY_PR);
+  const [prAcknowledged, setPrAcknowledged] = useState(false);
+  const [prShowErrors, setPrShowErrors] = useState(false);
+  const [weeklyMileage, setWeeklyMileage] = useState("");
+  const [goalRaceDistanceId, setGoalRaceDistanceId] = useState("");
+
+  // Step 3: Your Next Race
   const [meet, setMeet] = useState<Meet>({
     name: "",
     date: "",
@@ -84,7 +82,7 @@ export default function OnboardingPage() {
   });
   const [skipRace, setSkipRace] = useState(false);
 
-  // Step 3: Data source
+  // Step 4: Data source
   const [stravaConnected, setStravaConnected] = useState(false);
   const [stravaAthleteId, setStravaAthleteId] = useState<string | null>(null);
   const [showManualSchedule, setShowManualSchedule] = useState(false);
@@ -103,7 +101,7 @@ export default function OnboardingPage() {
     const params = new URLSearchParams(window.location.search);
     if (params.get("connected") === "1") {
       setStravaConnected(true);
-      setStep(3);
+      setStep(4);
       window.history.replaceState({}, "", "/onboarding");
       return;
     }
@@ -112,7 +110,7 @@ export default function OnboardingPage() {
   }, []);
 
   useEffect(() => {
-    if (step !== 3) return;
+    if (step !== 4) return;
     fetch("/api/strava/status")
       .then((r) => r.json())
       .then((d) => {
@@ -124,6 +122,24 @@ export default function OnboardingPage() {
       .catch(() => {});
   }, [step]);
 
+  // The PR step is skippable: leaving it blank falls back to history-inferred
+  // paces. A partly-filled form is a mistake though, so it blocks until fixed.
+  const prSkipped = isPrFormEmpty(pr);
+  const prValidation = validatePrForm(pr);
+  const prGuidance = pr.distanceId ? prDistanceGuidance(pr.distanceId) : null;
+  const prNeedsAcknowledgement = !!prGuidance && !prGuidance.reliable;
+  const prReady = prValidation.ok && (!prNeedsAcknowledgement || prAcknowledged);
+  const prProvided = !prSkipped && prReady;
+
+  const handleContinue = () => {
+    if (step === 2 && !prSkipped && !prReady) {
+      setPrShowErrors(true);
+      return;
+    }
+    setPrShowErrors(false);
+    setStep(step + 1);
+  };
+
   const updateDay = (day: number, field: "type" | "distance", value: string) => {
     setWeekTemplate((prev) => ({
       ...prev,
@@ -134,12 +150,37 @@ export default function OnboardingPage() {
   const handleSubmit = async () => {
     setLoading(true);
 
-    const meets = skipRace || !meet.name || !meet.date
-      ? []
-      : [meet];
+    // The declared PR doubles as the race PR when the meet's primary event is
+    // the same distance — no reason to ask for the same time twice. Otherwise
+    // fall back to whatever was typed into the meet form.
+    const prSeconds = prProvided ? parseTimeToSeconds(pr.time) : null;
+    const prMeetEvent = prProvided ? meetEventForPrDistance(pr.distanceId) : null;
+    const reusePr =
+      prSeconds !== null && !!prMeetEvent && meet.primaryEvent === prMeetEvent;
+
+    // Meet times are stored as total seconds regardless of how they were typed.
+    const meetPbSeconds = reusePr
+      ? prSeconds
+      : meet.personalBest.trim()
+        ? parseTimeToSeconds(meet.personalBest)
+        : null;
+
+    const meets =
+      skipRace || !meet.name || !meet.date
+        ? []
+        : [
+            {
+              ...meet,
+              personalBest: meetPbSeconds !== null ? String(meetPbSeconds) : null,
+              personalBestUnit:
+                meetPbSeconds !== null && meet.primaryEvent
+                  ? getUnitForEvent(meet.primaryEvent)
+                  : null,
+            },
+          ];
 
     const payload = {
-      sport,
+      sport: "track",
       age: parseInt(age),
       biologicalSex,
       currentWakeTime: wakeTime,
@@ -147,6 +188,11 @@ export default function OnboardingPage() {
       weekTemplate,
       meets,
       unitPreference,
+      weeklyMileage: weeklyMileage || null,
+      goalRaceDistanceId: goalRaceDistanceId || null,
+      ...(prProvided && prSeconds !== null
+        ? { prDistanceId: pr.distanceId, prTimeSeconds: prSeconds, prRecency: pr.recency }
+        : {}),
     };
 
     const res = await fetch("/api/user/onboarding", {
@@ -161,7 +207,8 @@ export default function OnboardingPage() {
     router.push(data.earlyAccessUser ? "/dashboard" : "/subscribe");
   };
 
-  const progress = (step / 3) * 100;
+  const TOTAL_STEPS = 4;
+  const progress = (step / TOTAL_STEPS) * 100;
 
   return (
     <div className="min-h-screen bg-white dark:bg-[#1a1a1a] flex flex-col">
@@ -170,7 +217,7 @@ export default function OnboardingPage() {
           PR<span className="text-[#E8FF00] bg-[#0A0A0A] px-1">form</span>
         </span>
         <span className="text-xs font-bold uppercase tracking-wider text-[#6B6B6B] dark:text-[#A0A0A0]">
-          Step {step} of 3
+          Step {step} of {TOTAL_STEPS}
         </span>
       </nav>
 
@@ -194,30 +241,12 @@ export default function OnboardingPage() {
             {/* Step 1: The Essentials */}
             {step === 1 && (
               <div>
-                <p className="text-xs font-bold uppercase tracking-[0.3em] text-[#6B6B6B] dark:text-[#A0A0A0] mb-2">Step 1 of 3</p>
+                <p className="text-xs font-bold uppercase tracking-[0.3em] text-[#6B6B6B] dark:text-[#A0A0A0] mb-2">Step 1 of {TOTAL_STEPS}</p>
                 <h1 className="font-black text-3xl uppercase mb-2">The Essentials</h1>
                 <p className="text-sm text-[#6B6B6B] dark:text-[#A0A0A0] font-mono mb-8">
                   Four things and we can calculate your first bedtime tonight.
                 </p>
                 <div className="space-y-6">
-                  <div>
-                    <label className="block text-xs font-bold uppercase tracking-wider mb-3">Your Sport</label>
-                    <div className="flex gap-3">
-                      {[{ value: "track", label: "Track & Field" }, { value: "swimming", label: "Swimming" }].map((s) => (
-                        <button
-                          key={s.value}
-                          onClick={() => setSport(s.value)}
-                          className={`flex-1 py-3 text-xs font-bold uppercase tracking-wider border transition-colors ${
-                            sport === s.value
-                              ? "bg-[#0A0A0A] text-white border-[#0A0A0A]"
-                              : "border-[#E5E5E5] dark:border-[#444] hover:border-[#0A0A0A] dark:hover:border-[#F5F5F5]"
-                          }`}
-                        >
-                          {s.label}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
                   <div>
                     <label className="block text-xs font-bold uppercase tracking-wider mb-2">Age</label>
                     <input
@@ -270,10 +299,86 @@ export default function OnboardingPage() {
               </div>
             )}
 
-            {/* Step 2: Your Next Race */}
+            {/* Step 2: Current Fitness */}
             {step === 2 && (
               <div>
-                <p className="text-xs font-bold uppercase tracking-[0.3em] text-[#6B6B6B] dark:text-[#A0A0A0] mb-2">Step 2 of 3</p>
+                <p className="text-xs font-bold uppercase tracking-[0.3em] text-[#6B6B6B] dark:text-[#A0A0A0] mb-2">Step 2 of {TOTAL_STEPS}</p>
+                <h1 className="font-black text-3xl uppercase mb-2">Current Fitness</h1>
+                <p className="text-sm text-[#6B6B6B] dark:text-[#A0A0A0] font-mono mb-8">
+                  One recent race result and PRform can prescribe every training pace today —
+                  no waiting for weeks of data.
+                </p>
+
+                <div className="space-y-8">
+                  <PrForm
+                    value={pr}
+                    onChange={setPr}
+                    shortDistanceAcknowledged={prAcknowledged}
+                    onAcknowledgeShortDistance={setPrAcknowledged}
+                    showErrors={prShowErrors}
+                  />
+
+                  <div>
+                    <label className="block text-xs font-bold uppercase tracking-wider mb-3">
+                      Weekly Mileage
+                    </label>
+                    <div className="flex flex-wrap gap-2">
+                      {WEEKLY_MILEAGE_OPTIONS.map((m) => (
+                        <button
+                          key={m}
+                          type="button"
+                          aria-pressed={weeklyMileage === m}
+                          onClick={() => setWeeklyMileage(weeklyMileage === m ? "" : m)}
+                          className={`flex-1 min-w-[72px] py-3 text-xs font-bold uppercase tracking-wider border transition-colors ${
+                            weeklyMileage === m
+                              ? "bg-[#0A0A0A] text-white border-[#0A0A0A] dark:bg-[#F5F5F5] dark:text-[#0A0A0A] dark:border-[#F5F5F5]"
+                              : "border-[#E5E5E5] dark:border-[#444] hover:border-[#0A0A0A] dark:hover:border-[#F5F5F5]"
+                          }`}
+                        >
+                          {m}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div>
+                    <label htmlFor="goal-race" className="block text-xs font-bold uppercase tracking-wider mb-2">
+                      Goal Race Distance{" "}
+                      <span className="text-[#6B6B6B] dark:text-[#A0A0A0] normal-case font-normal">(optional)</span>
+                    </label>
+                    <select
+                      id="goal-race"
+                      value={goalRaceDistanceId}
+                      onChange={(e) => setGoalRaceDistanceId(e.target.value)}
+                      className="w-full border border-[#E5E5E5] dark:border-[#444] dark:bg-[#2a2a2a] dark:text-[#F5F5F5] px-4 py-3 text-sm font-mono focus:outline-none focus:border-[#0A0A0A] dark:focus:border-[#F5F5F5] bg-white"
+                    >
+                      <option value="">No specific goal yet</option>
+                      {PR_DISTANCES.map((d) => (
+                        <option key={d.id} value={d.id}>{d.label}</option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setPr(EMPTY_PR);
+                      setPrAcknowledged(false);
+                      setPrShowErrors(false);
+                      setStep(3);
+                    }}
+                    className="w-full text-center text-xs font-mono text-[#6B6B6B] dark:text-[#A0A0A0] hover:text-[#0A0A0A] dark:hover:text-[#F5F5F5] py-2 transition-colors"
+                  >
+                    Skip — I&apos;ll let PRform learn from my training →
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* Step 3: Your Next Race */}
+            {step === 3 && (
+              <div>
+                <p className="text-xs font-bold uppercase tracking-[0.3em] text-[#6B6B6B] dark:text-[#A0A0A0] mb-2">Step 3 of {TOTAL_STEPS}</p>
                 <h1 className="font-black text-3xl uppercase mb-2">Your Next Race</h1>
                 <p className="text-sm text-[#6B6B6B] dark:text-[#A0A0A0] font-mono mb-8">
                   When is it? We&apos;ll build your sleep plan backward from race day.
@@ -323,18 +428,30 @@ export default function OnboardingPage() {
                           ))}
                         </select>
                       </div>
-                      <div>
-                        <label className="block text-xs font-bold uppercase tracking-wider mb-1">
-                          Personal Best <span className="text-[#6B6B6B] dark:text-[#A0A0A0] normal-case">(optional — e.g. 51.8 or 1:52.4)</span>
-                        </label>
-                        <input
-                          type="text"
-                          placeholder="e.g. 51.8 or 1:52.4"
-                          value={meet.personalBest}
-                          onChange={(e) => setMeet((m) => ({ ...m, personalBest: e.target.value }))}
-                          className="w-full border border-[#E5E5E5] dark:border-[#444] dark:bg-[#2a2a2a] dark:text-[#F5F5F5] px-4 py-2 text-sm font-mono focus:outline-none focus:border-[#0A0A0A] dark:focus:border-[#F5F5F5]"
-                        />
-                      </div>
+                      {prProvided && meetEventForPrDistance(pr.distanceId) === meet.primaryEvent && meet.primaryEvent ? (
+                        <div className="border border-[#E5E5E5] dark:border-[#444] px-4 py-3">
+                          <p className="text-xs font-bold uppercase tracking-wider mb-1">Personal Best</p>
+                          <p className="text-sm font-mono">
+                            {pr.time}{" "}
+                            <span className="text-[#6B6B6B] dark:text-[#A0A0A0]">
+                              — from the PR you entered
+                            </span>
+                          </p>
+                        </div>
+                      ) : (
+                        <div>
+                          <label className="block text-xs font-bold uppercase tracking-wider mb-1">
+                            Personal Best <span className="text-[#6B6B6B] dark:text-[#A0A0A0] normal-case">(optional — e.g. 51.8 or 1:52.4)</span>
+                          </label>
+                          <input
+                            type="text"
+                            placeholder="e.g. 51.8 or 1:52.4"
+                            value={meet.personalBest}
+                            onChange={(e) => setMeet((m) => ({ ...m, personalBest: e.target.value }))}
+                            className="w-full border border-[#E5E5E5] dark:border-[#444] dark:bg-[#2a2a2a] dark:text-[#F5F5F5] px-4 py-2 text-sm font-mono focus:outline-none focus:border-[#0A0A0A] dark:focus:border-[#F5F5F5]"
+                          />
+                        </div>
+                      )}
                       <div>
                         <label className="block text-xs font-bold uppercase tracking-wider mb-2">Priority</label>
                         <div className="flex gap-2">
@@ -359,7 +476,7 @@ export default function OnboardingPage() {
                   </div>
 
                   <button
-                    onClick={() => { setSkipRace(true); setStep(3); }}
+                    onClick={() => { setSkipRace(true); setStep(4); }}
                     className="w-full text-center text-xs font-mono text-[#6B6B6B] dark:text-[#A0A0A0] hover:text-[#0A0A0A] dark:hover:text-[#F5F5F5] py-2 transition-colors"
                   >
                     Skip for now →
@@ -369,9 +486,9 @@ export default function OnboardingPage() {
             )}
 
             {/* Step 3: Connect Your Data */}
-            {step === 3 && (
+            {step === 4 && (
               <div>
-                <p className="text-xs font-bold uppercase tracking-[0.3em] text-[#6B6B6B] dark:text-[#A0A0A0] mb-2">Step 3 of 3</p>
+                <p className="text-xs font-bold uppercase tracking-[0.3em] text-[#6B6B6B] dark:text-[#A0A0A0] mb-2">Step 4 of {TOTAL_STEPS}</p>
                 <h1 className="font-black text-3xl uppercase mb-2">Connect Your Data</h1>
                 <p className="text-sm text-[#6B6B6B] dark:text-[#A0A0A0] mb-8">
                   Connect Strava and PRform updates your sleep plan automatically after every run.
@@ -433,7 +550,7 @@ export default function OnboardingPage() {
                             onChange={(e) => updateDay(i, "type", e.target.value)}
                             className="flex-1 border border-[#E5E5E5] dark:border-[#444] dark:bg-[#2a2a2a] dark:text-[#F5F5F5] px-3 py-2 text-xs font-bold uppercase focus:outline-none focus:border-[#0A0A0A] dark:focus:border-[#F5F5F5] bg-white"
                           >
-                            {getWorkoutTypes(sport).map((t) => (
+                            {WORKOUT_TYPES.map((t) => (
                               <option key={t.value} value={t.value}>{t.label}</option>
                             ))}
                           </select>
@@ -462,8 +579,8 @@ export default function OnboardingPage() {
               Back
             </Button>
           )}
-          {step < 3 ? (
-            <Button variant="secondary" size="lg" onClick={() => setStep(step + 1)} className="flex-1">
+          {step < TOTAL_STEPS ? (
+            <Button variant="secondary" size="lg" onClick={handleContinue} className="flex-1">
               Continue →
             </Button>
           ) : (

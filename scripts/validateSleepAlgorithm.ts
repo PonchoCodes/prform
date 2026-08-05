@@ -32,11 +32,11 @@ console.log("\n── Test 1: Base sleep need ──");
 
   const user16F: UserInput = {
     age: 16, biologicalSex: "female", currentWakeTime: "07:00", currentBedTime: "22:30",
-    sport: "swimming",
   };
   const p2 = calculateSleepPlan(user16F, [], [], 0, { startDayOffset: 0 })[0];
-  // 16yo female swimmer rest day → 9.25*60 + 30 + 20 = 605 min = 10.083h → 10.1
-  assert("16yo female swimmer rest day → 10.1h", p2.totalSleepHours, 10.1);
+  // 16yo female rest day → 9.25*60 + 30 = 585 min = 9.75h → 9.8
+  // (covers the ≤17 age bracket and the female modifier)
+  assert("16yo female rest day → 9.75h", p2.totalSleepHours, 9.8);
 }
 
 // ── Test 2: Training load extra (Zone-based) ──
