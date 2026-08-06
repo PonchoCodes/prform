@@ -149,6 +149,7 @@ export async function getWorkoutsForDateRange(
             distance: (manualW.distance ?? 0) * 1.60934, // miles → km
             duration: manualW.duration ?? 0,
             effort: manualW.effort,
+            quality: manualW.quality,
             source: "manual",
             isTentative: false,
             manualOverride: true,
@@ -181,6 +182,7 @@ export async function getWorkoutsForDateRange(
             distance: (manualW.distance ?? 0) * 1.60934,
             duration: manualW.duration ?? 0,
             effort: manualW.effort,
+            quality: manualW.quality,
             source: "manual",
             isTentative: true,
           });
@@ -241,6 +243,7 @@ export async function getWorkoutsForDateRange(
           distance: (oneOff.distance ?? 0) * 1.60934,
           duration: oneOff.duration ?? 0,
           effort: oneOff.effort,
+          quality: oneOff.quality,
           source: "manual",
           isTentative: oneOff.isTentative || !isPast,
         });

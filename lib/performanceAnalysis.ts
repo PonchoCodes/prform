@@ -79,6 +79,15 @@ export function calculatePMC(
   user: UserForAnalysis,
   thresholdPaceMs: number,
   windowDays = 90,
+  /**
+   * Daily stress from sources other than Strava — manual workouts scored by
+   * session RPE (see lib/trainingLoad.ts), keyed "YYYY-MM-DD". Already
+   * deduplicated against Strava days by the caller; values here are simply
+   * added to the same daily map, so ATL/CTL/TSB cannot tell the sources
+   * apart. That is the point: an athlete with no watch and no Strava still
+   * accumulates honest fatigue.
+   */
+  extraDailyTss?: ReadonlyMap<string, number>,
 ): PMCResult {
   const maxHR = estimateMaxHR(user);
   const thresholdHR = user.userThresholdHR ?? Math.round(0.89 * maxHR);
@@ -95,6 +104,9 @@ export function calculatePMC(
     const tss = calculateTSS(act, thresholdHR, thresholdPaceMs);
     tssMap.set(key, (tssMap.get(key) ?? 0) + tss);
   }
+  extraDailyTss?.forEach((tss, key) => {
+    tssMap.set(key, (tssMap.get(key) ?? 0) + tss);
+  });
 
   let ctl = 0;
   let atl = 0;

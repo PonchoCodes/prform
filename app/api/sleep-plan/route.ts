@@ -8,6 +8,7 @@ import { getWorkoutsForDateRange } from "@/lib/workoutDataSource";
 import { calculatePerformancePrediction } from "@/lib/performancePrediction";
 import { toClientUser, CLIENT_USER_SELECT } from "@/lib/clientUser";
 import { calculatePMC, calculateVDOT, type StravaActivityInput } from "@/lib/performanceAnalysis";
+import { manualDailyTss } from "@/lib/trainingLoad";
 import { resolvePaces } from "@/lib/paceSource";
 import { computeSleepDebtMinutes } from "@/lib/verdict";
 import { isValidTimeZone, localClockOf } from "@/lib/messaging/time";
@@ -73,28 +74,47 @@ export async function GET() {
   const activityHistoryStart = new Date(today);
   activityHistoryStart.setDate(today.getDate() - ACTIVITY_HISTORY_DAYS);
 
-  const [{ workouts, conflicts }, meets, sleepLogs, recentSleepLogs, debtLogs, activities] =
-    await Promise.all([
-      getWorkoutsForDateRange(userId, yesterday, endDate),
-      prisma.meet.findMany({ where: { userId }, orderBy: { date: "asc" } }),
-      prisma.sleepLog.findMany({
-        where: { userId, date: { gte: yesterday, lte: endDate } },
-        orderBy: { date: "asc" },
-      }),
-      prisma.sleepLog.findMany({
-        where: { userId, date: { gte: sevenDaysAgo } },
-        orderBy: { date: "desc" },
-        take: 3,
-      }),
-      prisma.sleepLog.findMany({
-        where: { userId, date: { gte: debtWindowStart, lt: today } },
-        orderBy: { date: "desc" },
-      }),
-      prisma.stravaActivity.findMany({
-        where: { userId, startDate: { gte: activityHistoryStart } },
-        orderBy: { startDate: "desc" },
-      }),
-    ]);
+  const [
+    { workouts, conflicts },
+    meets,
+    sleepLogs,
+    recentSleepLogs,
+    debtLogs,
+    activities,
+    loggedWorkouts,
+  ] = await Promise.all([
+    getWorkoutsForDateRange(userId, yesterday, endDate),
+    prisma.meet.findMany({ where: { userId }, orderBy: { date: "asc" } }),
+    prisma.sleepLog.findMany({
+      where: { userId, date: { gte: yesterday, lte: endDate } },
+      orderBy: { date: "asc" },
+    }),
+    prisma.sleepLog.findMany({
+      where: { userId, date: { gte: sevenDaysAgo } },
+      orderBy: { date: "desc" },
+      take: 3,
+    }),
+    prisma.sleepLog.findMany({
+      where: { userId, date: { gte: debtWindowStart, lt: today } },
+      orderBy: { date: "desc" },
+    }),
+    prisma.stravaActivity.findMany({
+      where: { userId, startDate: { gte: activityHistoryStart } },
+      orderBy: { startDate: "desc" },
+    }),
+    // Manual sessions carrying an RPE — the no-Strava stress source. Same
+    // history window as the activities so the PMC warm-up sees both.
+    prisma.workout.findMany({
+      where: {
+        userId,
+        isTemplate: false,
+        date: { gte: activityHistoryStart, lte: today },
+        duration: { not: null },
+        effort: { not: null },
+      },
+      select: { date: true, duration: true, effort: true, isTemplate: true },
+    }),
+  ]);
 
   // The verdict has to name a pace, so the paces have to arrive with the plan
   // rather than a tab-click later. Same resolution order as analyzePerformance:
@@ -124,11 +144,26 @@ export async function GET() {
     qualifyingEfforts: observed.qualifyingEfforts,
   });
 
-  // No activities means no meaningful stress balance — null, so the verdict
-  // says nothing about form rather than reporting a confident zero.
+  // Manual RPE-scored sessions feed the same PMC as Strava activities, with
+  // Strava winning any day both cover — the merge layer's ground-truth rule,
+  // applied to load. This is what keeps the fatigue branch of the verdict
+  // alive for an athlete with no Strava connection at all.
+  const stravaDates = new Set(
+    activityInputs.map((a) => new Date(a.startDate).toISOString().slice(0, 10)),
+  );
+  const manualTss = manualDailyTss(loggedWorkouts, stravaDates);
+
+  // No stress source at all means no meaningful stress balance — null, so the
+  // verdict says nothing about form rather than reporting a confident zero.
   const tsb =
-    activityInputs.length > 0
-      ? calculatePMC(activityInputs, user, resolved.paces?.thresholdPaceMs ?? 3.5).currentTSB
+    activityInputs.length > 0 || manualTss.size > 0
+      ? calculatePMC(
+          activityInputs,
+          user,
+          resolved.paces?.thresholdPaceMs ?? 3.5,
+          90,
+          manualTss,
+        ).currentTSB
       : null;
 
   const sleepDebtMinutes = computeSleepDebtMinutes(debtLogs);

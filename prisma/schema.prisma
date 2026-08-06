@@ -167,7 +167,17 @@ model Workout {
   type              String
   distance          Float?
   duration          Int?
+  /// Session RPE, 1–10 (Foster scale). With `duration`, this is the whole
+  /// manual training-load story: duration × RPE feeds ATL/CTL/TSB exactly the
+  /// way device-derived stress does, so an athlete with no Strava still gets
+  /// the fatigue branch of the verdict. Named `effort` for continuity — the
+  /// column predates the load model and the API already reads/writes it.
   effort            Int?
+  /// How the session went, self-reported after the fact. The no-Strava
+  /// alternative to pace compliance: the trend chart scores NAILED_IT and FINE
+  /// as on-target, ROUGH as off. Null means never asked or never answered —
+  /// which is missing data, not a rough day.
+  quality           WorkoutQuality?
   isTemplate        Boolean  @default(false)
   dayOfWeek         Int?
   isTentative       Boolean  @default(false)
@@ -177,6 +187,15 @@ model Workout {
   createdAt         DateTime @default(now())
   updatedAt         DateTime @updatedAt
   user              User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+/// Self-reported session quality. Three values on purpose: a 1–10 "how was
+/// it?" collapses into the same three answers with false precision, and the
+/// athlete answering from a phone in a hallway needs a tap, not a rating task.
+enum WorkoutQuality {
+  NAILED_IT
+  FINE
+  ROUGH
 }
 
 model Meet {

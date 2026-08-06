@@ -11,17 +11,27 @@ import { Footer } from "@/components/Footer";
 type WorkoutType = "easy" | "moderate" | "tempo" | "long_run" | "track" | "race" | "rest" | "cross_train";
 type WorkoutSource = "strava" | "manual" | "assumed";
 
+type WorkoutQuality = "NAILED_IT" | "FINE" | "ROUGH";
+
 interface NormalizedWorkout {
   id?: string;
   date: string;
   type: WorkoutType;
   distance: number;
   duration: number;
+  effort?: number | null;
+  quality?: WorkoutQuality | null;
   source: WorkoutSource;
   isTentative: boolean;
   stravaActivityId?: string;
   manualOverride?: boolean;
 }
+
+const QUALITY_OPTIONS: { value: WorkoutQuality; label: string }[] = [
+  { value: "NAILED_IT", label: "Nailed it" },
+  { value: "FINE", label: "Fine" },
+  { value: "ROUGH", label: "Rough" },
+];
 
 interface WorkoutConflict {
   workoutId: string;
@@ -84,6 +94,14 @@ export default function SchedulePage() {
   const [showAddForm, setShowAddForm] = useState(false);
   const [addForm, setAddForm] = useState({ date: "", type: "easy" as WorkoutType, distance: "", duration: "" });
   const [saving, setSaving] = useState(false);
+  const [showLogForm, setShowLogForm] = useState(false);
+  const [logForm, setLogForm] = useState({
+    date: "",
+    type: "easy" as WorkoutType,
+    duration: "",
+    effort: "",
+  });
+  const [loggingWorkout, setLoggingWorkout] = useState(false);
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [fadingId, setFadingId] = useState<string | null>(null);
@@ -133,6 +151,51 @@ export default function SchedulePage() {
     setShowAddForm(false);
     setAddForm({ date: "", type: "easy", distance: "", duration: "" });
     setSaving(false);
+  };
+
+  const handleLogWorkout = async () => {
+    if (!logForm.date || !logForm.duration || !logForm.effort) return;
+    setLoggingWorkout(true);
+    const res = await fetch("/api/workouts", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        date: logForm.date,
+        type: logForm.type,
+        duration: logForm.duration,
+        effort: logForm.effort,
+        isTemplate: false,
+      }),
+    });
+    const saved = await res.json().catch(() => null);
+    setWorkouts((prev) => [
+      ...prev,
+      {
+        id: saved?.id,
+        date: logForm.date,
+        type: logForm.type,
+        distance: 0,
+        duration: parseInt(logForm.duration) || 0,
+        effort: parseInt(logForm.effort) || null,
+        source: "manual",
+        isTentative: false,
+      },
+    ]);
+    setShowLogForm(false);
+    setLogForm({ date: "", type: "easy", duration: "", effort: "" });
+    setLoggingWorkout(false);
+  };
+
+  const handleSetQuality = async (workoutId: string, quality: WorkoutQuality) => {
+    // Toggle off when tapping the already-selected answer.
+    const current = workouts.find((w) => w.id === workoutId)?.quality ?? null;
+    const next = current === quality ? null : quality;
+    setWorkouts((prev) => prev.map((w) => (w.id === workoutId ? { ...w, quality: next } : w)));
+    await fetch("/api/workouts", {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ id: workoutId, quality: next }),
+    });
   };
 
   const handleOverride = async (workoutId: string) => {
@@ -366,15 +429,83 @@ export default function SchedulePage() {
         {tab === "past" && (
           <section className="px-6 py-10">
             <div className="max-w-[1200px] mx-auto">
-              <div className="mb-6">
-                <p className="text-xs font-bold uppercase tracking-[0.3em] text-[#6B6B6B] mb-1">Last 7 Days</p>
-                <h2 className="font-black text-2xl uppercase">Activity Log</h2>
+              <div className="flex items-center justify-between mb-6">
+                <div>
+                  <p className="text-xs font-bold uppercase tracking-[0.3em] text-[#6B6B6B] mb-1">Last 7 Days</p>
+                  <h2 className="font-black text-2xl uppercase">Activity Log</h2>
+                </div>
+                <Button variant="secondary" size="sm" onClick={() => setShowLogForm(!showLogForm)}>
+                  + Log Workout
+                </Button>
               </div>
+
+              {showLogForm && (
+                <FadeUp>
+                  <div className="border border-[#E5E5E5] dark:border-[#333] p-6 mb-6">
+                    <h3 className="font-black text-sm uppercase tracking-wider mb-1">Log a Workout</h3>
+                    <p className="text-xs font-mono text-[#6B6B6B] dark:text-[#A0A0A0] mb-4">
+                      Duration × effort feeds your training load — no watch or Strava needed.
+                    </p>
+                    <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
+                      <input
+                        type="date"
+                        aria-label="Workout date"
+                        value={logForm.date}
+                        max={new Date().toISOString().slice(0, 10)}
+                        onChange={(e) => setLogForm({ ...logForm, date: e.target.value })}
+                        className="border border-[#E5E5E5] dark:border-[#333] dark:bg-[#2a2a2a] dark:text-[#F5F5F5] px-3 py-2 text-sm font-mono focus:outline-none focus:border-[#0A0A0A] dark:focus:border-[#F5F5F5]"
+                      />
+                      <select
+                        aria-label="Session type"
+                        value={logForm.type}
+                        onChange={(e) => setLogForm({ ...logForm, type: e.target.value as WorkoutType })}
+                        className="border border-[#E5E5E5] dark:border-[#333] dark:bg-[#2a2a2a] dark:text-[#F5F5F5] px-3 py-2 text-xs font-bold uppercase focus:outline-none focus:border-[#0A0A0A] dark:focus:border-[#F5F5F5] bg-white"
+                      >
+                        {WORKOUT_TYPES.filter((t) => t.value !== "rest").map((t) => (
+                          <option key={t.value} value={t.value}>{t.label}</option>
+                        ))}
+                      </select>
+                      <input
+                        type="number"
+                        placeholder="Minutes"
+                        aria-label="Duration in minutes"
+                        min={1}
+                        max={720}
+                        value={logForm.duration}
+                        onChange={(e) => setLogForm({ ...logForm, duration: e.target.value })}
+                        className="border border-[#E5E5E5] dark:border-[#333] dark:bg-[#2a2a2a] dark:text-[#F5F5F5] px-3 py-2 text-sm focus:outline-none focus:border-[#0A0A0A] dark:focus:border-[#F5F5F5]"
+                      />
+                      <select
+                        aria-label="Session RPE, 1 easy to 10 maximal"
+                        value={logForm.effort}
+                        onChange={(e) => setLogForm({ ...logForm, effort: e.target.value })}
+                        className="border border-[#E5E5E5] dark:border-[#333] dark:bg-[#2a2a2a] dark:text-[#F5F5F5] px-3 py-2 text-xs font-bold uppercase focus:outline-none focus:border-[#0A0A0A] dark:focus:border-[#F5F5F5] bg-white"
+                      >
+                        <option value="">Effort (RPE)…</option>
+                        {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((r) => (
+                          <option key={r} value={r}>
+                            {r} — {r <= 2 ? "very easy" : r <= 4 ? "easy" : r <= 6 ? "moderate" : r <= 8 ? "hard" : "maximal"}
+                          </option>
+                        ))}
+                      </select>
+                      <Button
+                        variant="secondary"
+                        size="sm"
+                        onClick={handleLogWorkout}
+                        disabled={!logForm.date || !logForm.duration || !logForm.effort || loggingWorkout}
+                      >
+                        {loggingWorkout ? "Saving..." : "Save"}
+                      </Button>
+                    </div>
+                  </div>
+                </FadeUp>
+              )}
 
               {pastWorkouts.length === 0 ? (
                 <p className="text-[#6B6B6B] dark:text-[#A0A0A0] text-sm py-8 text-center border border-dashed border-[#E5E5E5] dark:border-[#333]">
-                  No past activities found.{" "}
-                  <a href="/strava" className="font-bold text-[#0A0A0A] dark:text-[#F5F5F5]">Sync Strava →</a>
+                  No past activities found. Log one above{" "}
+                  <span className="text-[#6B6B6B] dark:text-[#A0A0A0]">or</span>{" "}
+                  <a href="/strava" className="font-bold text-[#0A0A0A] dark:text-[#F5F5F5]">sync Strava →</a>
                 </p>
               ) : (
                 <div className="space-y-px bg-[#E5E5E5] dark:bg-[#333]">
@@ -415,7 +546,29 @@ export default function SchedulePage() {
                               {w.duration > 0 && (
                                 <span className="text-xs font-mono text-[#6B6B6B]">{w.duration} min</span>
                               )}
+                              {w.effort != null && (
+                                <span className="text-xs font-mono text-[#6B6B6B]">RPE {w.effort}</span>
+                              )}
                             </div>
+                            {/* Self-reported quality — the no-Strava compliance signal */}
+                            {w.id && w.source === "manual" && (
+                              <div className="flex items-center gap-1" role="group" aria-label="How did this session go?">
+                                {QUALITY_OPTIONS.map((q) => (
+                                  <button
+                                    key={q.value}
+                                    onClick={() => handleSetQuality(w.id!, q.value)}
+                                    aria-pressed={w.quality === q.value}
+                                    className={`text-[10px] font-bold uppercase tracking-wider border px-2 py-0.5 transition-colors ${
+                                      w.quality === q.value
+                                        ? "bg-[#0A0A0A] text-white border-[#0A0A0A] dark:bg-[#F5F5F5] dark:text-[#0A0A0A] dark:border-[#F5F5F5]"
+                                        : "border-[#E5E5E5] dark:border-[#333] text-[#6B6B6B] dark:text-[#A0A0A0] hover:border-[#0A0A0A] dark:hover:border-[#F5F5F5]"
+                                    }`}
+                                  >
+                                    {q.label}
+                                  </button>
+                                ))}
+                              </div>
+                            )}
                             <div className="flex items-center gap-3">
                               <SourceDot source={w.source} />
                               <span className="text-[10px] font-mono uppercase text-[#6B6B6B]">{w.source}</span>
