@@ -13,6 +13,7 @@ export function Navbar() {
     { href: "/sleep", label: "Sleep" },
     { href: "/schedule", label: "Schedule" },
     { href: "/meets", label: "Meets" },
+    { href: "/team", label: "Team" },
     { href: "/analysis", label: "Analysis" },
     { href: "/profile", label: "Profile" },
   ];
