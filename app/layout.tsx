@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import localFont from "next/font/local";
 import "./globals.css";
 import { Providers } from "@/components/Providers";
+import { BottomTabBar } from "@/components/BottomTabBar";
 
 const geistMono = localFont({
   src: "./fonts/GeistMonoVF.woff",
@@ -34,7 +35,10 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <script dangerouslySetInnerHTML={{ __html: `(function(){var s=localStorage.getItem('prform-theme');var d=window.matchMedia('(prefers-color-scheme:dark)').matches;if(s==='dark'||(s!=='light'&&d))document.documentElement.classList.add('dark');})()` }} />
       </head>
       <body className="font-sans antialiased bg-white dark:bg-[#1a1a1a] text-[#0A0A0A] dark:text-[#F5F5F5]">
-        <Providers>{children}</Providers>
+        <Providers>
+          {children}
+          <BottomTabBar />
+        </Providers>
       </body>
     </html>
   );

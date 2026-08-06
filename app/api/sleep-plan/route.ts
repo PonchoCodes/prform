@@ -7,6 +7,17 @@ import type { SleepLogForPlan } from "@/lib/sleepAlgorithm";
 import { getWorkoutsForDateRange } from "@/lib/workoutDataSource";
 import { calculatePerformancePrediction } from "@/lib/performancePrediction";
 import { toClientUser, CLIENT_USER_SELECT } from "@/lib/clientUser";
+import { calculatePMC, calculateVDOT, type StravaActivityInput } from "@/lib/performanceAnalysis";
+import { resolvePaces } from "@/lib/paceSource";
+import { computeSleepDebtMinutes } from "@/lib/verdict";
+
+/**
+ * PMC needs the 90-day window plus its 42-day warm-up; 200 days covers that
+ * with room to spare while keeping the dashboard's main query bounded.
+ */
+const ACTIVITY_HISTORY_DAYS = 200;
+/** The window the dashboard verdict describes as "this week". */
+const DEBT_WINDOW_DAYS = 7;
 
 export async function GET() {
   const session = await getServerSession(authOptions);
@@ -29,6 +40,14 @@ export async function GET() {
       sport: true,
       planAggressiveness: true,
       bedtimeAdjustmentMinutes: true,
+      // Needed to resolve the pace table and the training-stress balance the
+      // dashboard verdict is built from.
+      userMaxHR: true,
+      userThresholdHR: true,
+      stravaConnected: true,
+      prTimeSeconds: true,
+      prRecency: true,
+      prSetOn: true,
       ...CLIENT_USER_SELECT,
     },
   });
@@ -46,19 +65,71 @@ export async function GET() {
   const sevenDaysAgo = new Date();
   sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
 
-  const [{ workouts, conflicts }, meets, sleepLogs, recentSleepLogs] = await Promise.all([
-    getWorkoutsForDateRange(userId, yesterday, endDate),
-    prisma.meet.findMany({ where: { userId }, orderBy: { date: "asc" } }),
-    prisma.sleepLog.findMany({
-      where: { userId, date: { gte: yesterday, lte: endDate } },
-      orderBy: { date: "asc" },
-    }),
-    prisma.sleepLog.findMany({
-      where: { userId, date: { gte: sevenDaysAgo } },
-      orderBy: { date: "desc" },
-      take: 3,
-    }),
-  ]);
+  const debtWindowStart = new Date(today);
+  debtWindowStart.setDate(today.getDate() - DEBT_WINDOW_DAYS);
+
+  const activityHistoryStart = new Date(today);
+  activityHistoryStart.setDate(today.getDate() - ACTIVITY_HISTORY_DAYS);
+
+  const [{ workouts, conflicts }, meets, sleepLogs, recentSleepLogs, debtLogs, activities] =
+    await Promise.all([
+      getWorkoutsForDateRange(userId, yesterday, endDate),
+      prisma.meet.findMany({ where: { userId }, orderBy: { date: "asc" } }),
+      prisma.sleepLog.findMany({
+        where: { userId, date: { gte: yesterday, lte: endDate } },
+        orderBy: { date: "asc" },
+      }),
+      prisma.sleepLog.findMany({
+        where: { userId, date: { gte: sevenDaysAgo } },
+        orderBy: { date: "desc" },
+        take: 3,
+      }),
+      prisma.sleepLog.findMany({
+        where: { userId, date: { gte: debtWindowStart, lt: today } },
+        orderBy: { date: "desc" },
+      }),
+      prisma.stravaActivity.findMany({
+        where: { userId, startDate: { gte: activityHistoryStart } },
+        orderBy: { startDate: "desc" },
+      }),
+    ]);
+
+  // The verdict has to name a pace, so the paces have to arrive with the plan
+  // rather than a tab-click later. Same resolution order as analyzePerformance:
+  // observed VDOT, blended against the declared PR, then everything that keys
+  // off the resulting threshold pace.
+  const activityInputs: StravaActivityInput[] = activities.map((a) => ({
+    stravaId: a.stravaId,
+    name: a.name,
+    startDate: a.startDate,
+    distance: a.distance,
+    movingTime: a.movingTime,
+    elapsedTime: a.elapsedTime,
+    totalElevGain: a.totalElevGain,
+    averageSpeed: a.averageSpeed,
+    maxSpeed: a.maxSpeed,
+    averageHeartrate: a.averageHeartrate,
+    maxHeartrate: a.maxHeartrate,
+    sufferScore: a.sufferScore,
+    workoutType: a.workoutType,
+    averageCadence: a.averageCadence,
+    externalId: a.externalId,
+  }));
+
+  const observed = calculateVDOT(activityInputs);
+  const resolved = resolvePaces(user, {
+    vdot: observed.vdot,
+    qualifyingEfforts: observed.qualifyingEfforts,
+  });
+
+  // No activities means no meaningful stress balance — null, so the verdict
+  // says nothing about form rather than reporting a confident zero.
+  const tsb =
+    activityInputs.length > 0
+      ? calculatePMC(activityInputs, user, resolved.paces?.thresholdPaceMs ?? 3.5).currentTSB
+      : null;
+
+  const sleepDebtMinutes = computeSleepDebtMinutes(debtLogs);
 
   const sleepLogsForPlan: SleepLogForPlan[] = sleepLogs.map((l) => ({
     date: new Date(l.date).toISOString().slice(0, 10),
@@ -94,7 +165,9 @@ export async function GET() {
     },
     meetsForPlan,
     workouts,
-    undefined,
+    // The algorithm has always accepted a TSB for its pre-race fatigue boost;
+    // until now nothing computed one to pass.
+    tsb ?? undefined,
     { startDayOffset: -1, sleepLogs: sleepLogsForPlan, recentSleepLogs: recentSleepLogsForPlan },
   );
 
@@ -144,5 +217,14 @@ export async function GET() {
     conflicts,
     yesterdayPlan,
     meetPredictions,
+    // Inputs to the dashboard verdict. `resolved` is a sibling of `user`, not
+    // part of it — ClientUser stays an allowlist of User columns.
+    resolved,
+    fitness: {
+      tsb,
+      sleepDebtMinutes,
+      nightsLogged: debtLogs.length,
+      stravaConnected: user.stravaConnected,
+    },
   });
 }

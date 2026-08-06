@@ -24,7 +24,15 @@ export async function POST(req: NextRequest) {
   const userId = (session.user as any).id;
 
   const body = await req.json();
-  const { date, hitTarget, actualBedtime, actualWakeTime, recommendedBedtime } = body;
+  const {
+    date,
+    hitTarget,
+    actualBedtime,
+    actualWakeTime,
+    recommendedBedtime,
+    recommendedWakeTime,
+    targetSleepHours,
+  } = body;
 
   if (!date || !recommendedBedtime || hitTarget === undefined) {
     return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
@@ -32,6 +40,15 @@ export async function POST(req: NextRequest) {
   if (hitTarget === false && !actualBedtime) {
     return NextResponse.json({ error: "actualBedtime required when hitTarget is false" }, { status: 400 });
   }
+
+  // The plan is recomputed on every request, so the night's target has to be
+  // frozen here or the trend chart later compares actuals against a target
+  // that has since moved. Optional so an older client still logs successfully.
+  const targetWake = typeof recommendedWakeTime === "string" ? recommendedWakeTime : null;
+  const targetHours =
+    typeof targetSleepHours === "number" && Number.isFinite(targetSleepHours)
+      ? targetSleepHours
+      : null;
 
   const user = await prisma.user.findUnique({ where: { id: userId }, select: { currentWakeTime: true } });
   const resolvedActualBedtime: string = hitTarget ? recommendedBedtime : actualBedtime;
@@ -44,6 +61,8 @@ export async function POST(req: NextRequest) {
       userId,
       date: dayStart(date),
       recommendedBedtime,
+      recommendedWakeTime: targetWake,
+      targetSleepHours: targetHours,
       hitTarget,
       actualBedtime: resolvedActualBedtime,
       actualWakeTime: actualWakeTime ?? null,
@@ -52,6 +71,10 @@ export async function POST(req: NextRequest) {
     },
     update: {
       recommendedBedtime,
+      // Never overwrite a stored target with null — a re-log from a client that
+      // did not send one must not erase the night's original target.
+      ...(targetWake ? { recommendedWakeTime: targetWake } : {}),
+      ...(targetHours != null ? { targetSleepHours: targetHours } : {}),
       hitTarget,
       actualBedtime: resolvedActualBedtime,
       actualWakeTime: actualWakeTime ?? null,

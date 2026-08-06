@@ -170,6 +170,13 @@ model SleepLog {
   userId             String
   date               DateTime
   recommendedBedtime String
+  // The rest of the plan's target for that night, captured at log time. The
+  // plan is recomputed on every request, so by the time a trend is drawn the
+  // original target is gone — a meet ramp or a changed wake time would
+  // silently rewrite history. Nullable: nights logged before this shipped
+  // have no target and are excluded from the debt series rather than guessed.
+  recommendedWakeTime String?
+  targetSleepHours   Float?
   hitTarget          Boolean?
   actualBedtime      String?
   actualWakeTime     String?

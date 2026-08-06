@@ -23,6 +23,8 @@ export default function StravaPage() {
   const [statusData, setStatusData] = useState<any>(null);
   const [syncing, setSyncing] = useState(false);
   const [syncResult, setSyncResult] = useState<string | null>(null);
+  /** Set when Strava rejected our credentials — only reconnecting fixes it. */
+  const [needsReconnect, setNeedsReconnect] = useState(false);
   const [disconnecting, setDisconnecting] = useState(false);
 
   useEffect(() => {
@@ -47,12 +49,29 @@ export default function StravaPage() {
   const handleSync = async (fullHistory = false) => {
     setSyncing(true);
     setSyncResult(null);
+    setNeedsReconnect(false);
     const url = fullHistory ? "/api/strava/sync?fullHistory=true" : "/api/strava/sync";
-    const res = await fetch(url, { method: "POST" });
-    const data = await res.json();
-    setSyncResult(data.synced != null ? `Synced ${data.synced} new runs.` : "Sync failed.");
-    setSyncing(false);
-    loadStatus();
+
+    try {
+      const res = await fetch(url, { method: "POST" });
+      // An error response can have an empty body — never parse unconditionally.
+      const data = await res.json().catch(() => null);
+
+      if (!res.ok || !data || data.synced == null) {
+        setSyncResult(data?.error ?? "Sync failed. Please try again.");
+        setNeedsReconnect(data?.code === "REAUTH");
+        return;
+      }
+
+      const parts = [`Synced ${data.synced} new run${data.synced === 1 ? "" : "s"}`];
+      if (data.updated) parts.push(`${data.updated} already up to date`);
+      setSyncResult(parts.join(" · ") + ".");
+    } catch {
+      setSyncResult("Couldn't reach the server. Check your connection and try again.");
+    } finally {
+      setSyncing(false);
+      loadStatus();
+    }
   };
 
   const handleDisconnect = async () => {
@@ -157,7 +176,17 @@ export default function StravaPage() {
                   </div>
                 </div>
                 {syncResult && (
-                  <p className="mt-4 font-mono text-xs text-[#6B6B6B] dark:text-[#A0A0A0] bg-[#F5F5F5] dark:bg-[#2a2a2a] px-3 py-2">{syncResult}</p>
+                  <div className="mt-4 bg-[#F5F5F5] dark:bg-[#2a2a2a] px-3 py-2">
+                    <p className="font-mono text-xs text-[#6B6B6B] dark:text-[#A0A0A0]">{syncResult}</p>
+                    {needsReconnect && (
+                      <a
+                        href="/api/strava/connect"
+                        className="inline-block mt-2 bg-[#E8FF00] text-[#0A0A0A] font-black text-[10px] uppercase tracking-widest px-4 py-2 hover:bg-[#d4e800] transition-colors"
+                      >
+                        Reconnect Strava →
+                      </a>
+                    )}
+                  </div>
                 )}
                 <div className="mt-4 pt-4 border-t border-[#E5E5E5] dark:border-[#333]">
                   <button

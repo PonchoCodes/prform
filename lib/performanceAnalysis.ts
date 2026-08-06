@@ -299,6 +299,39 @@ const TEMPO_KEYWORDS = /tempo|threshold|t-pace|cruise/i;
 const INTERVAL_KEYWORDS = /interval|repeat|track|speed|vo2|VO2/i;
 const LONG_KEYWORDS = /long|lsd|marathon|endurance/i;
 
+/** Fraction off the prescribed pace before a run stops counting as on target. */
+const COMPLIANCE_TOLERANCE = 0.08;
+
+/**
+ * The pace this run was supposed to be at, given what kind of run it looks like.
+ * Exported so the trend chart scores runs by exactly the same rule the analysis
+ * page does — two definitions of "on target" would be worse than none.
+ */
+export function prescribedPaceFor(activity: StravaActivityInput, paces: PaceTable): number {
+  switch (guessWorkoutType(activity)) {
+    case "race":
+    case "interval":
+      return paces.intervalPaceMs;
+    case "tempo":
+      return paces.thresholdPaceMs;
+    case "long":
+      return paces.marathonPaceMs;
+    default:
+      return paces.easyPaceMs;
+  }
+}
+
+/** Whether a run hit the pace it was prescribed. */
+export function classifyCompliance(
+  activity: StravaActivityInput,
+  paces: PaceTable,
+): PaceCompliance {
+  const ratio = activity.averageSpeed / prescribedPaceFor(activity, paces);
+  if (ratio > 1 + COMPLIANCE_TOLERANCE) return "TOO_FAST";
+  if (ratio < 1 - COMPLIANCE_TOLERANCE) return "TOO_SLOW";
+  return "ON_TARGET";
+}
+
 function guessWorkoutType(activity: StravaActivityInput): string {
   const name = activity.name ?? "";
   if (activity.workoutType === 1) return "race";
@@ -356,31 +389,8 @@ export function calculateVDOT(
 
   for (const act of last30.slice(0, 10)) {
     const intendedType = guessWorkoutType(act);
-    let recommendedPaceMs: number;
-
-    switch (intendedType) {
-      case "race":
-      case "interval":
-        recommendedPaceMs = paces.intervalPaceMs;
-        break;
-      case "tempo":
-        recommendedPaceMs = paces.thresholdPaceMs;
-        break;
-      case "long":
-        recommendedPaceMs = paces.marathonPaceMs;
-        break;
-      default:
-        recommendedPaceMs = paces.easyPaceMs;
-    }
-
-    let compliance: PaceCompliance;
-    const ratio = act.averageSpeed / recommendedPaceMs;
-    if (ratio > 1.08) compliance = "TOO_FAST";
-    else if (ratio < 0.92) compliance = "TOO_SLOW";
-    else {
-      compliance = "ON_TARGET";
-      onTargetCount++;
-    }
+    const compliance = classifyCompliance(act, paces);
+    if (compliance === "ON_TARGET") onTargetCount++;
 
     recentRunAnalysis.push({
       stravaId: act.stravaId,

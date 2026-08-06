@@ -1,22 +1,44 @@
 "use client";
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useMemo } from "react";
+import dynamic from "next/dynamic";
 import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
 import { motion, AnimatePresence } from "framer-motion";
 import { FadeUp } from "@/components/FadeUp";
 import { Footer } from "@/components/Footer";
 import { MonoClock } from "@/components/MonoClock";
-import { Badge } from "@/components/Badge";
 import { Navbar } from "@/components/Navbar";
 import type { DailySleepPlan } from "@/lib/sleepAlgorithm";
 import { formatTime12h } from "@/lib/sleepAlgorithm";
 import type { PerformanceReport } from "@/lib/performanceAnalysis";
-import { formatTimeFromSeconds, formatTimeDifference } from "@/lib/performancePrediction";
 import type { PerformancePrediction } from "@/lib/performancePrediction";
 import { formatPace } from "@/lib/unitUtils";
 import type { UnitPreference } from "@/lib/unitUtils";
 import { DayDetailModal } from "@/components/DayDetailModal";
 import { PrPrompt } from "@/components/PrPrompt";
+import { VerdictCard } from "@/components/VerdictCard";
+import { TonightsTarget } from "@/components/TonightsTarget";
+import { NextMeetCard } from "@/components/NextMeetCard";
+import { SubscribeStrip } from "@/components/SubscribeStrip";
+import { RaceReadiness } from "@/components/RaceReadiness";
+import { computeVerdict } from "@/lib/verdict";
+import type { TrendResult } from "@/lib/trend";
+
+// Recharts is ~115 kB and the chart sits below the fold. Loading it with the
+// page would delay the one thing the dashboard exists to show.
+const SleepPaceTrendChart = dynamic(
+  () => import("@/components/charts/SleepPaceTrendChart").then((m) => m.SleepPaceTrendChart),
+  {
+    ssr: false,
+    loading: () => (
+      <div className="h-[220px] border border-dashed border-[#E5E5E5] dark:border-[#333] flex items-center justify-center">
+        <p className="font-mono text-[10px] uppercase tracking-widest text-[#6B6B6B]">
+          Loading trend…
+        </p>
+      </div>
+    ),
+  },
+);
 
 const DAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 
@@ -26,10 +48,6 @@ const LOAD_COLORS = {
   high: "bg-[#0A0A0A]",
 };
 
-function formatDate(date: Date): string {
-  return new Date(date).toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" });
-}
-
 function parseTimeMin(t: string): number {
   const [h, m] = t.split(":").map(Number);
   return (h || 0) * 60 + (m || 0);
@@ -38,6 +56,24 @@ function parseTimeMin(t: string): number {
 function minutesToTime(min: number): string {
   const total = ((min % 1440) + 1440) % 1440;
   return `${String(Math.floor(total / 60)).padStart(2, "0")}:${String(total % 60).padStart(2, "0")}`;
+}
+
+/**
+ * Fetches JSON, resolving to null instead of throwing. A failing route returns
+ * an empty body, and parsing that unconditionally throws "JSON.parse:
+ * unexpected end of data" as an unhandled runtime error — which takes down the
+ * whole dashboard for what may be one non-essential endpoint.
+ */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any -- the payload is
+// already consumed as `any` via the `data` state; typing it here buys nothing.
+async function fetchJson(url: string, init?: RequestInit): Promise<any | null> {
+  try {
+    const res = await fetch(url, init);
+    if (!res.ok) return null;
+    return await res.json();
+  } catch {
+    return null;
+  }
 }
 
 function currentMinutes(): number {
@@ -80,6 +116,10 @@ function MorningConfirmationCard({ yesterdayPlan, onDismiss }: MorningCardProps)
         actualBedtime: hitTarget ? undefined : actualBedtime,
         actualWakeTime: actualWakeTime || undefined,
         recommendedBedtime: yesterdayPlan.recommendedBedtime,
+        // Freeze the night's target alongside the actual — the plan that
+        // produced it is recomputed daily and will not survive to be charted.
+        recommendedWakeTime: yesterdayPlan.recommendedWakeTime,
+        targetSleepHours: yesterdayPlan.totalSleepHours,
       }),
     });
     setPhase("done");
@@ -96,9 +136,9 @@ function MorningConfirmationCard({ yesterdayPlan, onDismiss }: MorningCardProps)
           initial={{ opacity: 1 }}
           exit={{ opacity: 0 }}
           transition={{ duration: 0.2 }}
-          className="bg-[#F5F5F5] dark:bg-[#0A0A0A] text-[#0A0A0A] dark:text-white px-6 py-6 border-b border-[#E5E5E5] dark:border-[#222]"
+          className="bg-[#F5F5F5] dark:bg-[#0A0A0A] text-[#0A0A0A] dark:text-white border border-[#E5E5E5] dark:border-[#333] p-5"
         >
-          <div className="max-w-[1200px] mx-auto">
+          <div>
             {phase === "done" ? (
               <div className="flex items-center gap-3">
                 <span className="text-[#0A0A0A] dark:text-[#E8FF00] font-bold text-sm uppercase tracking-widest">✓ Logged</span>
@@ -106,12 +146,12 @@ function MorningConfirmationCard({ yesterdayPlan, onDismiss }: MorningCardProps)
               </div>
             ) : (
               <>
-                <p className="text-xs font-bold uppercase tracking-[0.3em] text-[#6B6B6B] dark:text-[#E8FF00] mb-2">Last Night</p>
-                <h2 className="font-black text-2xl uppercase mb-3">Did You Hit Your Target?</h2>
-                <p className="text-xs font-mono text-[#6B6B6B] mb-1">
+                <p className="text-[10px] font-bold uppercase tracking-[0.3em] text-[#6B6B6B] dark:text-[#E8FF00] mb-2">Last Night</p>
+                <h2 className="font-black text-lg uppercase mb-3 leading-tight">Did You Hit Your Target?</h2>
+                <p className="text-[11px] font-mono text-[#6B6B6B] mb-1">
                   Target bedtime: <span className="text-[#0A0A0A] dark:text-white font-bold">{formatTime12h(yesterdayPlan.recommendedBedtime)}</span>
                 </p>
-                <p className="text-xs font-mono text-[#6B6B6B] mb-4">
+                <p className="text-[11px] font-mono text-[#6B6B6B] mb-4">
                   Target wake: <span className="text-[#0A0A0A] dark:text-white font-bold">{formatTime12h(yesterdayPlan.recommendedWakeTime)}</span>
                 </p>
 
@@ -120,13 +160,13 @@ function MorningConfirmationCard({ yesterdayPlan, onDismiss }: MorningCardProps)
                     <div className="flex gap-px mb-3">
                       <button
                         onClick={() => submit(true)}
-                        className="flex-1 py-3 bg-[#E8FF00] text-[#0A0A0A] font-black text-xs uppercase tracking-widest hover:bg-[#d4e800] transition-colors"
+                        className="flex-1 min-h-[44px] px-2 bg-[#E8FF00] text-[#0A0A0A] font-black text-[11px] uppercase tracking-widest hover:bg-[#d4e800] transition-colors"
                       >
                         Yes, I Hit It
                       </button>
                       <button
                         onClick={() => setPhase("miss")}
-                        className="flex-1 py-3 bg-white dark:bg-[#1a1a1a] text-[#0A0A0A] dark:text-white font-black text-xs uppercase tracking-widest hover:bg-[#E5E5E5] dark:hover:bg-[#2a2a2a] transition-colors border border-[#E5E5E5] dark:border-[#333]"
+                        className="flex-1 min-h-[44px] px-2 bg-white dark:bg-[#1a1a1a] text-[#0A0A0A] dark:text-white font-black text-[11px] uppercase tracking-widest hover:bg-[#E5E5E5] dark:hover:bg-[#2a2a2a] transition-colors border border-[#E5E5E5] dark:border-[#333]"
                       >
                         No, I Missed It
                       </button>
@@ -140,7 +180,9 @@ function MorningConfirmationCard({ yesterdayPlan, onDismiss }: MorningCardProps)
 
                 {phase === "miss" && (
                   <>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-3">
+                    {/* Single column: this now sits in a narrow rail at every
+                        width, so a two-up grid would crush both inputs. */}
+                    <div className="grid grid-cols-1 gap-3 mb-3">
                       <div>
                         <label className="block text-[10px] font-bold uppercase tracking-wider text-[#6B6B6B] mb-1">
                           I went to bed at:
@@ -149,7 +191,7 @@ function MorningConfirmationCard({ yesterdayPlan, onDismiss }: MorningCardProps)
                           type="time"
                           value={actualBedtime}
                           onChange={(e) => setActualBedtime(e.target.value)}
-                          className="w-full bg-white dark:bg-[#1a1a1a] border border-[#E5E5E5] dark:border-[#333] px-3 py-2 text-sm font-mono text-[#0A0A0A] dark:text-white focus:outline-none focus:border-[#0A0A0A] dark:focus:border-[#E8FF00]"
+                          className="w-full min-h-[44px] bg-white dark:bg-[#1a1a1a] border border-[#E5E5E5] dark:border-[#333] px-3 py-2 text-sm font-mono text-[#0A0A0A] dark:text-white focus:outline-none focus:border-[#0A0A0A] dark:focus:border-[#E8FF00]"
                         />
                       </div>
                       <div>
@@ -160,14 +202,14 @@ function MorningConfirmationCard({ yesterdayPlan, onDismiss }: MorningCardProps)
                           type="time"
                           value={actualWakeTime}
                           onChange={(e) => setActualWakeTime(e.target.value)}
-                          className="w-full bg-white dark:bg-[#1a1a1a] border border-[#E5E5E5] dark:border-[#333] px-3 py-2 text-sm font-mono text-[#0A0A0A] dark:text-white focus:outline-none focus:border-[#0A0A0A] dark:focus:border-[#E8FF00]"
+                          className="w-full min-h-[44px] bg-white dark:bg-[#1a1a1a] border border-[#E5E5E5] dark:border-[#333] px-3 py-2 text-sm font-mono text-[#0A0A0A] dark:text-white focus:outline-none focus:border-[#0A0A0A] dark:focus:border-[#E8FF00]"
                         />
                       </div>
                     </div>
                     <button
                       onClick={() => submit(false)}
                       disabled={!actualBedtime}
-                      className="w-full py-3 bg-[#0A0A0A] dark:bg-white text-white dark:text-[#0A0A0A] font-black text-xs uppercase tracking-widest hover:bg-[#333] dark:hover:bg-[#E5E5E5] transition-colors disabled:opacity-40"
+                      className="w-full min-h-[44px] bg-[#0A0A0A] dark:bg-white text-white dark:text-[#0A0A0A] font-black text-xs uppercase tracking-widest hover:bg-[#333] dark:hover:bg-[#E5E5E5] transition-colors disabled:opacity-40"
                     >
                       Confirm
                     </button>
@@ -389,8 +431,11 @@ function WindDownSinglePhase({ windDown, bedtime }: WindDownSinglePhaseProps) {
   })();
 
   return (
-    <div className="bg-[#F5F5F5] dark:bg-[#0A0A0A] text-[#0A0A0A] dark:text-white p-6 flex items-start justify-between gap-6 border border-[#E5E5E5] dark:border-transparent">
-      <div className="flex-1">
+    <div className="bg-[#F5F5F5] dark:bg-[#0A0A0A] text-[#0A0A0A] dark:text-white p-6 flex items-start justify-between gap-4 sm:gap-6 border border-[#E5E5E5] dark:border-transparent">
+      {/* min-w-0 is load-bearing: a flex child defaults to min-width:auto, so
+          without it this column refuses to shrink below its own text and shoves
+          the status block clean outside the card. */}
+      <div className="flex-1 min-w-0">
         <div className="flex items-center gap-3 mb-3">
           <span className={`text-xs font-bold uppercase tracking-widest ${isUpcoming ? "text-[#6B6B6B]" : "text-[#0A0A0A] dark:text-[#E8FF00]"}`}>
             {isUpcoming ? "UPCOMING" : "● NOW"}
@@ -400,7 +445,7 @@ function WindDownSinglePhase({ windDown, bedtime }: WindDownSinglePhaseProps) {
         <p className="font-black text-xl uppercase mb-2">{phase.label}</p>
         <p className="text-sm text-[#6B6B6B] dark:text-[#AAAAAA] font-mono leading-relaxed">{phase.description}</p>
         {phaseIdx === 1 && (
-          <div className="flex gap-2 mt-3">
+          <div className="flex flex-wrap gap-2 mt-3">
             <a
               href="App-prefs:root=DISPLAY"
               className="text-xs font-bold uppercase tracking-wider px-3 py-1 border border-[#0A0A0A] dark:border-white hover:bg-[#0A0A0A] dark:hover:bg-white hover:text-white dark:hover:text-[#0A0A0A] transition-colors"
@@ -516,6 +561,7 @@ export default function DashboardPage() {
   const router = useRouter();
   const [data, setData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState(false);
   const [activeTab, setActiveTab] = useState<"Sleep" | "Performance">("Sleep");
   const [stravaStatus, setStravaStatus] = useState<{ connected: boolean; recentActivities?: { name: string; startDate: string; distance: number; averageSpeed: number; averageHeartrate?: number | null }[] } | null>(null);
   const [perfReport, setPerfReport] = useState<PerformanceReport | null>(null);
@@ -524,6 +570,11 @@ export default function DashboardPage() {
   const [streakData, setStreakData] = useState<any>(null);
   const [morningCardDismissed, setMorningCardDismissed] = useState(false);
   const [interventionDismissed, setInterventionDismissed] = useState(false);
+
+  /** Opened from the verdict's "Add a race PR" action, even after a dismissal. */
+  const [prPromptOpen, setPrPromptOpen] = useState(false);
+
+  const [trend, setTrend] = useState<(TrendResult & { windowDays: number; hasPaces: boolean }) | null>(null);
 
   const [dismissedDays, setDismissedDays] = useState<string[]>([]);
   const [selectedDay, setSelectedDay] = useState<DailySleepPlan | null>(null);
@@ -536,12 +587,19 @@ export default function DashboardPage() {
   useEffect(() => {
     if (status !== "authenticated") return;
     Promise.all([
-      fetch("/api/sleep-plan", { cache: "no-store" }).then((r) => r.json()),
-      fetch("/api/strava/status").then((r) => r.json()),
-      fetch("/api/sleep-log/streak").then((r) => r.json()),
+      fetchJson("/api/sleep-plan", { cache: "no-store" }),
+      fetchJson("/api/strava/status"),
+      fetchJson("/api/sleep-log/streak"),
     ]).then(([sleepData, stravaData, streak]) => {
-      if (sleepData.redirect) {
+      if (sleepData?.redirect) {
         router.push(sleepData.redirect);
+        return;
+      }
+      // Strava status and the streak are enrichment — the dashboard still
+      // renders a verdict without them. Only the plan is load-bearing.
+      if (!sleepData) {
+        setLoadError(true);
+        setLoading(false);
         return;
       }
       setData(sleepData);
@@ -551,12 +609,20 @@ export default function DashboardPage() {
     });
   }, [status, router]);
 
+  // Separate from the blocking load: the trend is below the fold and must never
+  // hold up the verdict.
+  useEffect(() => {
+    if (status !== "authenticated") return;
+    fetchJson("/api/trend?days=60").then((d) => {
+      if (d) setTrend(d);
+    });
+  }, [status]);
+
   /** Re-pulls the user record so a newly saved PR is reflected immediately. */
   const refreshDashboard = useCallback(() => {
-    fetch("/api/sleep-plan")
-      .then((r) => r.json())
-      .then((d) => { if (!d.redirect) setData(d); })
-      .catch(() => {});
+    fetchJson("/api/sleep-plan").then((d) => {
+      if (d && !d.redirect) setData(d);
+    });
   }, []);
 
   // A declared PR is enough to produce a report, so this no longer waits on Strava.
@@ -615,6 +681,35 @@ export default function DashboardPage() {
     setInterventionDismissed(true);
   }, [streakData]);
 
+  /**
+   * The headline instruction. Derived entirely from what /api/sleep-plan
+   * already returns, so it paints with the first render rather than waiting on
+   * a second request. Every degraded case still resolves to a verdict — see
+   * lib/verdict.ts.
+   */
+  const verdict = useMemo(() => {
+    const todayPlan = data?.plan?.[0] as DailySleepPlan | undefined;
+    if (!todayPlan) return null;
+    const tomorrowPlan = data?.plan?.[1] as DailySleepPlan | undefined;
+
+    return computeVerdict({
+      paces: data.resolved?.paces ?? null,
+      paceSourceKind: data.resolved?.source?.kind ?? "none",
+      unit: (data.user?.unitPreference ?? "imperial") as UnitPreference,
+      stravaConnected: Boolean(data.fitness?.stravaConnected),
+      totalSleepHours: todayPlan.totalSleepHours,
+      recoveryScore: todayPlan.recoveryScore,
+      trainingLoadLevel: todayPlan.trainingLoadLevel,
+      tomorrowLoadLevel: tomorrowPlan?.trainingLoadLevel ?? null,
+      daysUntilNextMeet: todayPlan.daysUntilNextMeet,
+      nextMeetName: todayPlan.nextMeetName,
+      nextMeetPriority: todayPlan.nextMeetPriority,
+      tsb: data.fitness?.tsb ?? null,
+      sleepDebtMinutes: data.fitness?.sleepDebtMinutes ?? null,
+      nightsLogged: data.fitness?.nightsLogged ?? 0,
+    });
+  }, [data]);
+
   if (status === "loading" || loading) {
     return (
       <div className="min-h-screen bg-white dark:bg-[#1a1a1a] flex items-center justify-center">
@@ -623,7 +718,33 @@ export default function DashboardPage() {
     );
   }
 
-  if (!data) return null;
+  if (loadError || !data) {
+    return (
+      <div className="min-h-screen bg-white dark:bg-[#1a1a1a]">
+        <Navbar />
+        <section className="px-6 py-20">
+          <div className="max-w-[1200px] mx-auto">
+            <p className="text-xs font-bold uppercase tracking-[0.3em] text-[#6B6B6B] dark:text-[#A0A0A0] mb-4">
+              Today
+            </p>
+            <h1 className="font-black uppercase leading-[1.05] max-w-[16ch] text-[clamp(24px,7vw,30px)] md:text-[clamp(30px,3.2vw,44px)]">
+              Couldn&apos;t load your plan.
+            </h1>
+            <p className="mt-4 text-sm font-mono text-[#6B6B6B] dark:text-[#A0A0A0] max-w-[52ch]">
+              The connection dropped or the server had a problem. Your data is fine.
+            </p>
+            <button
+              onClick={() => window.location.reload()}
+              className="mt-6 inline-flex items-center min-h-[44px] px-5 text-[11px] font-bold uppercase tracking-widest border border-[#0A0A0A] dark:border-[#F5F5F5] text-[#0A0A0A] dark:text-[#F5F5F5] hover:bg-[#E8FF00] hover:border-[#E8FF00] hover:text-[#0A0A0A] transition-colors"
+            >
+              Try again →
+            </button>
+          </div>
+        </section>
+        <Footer />
+      </div>
+    );
+  }
 
   const { plan, meets, meetPredictions = {} } = data;
   const today = plan[0] as DailySleepPlan;
@@ -647,8 +768,6 @@ export default function DashboardPage() {
     : recoveryScore >= 60
     ? "Moderate fatigue accumulating."
     : "High fatigue. Prioritize rest.";
-
-  const recoveryBarColor = recoveryScore >= 80 ? "#E8FF00" : recoveryScore >= 50 ? "#6B6B6B" : "#FF6B6B";
 
   const nextMeetPred: PerformancePrediction | null = nextMeet ? (meetPredictions[nextMeet.id] ?? null) : null;
 
@@ -680,7 +799,7 @@ export default function DashboardPage() {
         </div>
       )}
 
-      {/* Subscription banner */}
+      {/* Trial countdown — already a thin strip, and factual rather than a pitch */}
       {subscriptionStatus === "trialing" && trialDaysLeft !== null && (
         <div className="border-b border-[#E5E5E5] dark:border-[#333] px-6 py-2 flex items-center justify-between max-w-full">
           <p className="font-mono text-xs text-[#6B6B6B] dark:text-[#A0A0A0]">
@@ -691,43 +810,105 @@ export default function DashboardPage() {
           </a>
         </div>
       )}
-      {!isEarlyAccessUser && subscriptionStatus !== "trialing" && subscriptionStatus !== "active" && (
-        <div className="bg-[#E8FF00] px-6 py-3 flex items-center justify-between">
-          <p className="font-black text-xs uppercase tracking-widest text-[#0A0A0A]">
-            Start your 30-day free trial to unlock PRform
-          </p>
-          <a
-            href="/subscribe"
-            className="bg-[#0A0A0A] text-white font-black text-[10px] uppercase tracking-widest px-4 py-2 hover:bg-[#333] transition-colors shrink-0 ml-4"
-          >
-            Subscribe →
-          </a>
-        </div>
-      )}
 
-      {/* Tab toggle */}
-      <div className="border-b border-[#E5E5E5] dark:border-[#333] px-6">
-        <div className="max-w-[1200px] mx-auto flex">
-          {(["Sleep", "Performance"] as const).map((tab) => (
-            <button
-              key={tab}
-              onClick={() => setActiveTab(tab)}
-              className={`px-6 py-3 text-xs font-black uppercase tracking-widest transition-colors border-b-2 ${
-                activeTab === tab
-                  ? "border-[#0A0A0A] dark:border-[#F5F5F5] text-[#0A0A0A] dark:text-[#F5F5F5]"
-                  : "border-transparent text-[#6B6B6B] dark:text-[#A0A0A0] hover:text-[#0A0A0A] dark:hover:text-[#F5F5F5]"
-              }`}
-            >
-              {tab}
-            </button>
-          ))}
+      {/* Header region.
+          Desktop — two columns: verdict left, the three at-a-glance cards in a
+          narrower right rail, tabs full width beneath.
+          Mobile — one column: verdict → target → last night → tabs → next meet,
+          so the two things that earn a return visit clear the fold.
+
+          The rail wrapper is `display: contents` on mobile, which dissolves it
+          so its three cards become direct flex children and can be ordered
+          individually around the tabs. At md it becomes a normal block in
+          column two. One DOM node per card, two layouts, and only two grid rows
+          — placing each card in its own row would leave a gap in the rail
+          whenever the verdict grew taller than Tonight's Target. */}
+      <div className="px-6">
+        <div className="max-w-[1200px] mx-auto flex flex-col md:grid md:grid-cols-[minmax(0,1.45fr)_minmax(0,1fr)] md:gap-x-10 md:items-start">
+          {/* Left column. Same `contents` trick as the rail: on mobile it
+              dissolves so the verdict stays first and Race Readiness drops
+              below the tabs, while on desktop the two stack together and fill
+              the space the verdict alone used to leave empty. */}
+          <div className="contents md:block md:col-start-1 md:row-start-1 md:py-10 md:space-y-8">
+            {verdict && (
+              <div className="order-1 py-8 md:py-0">
+                <VerdictCard verdict={verdict} onAddPr={() => setPrPromptOpen(true)} />
+              </div>
+            )}
+
+            <div className="order-6 pb-8 md:pb-0">
+              <RaceReadiness
+                recoveryScore={recoveryScore}
+                recoveryFactorText={recoveryFactorText}
+                prediction={nextMeetPred}
+              />
+            </div>
+          </div>
+
+          <div className="contents md:block md:col-start-2 md:row-start-1 md:pt-10 md:space-y-4">
+            <div className="order-2 pb-6 md:pb-0">
+              <TonightsTarget today={today} />
+            </div>
+
+            {showMorning && !showIntervention && yesterdayPlan && (
+              <div className="order-3 pb-6 md:pb-0">
+                <MorningConfirmationCard
+                  yesterdayPlan={yesterdayPlan}
+                  onDismiss={() => setMorningCardDismissed(true)}
+                />
+              </div>
+            )}
+
+            <div className="order-5 pb-8 md:pb-0">
+              <NextMeetCard
+                meet={nextMeet ?? null}
+                daysUntil={today.daysUntilNextMeet}
+                hasPrediction={Boolean(nextMeet && meetPredictions[nextMeet.id])}
+              />
+            </div>
+          </div>
+
+          {/* Tab toggle */}
+          <div className="order-4 border-b border-[#E5E5E5] dark:border-[#333] md:col-start-1 md:col-span-2 md:row-start-2 md:mt-8">
+            <div className="flex">
+              {(["Sleep", "Performance"] as const).map((tab) => (
+                <button
+                  key={tab}
+                  onClick={() => setActiveTab(tab)}
+                  className={`px-6 min-h-[44px] py-3 text-xs font-black uppercase tracking-widest transition-colors border-b-2 ${
+                    activeTab === tab
+                      ? "border-[#0A0A0A] dark:border-[#F5F5F5] text-[#0A0A0A] dark:text-[#F5F5F5]"
+                      : "border-transparent text-[#6B6B6B] dark:text-[#A0A0A0] hover:text-[#0A0A0A] dark:hover:text-[#F5F5F5]"
+                  }`}
+                >
+                  {tab}
+                </button>
+              ))}
+            </div>
+          </div>
         </div>
       </div>
+
+      {!isEarlyAccessUser && subscriptionStatus !== "trialing" && subscriptionStatus !== "active" && (
+        <SubscribeStrip />
+      )}
+
+      {prPromptOpen && (
+        <div className="px-6 pt-6 max-w-[1200px] mx-auto">
+          <PrPrompt
+            onResolved={() => {
+              setPrPromptOpen(false);
+              setPerfReport(null);
+              refreshDashboard();
+            }}
+          />
+        </div>
+      )}
 
       {/* Performance tab */}
       {activeTab === "Performance" && (
         <div className="max-w-[1200px] mx-auto px-6 py-10 space-y-6">
-          {showPrPrompt && (
+          {showPrPrompt && !prPromptOpen && (
             <FadeUp>
               <PrPrompt
                 onResolved={() => {
@@ -793,145 +974,33 @@ export default function DashboardPage() {
             />
           )}
 
-          {/* 2. Morning confirmation card */}
-          {showMorning && !showIntervention && yesterdayPlan && (
-            <MorningConfirmationCard
-              yesterdayPlan={yesterdayPlan}
-              onDismiss={() => setMorningCardDismissed(true)}
-            />
+          {/* 2. The trend — the product's thesis, measured on this athlete.
+                 Directly under the fold: it is the reason to come back, not the
+                 reason to open the app. */}
+          {trend && (
+            <section className="border-b border-[#E5E5E5] dark:border-[#333] px-6 py-10">
+              <div className="max-w-[1200px] mx-auto">
+                <FadeUp>
+                  <p className="text-xs font-bold uppercase tracking-[0.3em] text-[#6B6B6B] dark:text-[#A0A0A0] mb-2">
+                    Sleep × Pace
+                  </p>
+                  <h2 className="font-black text-2xl uppercase mb-6">
+                    Does Sleeping More Make You Faster?
+                  </h2>
+                </FadeUp>
+                <FadeUp delay={80}>
+                  <SleepPaceTrendChart
+                    trend={trend}
+                    windowDays={trend.windowDays}
+                    hasPaces={trend.hasPaces}
+                    onAddPr={() => setPrPromptOpen(true)}
+                  />
+                </FadeUp>
+              </div>
+            </section>
           )}
 
-          {/* 3. Hero Card */}
-          <motion.section
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ duration: 0.4 }}
-            className="bg-[#F5F5F5] dark:bg-[#0A0A0A] text-[#0A0A0A] dark:text-white px-6 py-10"
-          >
-            <div className="max-w-[1200px] mx-auto grid grid-cols-1 md:grid-cols-2 gap-8 items-center">
-              {/* Left: bedtime */}
-              <div>
-                <p className="text-xs font-bold uppercase tracking-[0.3em] text-[#6B6B6B] mb-3">Tonight&apos;s Target</p>
-                <MonoClock
-                  time24={today.recommendedBedtime}
-                  accent
-                  animate
-                  className="text-6xl md:text-8xl font-black leading-none block mb-3"
-                />
-                <p className="text-[#6B6B6B] text-sm uppercase tracking-wider">Fall asleep by</p>
-                <p className="text-[#6B6B6B] text-xs mt-2 font-mono">
-                  Wake: <MonoClock time24={today.recommendedWakeTime} className="inline text-[#0A0A0A] dark:text-white" />
-                </p>
-                <p className="text-[#6B6B6B] text-xs mt-1 font-mono">
-                  {today.totalSleepHours}h sleep target tonight
-                </p>
-                {/* Circadian drift note — inline, conditional */}
-                {today.circadianDelayMinutes > 30 && (
-                  <div className="mt-3">
-                    <span className="text-[10px] font-bold uppercase tracking-widest text-[#6B6B6B] dark:text-[#E8FF00]">
-                      CIRCADIAN DRIFT DETECTED
-                    </span>
-                    <p className="text-[10px] font-mono text-[#6B6B6B] mt-0.5">
-                      Ramp adjusted for {Math.round(today.circadianDelayMinutes / 60 * 10) / 10}hr circadian delay
-                    </p>
-                  </div>
-                )}
-              </div>
-
-              {/* Right: next meet */}
-              <div
-                className="cursor-pointer hover:opacity-80 transition-opacity duration-150"
-                onClick={() => router.push("/meets")}
-              >
-                {nextMeet ? (
-                  <div className="border border-[#E5E5E5] dark:border-[#333] p-6">
-                    <p className="text-xs font-bold uppercase tracking-[0.3em] text-[#6B6B6B] mb-4">Next Meet</p>
-                    <div className="flex items-start justify-between">
-                      <div>
-                        <p className="font-black text-2xl mb-1">{nextMeet.name}</p>
-                        <p className="text-[#6B6B6B] text-sm mb-3">{formatDate(nextMeet.date)}</p>
-                        <Badge label={`${nextMeet.priority} Race`} variant={nextMeet.priority as "A" | "B" | "C"} />
-                      </div>
-                      <div className="text-right">
-                        <p className="font-mono font-black text-6xl text-[#0A0A0A] dark:text-[#E8FF00] leading-none">
-                          {today.daysUntilNextMeet ?? "0"}
-                        </p>
-                        <p className="text-[#6B6B6B] text-xs uppercase tracking-wider mt-1">days away</p>
-                        {nextMeet.raceTime && today.daysUntilNextMeet !== null && today.daysUntilNextMeet <= 10 && (
-                          <p className="text-[#6B6B6B] text-xs font-mono uppercase tracking-wider mt-1">
-                            RACE AT {formatTime12h(nextMeet.raceTime)}
-                          </p>
-                        )}
-                      </div>
-                    </div>
-                    {today.daysUntilNextMeet !== null && today.daysUntilNextMeet <= 10 && (
-                      <p className="mt-4 text-xs text-[#0A0A0A] dark:text-[#E8FF00] font-bold uppercase tracking-wider">
-                        Sleep shift in progress ↗
-                      </p>
-                    )}
-                    {/* Prediction block */}
-                    {(() => {
-                      const pred: PerformancePrediction | null = meetPredictions[nextMeet.id] ?? null;
-                      if (pred) {
-                        const isSlower = pred.timeDifference > 0.5;
-                        const isFaster = pred.timeDifference < -0.5;
-                        const diffColor = isSlower ? "text-[#FF6B6B]" : isFaster ? "text-[#0A0A0A] dark:text-[#E8FF00]" : "text-[#6B6B6B]";
-                        const refLabel = pred.referenceLabel === "Season Best" ? "SB" : "PR";
-                        return (
-                          <div className="mt-5 pt-4 border-t border-[#E5E5E5] dark:border-[#222]">
-                            <p className="text-[10px] font-bold uppercase tracking-[0.3em] text-[#6B6B6B] mb-2">Predicted Finish</p>
-                            <p className="font-mono font-black text-3xl text-[#0A0A0A] dark:text-white leading-none mb-1">
-                              {formatTimeFromSeconds(pred.predictedTime, pred.unit)}
-                            </p>
-                            <p className={`font-mono text-sm ${diffColor}`}>
-                              {isSlower || isFaster
-                                ? `${formatTimeDifference(pred.timeDifference)} vs ${refLabel}`
-                                : `On track for ${refLabel}`}
-                            </p>
-                            <p className="text-[9px] font-mono text-[#AAAAAA] mt-2">
-                              Based on {pred.confidenceNights}/{pred.totalNights} nights of sleep data
-                              {pred.isEstimated ? " (estimated)" : ""}
-                            </p>
-                          </div>
-                        );
-                      }
-                      if (nextMeet.primaryEvent && !(nextMeet.recentBest || nextMeet.personalBest)) {
-                        return (
-                          <div className="mt-5 pt-4 border-t border-[#E5E5E5] dark:border-[#222]">
-                            <button
-                              onClick={(e) => { e.stopPropagation(); router.push(`/meets?edit=${nextMeet.id}`); }}
-                              className="text-xs font-bold uppercase tracking-wider text-[#6B6B6B] hover:text-[#0A0A0A] dark:hover:text-white px-3 py-2 border border-[#E5E5E5] dark:border-[#333] hover:border-[#0A0A0A] dark:hover:border-[#555] transition-colors"
-                            >
-                              ADD PR →
-                            </button>
-                          </div>
-                        );
-                      }
-                      if (!nextMeet.primaryEvent) {
-                        return (
-                          <div className="mt-5 pt-4 border-t border-[#E5E5E5] dark:border-[#222]">
-                            <button
-                              onClick={(e) => { e.stopPropagation(); router.push(`/meets?edit=${nextMeet.id}`); }}
-                              className="text-xs font-bold uppercase tracking-wider text-[#6B6B6B] hover:text-[#0A0A0A] dark:hover:text-white px-3 py-2 border border-[#E5E5E5] dark:border-[#333] hover:border-[#0A0A0A] dark:hover:border-[#555] transition-colors"
-                            >
-                              ADD EVENT + PR →
-                            </button>
-                          </div>
-                        );
-                      }
-                      return null;
-                    })()}
-                  </div>
-                ) : (
-                  <div className="border border-[#E5E5E5] dark:border-[#333] p-6 flex items-center justify-center">
-                    <p className="text-[#6B6B6B] text-sm uppercase tracking-wider">No upcoming meets</p>
-                  </div>
-                )}
-              </div>
-            </div>
-          </motion.section>
-
-          {/* 4. Wind-Down — single active phase */}
+          {/* 3. Wind-Down — single active phase */}
           <section className="border-b border-[#E5E5E5] dark:border-[#333] px-6 py-10">
             <div className="max-w-[1200px] mx-auto">
               <FadeUp>
@@ -1084,84 +1153,6 @@ export default function DashboardPage() {
                   </>
                 );
               })()}
-            </div>
-          </section>
-
-          {/* 6. Race Readiness Card */}
-          <section className="px-6 py-10 border-b border-[#E5E5E5] dark:border-[#333]">
-            <div className="max-w-[1200px] mx-auto">
-              <FadeUp>
-                <div className="bg-[#F5F5F5] dark:bg-[#0A0A0A] text-[#0A0A0A] dark:text-white border border-[#E5E5E5] dark:border-[#333333] p-6">
-                  <p className="text-[10px] font-bold uppercase tracking-[0.3em] text-[#6B6B6B] mb-6">RACE READINESS</p>
-                  <div className="grid grid-cols-2 gap-6">
-                    {/* Left: Recovery */}
-                    <div className="border-r border-[#E5E5E5] dark:border-[#333333] pr-6">
-                      <p className="text-[10px] font-bold uppercase tracking-wider text-[#6B6B6B] mb-2">RECOVERY</p>
-                      <div className="flex items-end gap-2 mb-1">
-                        <p className="font-mono font-black text-4xl leading-none">{recoveryScore}</p>
-                        <p className="text-[#6B6B6B] text-lg mb-1">/ 100</p>
-                      </div>
-                      <p className="text-xs font-mono text-[#6B6B6B] mt-1 mb-3">{recoveryFactorText}</p>
-                      <div className="w-full h-0.5 bg-[#E5E5E5] dark:bg-[#333333]">
-                        <div
-                          className="h-0.5 transition-all duration-700"
-                          style={{ width: `${recoveryScore}%`, backgroundColor: recoveryBarColor }}
-                        />
-                      </div>
-                    </div>
-
-                    {/* Right: Race Prediction */}
-                    <div>
-                      {nextMeetPred ? (
-                        (() => {
-                          const isSlower = nextMeetPred.timeDifference > 0.5;
-                          const isFaster = nextMeetPred.timeDifference < -0.5;
-                          const diffColor = isSlower ? "#FF6B6B" : isFaster ? "#0A0A0A" : "#6B6B6B";
-                          const diffColorDark = isSlower ? "#FF6B6B" : isFaster ? "#E8FF00" : "#6B6B6B";
-                          const refLabel = nextMeetPred.referenceLabel === "Season Best" ? "SB" : "PR";
-                          const daysOut = Math.round((new Date(nextMeet.date + 'T00:00:00').getTime() - Date.now()) / 86400000);
-                          return (
-                            <>
-                              <p className="text-[10px] font-bold uppercase tracking-wider text-[#6B6B6B] mb-2">PREDICTED FINISH</p>
-                              <p className="font-mono font-black text-4xl leading-none mb-1">
-                                {formatTimeFromSeconds(nextMeetPred.predictedTime, nextMeetPred.unit)}
-                              </p>
-                              <p className="text-xs font-mono mt-1 dark:[color:var(--diff-dark)]" style={{ color: diffColor, ["--diff-dark" as any]: diffColorDark }}>
-                                {isSlower || isFaster
-                                  ? `${formatTimeDifference(nextMeetPred.timeDifference)} vs ${refLabel}`
-                                  : `On track for ${refLabel}`}
-                              </p>
-                              <p className="text-[10px] font-mono text-[#6B6B6B] mt-2">
-                                Based on {nextMeetPred.confidenceNights} nights of sleep data
-                              </p>
-                              <p className="text-[10px] font-mono text-[#6B6B6B]">
-                                {nextMeet.name} · {daysOut} days away
-                              </p>
-                            </>
-                          );
-                        })()
-                      ) : (
-                        <>
-                          <p className="text-[10px] font-bold uppercase tracking-wider text-[#6B6B6B] mb-2">RACE PREDICTION</p>
-                          <p className="text-sm font-mono text-[#6B6B6B] mb-3">Add your event and PR to a meet</p>
-                          <a
-                            href="/meets"
-                            className="inline-block text-xs font-bold uppercase tracking-wider text-[#6B6B6B] border border-[#E5E5E5] dark:border-[#333] px-3 py-1.5 hover:border-[#0A0A0A] dark:hover:border-[#555] hover:text-[#0A0A0A] dark:hover:text-white transition-colors"
-                          >
-                            SET UP →
-                          </a>
-                        </>
-                      )}
-                    </div>
-                  </div>
-
-                  <div className="mt-6 pt-4 border-t border-[#E5E5E5] dark:border-[#333333]">
-                    <a href="/schedule?tab=history" className="text-[10px] font-mono text-[#6B6B6B] hover:text-[#0A0A0A] dark:hover:text-white transition-colors">
-                      View sleep history →
-                    </a>
-                  </div>
-                </div>
-              </FadeUp>
             </div>
           </section>
 

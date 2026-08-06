@@ -25,27 +25,30 @@ export function Navbar() {
         </Link>
 
         {session ? (
-          <div className="overflow-x-auto -mr-6">
-            <div className="flex items-center gap-3 md:gap-5 pr-6 min-w-max">
+          /* Under 768px the links live in BottomTabBar — this row would need a
+             horizontal scroll with no affordance to fit them, which is what it
+             used to do. Only the two controls stay up here on mobile. */
+          <div className="flex items-center gap-3 md:gap-5">
+            <div className="hidden md:flex items-center gap-5">
               {navLinks.map((link) => (
                 <Link
                   key={link.href}
                   href={link.href}
-                  className={`link-wipe text-xs md:text-sm font-bold uppercase tracking-wider focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#E8FF00] ${
+                  className={`link-wipe text-sm font-bold uppercase tracking-wider focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#E8FF00] ${
                     pathname === link.href ? "text-[#0A0A0A] dark:text-[#F5F5F5]" : "text-[#6B6B6B] dark:text-[#A0A0A0] hover:text-[#0A0A0A] dark:hover:text-[#F5F5F5]"
                   }`}
                 >
                   {link.label}
                 </Link>
               ))}
-              <ThemeToggle />
-              <button
-                onClick={() => signOut({ callbackUrl: "/" })}
-                className="text-xs md:text-sm font-bold uppercase tracking-wider text-[#6B6B6B] dark:text-[#A0A0A0] hover:text-[#0A0A0A] dark:hover:text-[#F5F5F5] link-wipe focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#E8FF00]"
-              >
-                Sign Out
-              </button>
             </div>
+            <ThemeToggle />
+            <button
+              onClick={() => signOut({ callbackUrl: "/" })}
+              className="inline-flex items-center min-h-[44px] text-xs md:text-sm font-bold uppercase tracking-wider text-[#6B6B6B] dark:text-[#A0A0A0] hover:text-[#0A0A0A] dark:hover:text-[#F5F5F5] link-wipe focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#E8FF00]"
+            >
+              Sign Out
+            </button>
           </div>
         ) : (
           <div className="flex items-center gap-4">
