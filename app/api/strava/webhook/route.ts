@@ -30,11 +30,19 @@ export async function POST(req: NextRequest) {
 }
 
 async function handleEvent(body: any) {
-  const { owner_id, object_type, object_id, aspect_type } = body ?? {};
+  const { owner_id, object_type, object_id, aspect_type, updates } = body ?? {};
 
   if (!owner_id || !object_type || !aspect_type) return;
 
-  if (object_type === "athlete" && aspect_type === "delete") {
+  // Strava delivers deauthorization as an athlete *update* carrying
+  // `updates: { "authorized": "false" }` — not as a delete. Matching only
+  // aspect_type === "delete" silently missed every real revocation, which is
+  // the one event Strava's API terms require us to honour. Both shapes are
+  // accepted in case the delivered form ever differs from the documented one.
+  if (
+    object_type === "athlete" &&
+    (aspect_type === "delete" || String(updates?.authorized) === "false")
+  ) {
     await handleDeauthorization(owner_id);
     return;
   }
