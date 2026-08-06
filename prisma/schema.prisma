@@ -96,6 +96,8 @@ model User {
   sentMessages     SentMessage[]
   inboundMessages  InboundMessage[]
   phoneVerifications PhoneVerification[]
+  coachedTeams     Team[]           @relation("CoachedTeams")
+  teamMemberships  TeamMembership[]
 }
 
 /// UNVERIFIED is the default and the safe state: no message may be sent in it.
@@ -407,6 +409,89 @@ enum InboundIntent {
   WAKE_TIME
   DURATION
   UNPARSED
+}
+
+// ── Coach layer ──────────────────────────────────────────────────────────────
+
+model Team {
+  id      String  @id @default(cuid())
+  name    String
+  sport   String  @default("track")
+  season  String?
+  coachId String
+
+  /// Athletes join themselves with this code — it is the ONLY path onto a
+  /// team. There is deliberately no API that lets a coach attach a user:
+  /// many athletes are minors, and enrolment has to be an act the athlete
+  /// performs, on their own account, past a consent screen.
+  joinCode          String   @unique
+  joinCodeExpiresAt DateTime
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  coach           User             @relation("CoachedTeams", fields: [coachId], references: [id], onDelete: Cascade)
+  memberships     TeamMembership[]
+  plannedSessions PlannedSession[]
+
+  @@index([coachId])
+}
+
+model TeamMembership {
+  id     String @id @default(cuid())
+  teamId String
+  userId String
+
+  role     MembershipRole   @default(ATHLETE)
+  joinedAt DateTime         @default(now())
+  /// When the athlete accepted the consent screen — set at join, required.
+  consentAt DateTime
+  /// The exact consent copy shown at join, stored verbatim (same rationale as
+  /// smsOptInText: later edits to the wording must not rewrite what a past
+  /// athlete actually agreed to).
+  consentText String
+  status      MembershipStatus @default(ACTIVE)
+
+  team Team @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([teamId, userId])
+  @@index([userId])
+}
+
+enum MembershipRole {
+  ATHLETE
+}
+
+enum MembershipStatus {
+  ACTIVE
+  /// The athlete left. Kept rather than deleted so the consent record survives.
+  LEFT
+  /// The coach removed them. Same reasoning.
+  REMOVED
+}
+
+/// A session the coach plans for the whole team. Feeds each member's sleep
+/// plan and verdict through the workout merge layer, so the planned-session
+/// branch works with no Strava and no athlete input at all.
+model PlannedSession {
+  id     String @id @default(cuid())
+  teamId String
+
+  date        DateTime
+  /// One of the app's WorkoutType strings ("easy" | "tempo" | "track" | …).
+  sessionType String
+  description String?
+  /// Free text ("5x1k @ 3:45/km"). Display-only — pace prescriptions for the
+  /// athlete's own fitness still come from their resolved pace table.
+  targetPaces String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  team Team @relation(fields: [teamId], references: [id], onDelete: Cascade)
+
+  @@index([teamId, date])
 }
 
 /// Phone verification codes. Separate from User so a code has a lifetime, an
