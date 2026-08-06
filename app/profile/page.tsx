@@ -7,6 +7,7 @@ import { FadeUp } from "@/components/FadeUp";
 import { Navbar } from "@/components/Navbar";
 import { Footer } from "@/components/Footer";
 import { Button } from "@/components/Button";
+import { SmsEnrollment } from "@/components/SmsEnrollment";
 import { formatTime12h } from "@/lib/sleepAlgorithm";
 
 function parseTimeMin(t: string): number {
@@ -233,6 +234,10 @@ export default function ProfilePage() {
                 </div>
               </div>
             </div>
+
+            {/* Text messages — self-enrolment only; see components/SmsEnrollment.tsx */}
+            <h2 className="font-black text-xl uppercase mt-10 mb-6 border-b border-[#E5E5E5] dark:border-[#333] pb-3">Text Messages</h2>
+            <SmsEnrollment />
 
             {/* Notification Toggles */}
             <h2 className="font-black text-xl uppercase mt-10 mb-6 border-b border-[#E5E5E5] dark:border-[#333] pb-3">Wind-Down Notifications</h2>
