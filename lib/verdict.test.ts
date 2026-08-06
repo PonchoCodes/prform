@@ -3,6 +3,7 @@ import {
   computeSleepDebtMinutes,
   computeVerdict,
   formatSleepDebt,
+  formatShortfall,
   type VerdictInput,
 } from "@/lib/verdict";
 import { pacesFromVdot } from "@/lib/vdot";
@@ -17,6 +18,8 @@ function baseInput(overrides: Partial<VerdictInput> = {}): VerdictInput {
     unit: "imperial",
     stravaConnected: true,
     totalSleepHours: 8.5,
+    sleepShortfallMinutes: 0,
+    achievableSleepHours: 8.5,
     recoveryScore: 82,
     trainingLoadLevel: "low",
     tomorrowLoadLevel: null,
@@ -216,6 +219,10 @@ describe("every reachable verdict carries a number", () => {
     ["go hard", baseInput({ trainingLoadLevel: "high" })],
     ["threshold", baseInput({ trainingLoadLevel: "medium" })],
     ["easy", baseInput()],
+    [
+      "short night",
+      baseInput({ sleepShortfallMinutes: 195, achievableSleepHours: 6 }),
+    ],
   ];
 
   const seen = new Set<string>();
@@ -275,6 +282,7 @@ describe("every reachable verdict carries a number", () => {
   it("covers every branch of the ladder", () => {
     expect(seen).toEqual(
       new Set([
+        "short_night",
         "needs_pr",
         "race_day",
         "race_tomorrow",
@@ -344,5 +352,94 @@ describe("formatSleepDebt", () => {
     expect(formatSleepDebt(130)).toBe("2h10");
     expect(formatSleepDebt(125)).toBe("2h05");
     expect(formatSleepDebt(-10)).toBe("0min");
+  });
+});
+
+describe("an unreachable target", () => {
+  /** Up at 03:00, which leaves 6h against a 9.3h need. */
+  function shortNight(overrides: Partial<VerdictInput> = {}): VerdictInput {
+    return baseInput({
+      totalSleepHours: 9.3,
+      sleepShortfallMinutes: 195,
+      achievableSleepHours: 6,
+      ...overrides,
+    });
+  }
+
+  it("names the shortfall and moves tomorrow's session", () => {
+    const v = computeVerdict(shortNight());
+    expect(v.kind).toBe("short_night");
+    expect(v.verdict).toBe("You'll be about 3.5 hours short tonight.");
+    expect(v.reason).toMatch(/6h against a 9\.3h target/);
+    expect(v.reason).toMatch(/tomorrow's threshold|aerobic/i);
+  });
+
+  it("never prints a bedtime, which is the thing it exists to replace", () => {
+    const v = computeVerdict(shortNight());
+    expect(`${v.verdict} ${v.reason}`).not.toMatch(/\d{1,2}:\d{2}/);
+  });
+
+  it("outranks every other branch, including race day", () => {
+    // The ordering the athlete's own answer earns: they told us when they are
+    // getting up, and that fact survives contact with everything else.
+    const cases: [string, Partial<VerdictInput>][] = [
+      ["race day", { daysUntilNextMeet: 0 }],
+      ["race tomorrow", { daysUntilNextMeet: 1 }],
+      ["taper", { daysUntilNextMeet: 5, nextMeetPriority: "A" }],
+      ["hard session", { trainingLoadLevel: "high" }],
+      ["accumulated debt", { sleepDebtMinutes: 300 }],
+      ["flat recovery", { recoveryScore: 30 }],
+      ["deep fatigue", { tsb: -40 }],
+    ];
+    for (const [name, overrides] of cases) {
+      expect(computeVerdict(shortNight(overrides)).kind, name).toBe("short_night");
+    }
+  });
+
+  it("outranks the no-PR state, whose headline would otherwise be impossible", () => {
+    // needs_pr leads with "Sleep 9.3h tonight." — a number we already know
+    // cannot happen. The PR nudge survives as the action.
+    const v = computeVerdict(shortNight({ paces: null, paceSourceKind: "none" }));
+    expect(v.kind).toBe("short_night");
+    expect(v.verdict).not.toMatch(/^Sleep /);
+    expect(v.action).toEqual({ label: "Add a race PR", target: "pr" });
+  });
+
+  it("stays out of the way on an ordinary night", () => {
+    expect(computeVerdict(baseInput({ sleepShortfallMinutes: 0 })).kind).not.toBe("short_night");
+    expect(computeVerdict(baseInput({ sleepShortfallMinutes: null })).kind).not.toBe(
+      "short_night",
+    );
+    // Under the hour, this is noise rather than a night worth rewriting a
+    // training plan over.
+    expect(computeVerdict(baseInput({ sleepShortfallMinutes: 59 })).kind).not.toBe(
+      "short_night",
+    );
+  });
+
+  it("fires at exactly the hour, matching the accumulated-debt threshold", () => {
+    // The two signals have to agree about what an hour down means, or the same
+    // lost sleep sits on opposite sides of two different lines.
+    expect(computeVerdict(baseInput({ sleepShortfallMinutes: 60 })).kind).toBe("short_night");
+  });
+
+  it("still says something useful when the achievable hours are unknown", () => {
+    const v = computeVerdict(shortNight({ achievableSleepHours: null }));
+    expect(v.kind).toBe("short_night");
+    expect(v.verdict).toMatch(/3\.5 hours/);
+    expect(v.reason.length).toBeGreaterThan(0);
+  });
+});
+
+describe("formatShortfall", () => {
+  it("rounds to the half hour, which is the precision the model has", () => {
+    expect(formatShortfall(60)).toBe("1 hour");
+    expect(formatShortfall(90)).toBe("1.5 hours");
+    expect(formatShortfall(135)).toBe("2.5 hours");
+    expect(formatShortfall(180)).toBe("3 hours");
+    expect(formatShortfall(195)).toBe("3.5 hours");
+    expect(formatShortfall(30)).toBe("30 minutes");
+    expect(formatShortfall(0)).toBe("0 minutes");
+    expect(formatShortfall(-30)).toBe("0 minutes");
   });
 });

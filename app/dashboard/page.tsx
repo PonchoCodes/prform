@@ -698,6 +698,10 @@ export default function DashboardPage() {
       unit: (data.user?.unitPreference ?? "imperial") as UnitPreference,
       stravaConnected: Boolean(data.fitness?.stravaConnected),
       totalSleepHours: todayPlan.totalSleepHours,
+      // Only meaningful once a wake time has been declared; the plan reports a
+      // zero shortfall on an ordinary night, which no branch acts on.
+      sleepShortfallMinutes: todayPlan.sleepShortfallMinutes ?? null,
+      achievableSleepHours: todayPlan.achievableSleepHours ?? null,
       recoveryScore: todayPlan.recoveryScore,
       trainingLoadLevel: todayPlan.trainingLoadLevel,
       tomorrowLoadLevel: tomorrowPlan?.trainingLoadLevel ?? null,

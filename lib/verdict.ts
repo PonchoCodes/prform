@@ -17,6 +17,7 @@ import { formatPace, type UnitPreference } from "@/lib/unitUtils";
  * tests can assert on the branch rather than on copy.
  */
 export type VerdictKind =
+  | "short_night"
   | "needs_pr"
   | "race_day"
   | "race_tomorrow"
@@ -71,6 +72,19 @@ export interface VerdictInput {
    * needs the hours, and only for the state where no pace exists.
    */
   totalSleepHours: number;
+  /**
+   * How far tonight's prescription falls short of `totalSleepHours`, in
+   * minutes, once the wake time the athlete declared has been accounted for.
+   * Null when nothing has been declared and the plan is working from their
+   * default, which is the ordinary case.
+   *
+   * A duration rather than a clock time, deliberately: this module still says
+   * nothing about when to go to bed, and a shortfall is a quantity the verdict
+   * can reason about without becoming a second place that prints a bedtime.
+   */
+  sleepShortfallMinutes: number | null;
+  /** What tonight actually allows, against the target. Null when unknown. */
+  achievableSleepHours: number | null;
   recoveryScore: number;
   trainingLoadLevel: "low" | "medium" | "high";
   /** Tomorrow's planned load. Changes why today is easy, never whether it is. */
@@ -99,6 +113,16 @@ const TSB_FATIGUED = -15;
 const TAPER_WINDOW_DAYS = 7;
 /** Confirmed nights needed before sleep-derived reasoning is trustworthy. */
 const CONFIDENT_NIGHTS = 5;
+
+/**
+ * How short tonight has to be before the verdict is about the night rather
+ * than the run. Deliberately the same hour as SLEEP_DEBT_MINUTES: the two are
+ * different signals — one is a deficit already accumulated, the other a deficit
+ * arriving tonight — and having them disagree about what counts as an hour down
+ * would put the athlete either side of two different lines for the same amount
+ * of lost sleep.
+ */
+const SHORTFALL_MINUTES = SLEEP_DEBT_MINUTES;
 
 /**
  * A night has to be meaningfully short before it counts. Fifteen minutes is
@@ -182,6 +206,25 @@ function paceRange(fastMs: number, slowMs: number, unit: UnitPreference): string
   return `${pace(fastMs, unit).replace(suffix, "")}–${pace(slowMs, unit)}`;
 }
 
+/**
+ * "3 hours" / "2.5 hours" / "30 minutes" — a shortfall at the precision it is
+ * actually known to.
+ *
+ * Rounded to the half hour on purpose. The number comes from a sleep need
+ * derived from age brackets and training load, against a bedtime clamped by two
+ * separate limits; reporting "3h17m short" would claim a precision the model
+ * does not have, and an athlete reading it would reasonably start arguing with
+ * the seventeen.
+ */
+export function formatShortfall(minutes: number): string {
+  const halfHours = Math.round(Math.max(0, minutes) / 30);
+  if (halfHours === 0) return "0 minutes";
+  if (halfHours === 1) return "30 minutes";
+  const hours = halfHours / 2;
+  if (hours === 1) return "1 hour";
+  return `${hours % 1 === 0 ? hours : hours.toFixed(1)} hours`;
+}
+
 /** "2h10" / "45min" — how far down the athlete is, in words they'd use. */
 export function formatSleepDebt(minutes: number): string {
   const total = Math.max(0, Math.round(minutes));
@@ -258,6 +301,42 @@ export function computeVerdict(input: VerdictInput): Verdict {
   const action = actionFor(input);
   const fatigue = fatigueReason(input);
   const meetLabel = nextMeetName ?? "your next meet";
+
+  // Above everything, including race day and the no-PR state.
+  //
+  // The athlete has told us when they are getting up, and that time makes
+  // tonight's target unreachable — not unlikely, unreachable, because the
+  // bedtime it would require is one the plan is not allowed to prescribe. Every
+  // branch below assumes a night that can still go either way, so any of them
+  // running here would print an instruction built on sleep that is not
+  // available. The no-PR branch is the sharpest case: its headline is a sleep
+  // target, and it would be stating a number we already know cannot happen.
+  //
+  // It outranks race day because a 03:00 wake before a race is exactly when the
+  // honest version matters most, and because saying it does not stop the athlete
+  // racing — it changes what they should expect and what tomorrow should hold.
+  if (
+    input.sleepShortfallMinutes != null &&
+    input.sleepShortfallMinutes >= SHORTFALL_MINUTES
+  ) {
+    const short = formatShortfall(input.sleepShortfallMinutes);
+    const available =
+      input.achievableSleepHours != null ? `${input.achievableSleepHours}h` : null;
+
+    return {
+      kind: "short_night",
+      verdict: `You'll be about ${short} short tonight.`,
+      reason: available
+        ? `The wake time you gave leaves ${available} against a ${totalSleepHours}h target. Move tomorrow's threshold or make it aerobic — on that much sleep the session costs more than it returns.`
+        : `Tonight's target can't be reached from the wake time you gave. Move tomorrow's threshold or make it aerobic — on that much sleep the session costs more than it returns.`,
+      // Only the headline's own tokens: `nowrap` is defined as substrings of
+      // `verdict`, and the hours in the reason are set at body size where a
+      // line break is harmless.
+      nowrap: [short],
+      confidence,
+      action,
+    };
+  }
 
   // No VDOT resolvable, so there is no run instruction to give. Tonight's sleep
   // is the only thing that can still be prescribed, so it takes the headline —
