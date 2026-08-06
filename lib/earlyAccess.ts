@@ -1,9 +1,11 @@
 import { prisma } from "@/lib/prisma";
 
-// Max approved early-access members. Matches the Strava Standard tier's
-// 10-connected-athlete limit, but the two caps are enforced independently —
-// see STRAVA_ATHLETE_CAP below.
-export const EARLY_ACCESS_APPROVAL_CAP = 10;
+// Max approved early-access members. Intentionally set ABOVE the Strava
+// Standard tier's 10-connected-athlete limit — the two caps are independent
+// (see STRAVA_ATHLETE_CAP below). Approved members past the Strava cap can
+// still use the app with manual/template workouts; only the first
+// STRAVA_ATHLETE_CAP to connect Strava get through the OAuth gate.
+export const EARLY_ACCESS_APPROVAL_CAP = 25;
 
 // Hard limit on connected Strava athletes imposed by the Strava API tier.
 // This cap is NOT tied to the EARLY_ACCESS flag and must never be bypassed
