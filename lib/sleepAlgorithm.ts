@@ -88,7 +88,7 @@ export interface DailySleepPlan {
   circadian: CircadianPlan | null; // null when no meet within shift window
   fatigueSleepBoost: boolean;
   fatigueSleepBoostMinutes: number;
-  workoutSource: "strava" | "manual" | "assumed" | "rest";
+  workoutSource: "strava" | "manual" | "team" | "assumed" | "rest";
   isTentative: boolean;
   // Sleep confirmation enrichment (null for future days or when unlogged)
   actualBedtime: string | null;
@@ -803,7 +803,7 @@ export function calculateSleepPlan(
       circadian,
       fatigueSleepBoost: isFatigueBoostDay,
       fatigueSleepBoostMinutes: fatigueBoostMinutes,
-      workoutSource: workoutSource as "strava" | "manual" | "assumed" | "rest",
+      workoutSource: workoutSource as "strava" | "manual" | "team" | "assumed" | "rest",
       isTentative: workoutTentative,
       actualBedtime,
       actualSleepHours: actualSleepHoursOut,

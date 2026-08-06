@@ -18,10 +18,12 @@ export interface NormalizedWorkout {
   effort?: number | null; // session RPE 1–10 (manual workouts only); feeds training load
   /** Self-reported session quality (manual workouts only). */
   quality?: "NAILED_IT" | "FINE" | "ROUGH" | null;
-  source: "strava" | "manual" | "assumed";
+  source: "strava" | "manual" | "team" | "assumed";
   isTentative: boolean;
   stravaActivityId?: string;
   manualOverride?: boolean;
+  /** Coach's note for a team session ("5x1k — hit rhythm, not heroics"). */
+  note?: string;
 }
 
 export interface WorkoutConflict {

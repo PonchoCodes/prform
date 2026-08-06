@@ -9,7 +9,7 @@ import { Button } from "@/components/Button";
 import { Footer } from "@/components/Footer";
 
 type WorkoutType = "easy" | "moderate" | "tempo" | "long_run" | "track" | "race" | "rest" | "cross_train";
-type WorkoutSource = "strava" | "manual" | "assumed";
+type WorkoutSource = "strava" | "manual" | "team" | "assumed";
 
 type WorkoutQuality = "NAILED_IT" | "FINE" | "ROUGH";
 
@@ -25,6 +25,7 @@ interface NormalizedWorkout {
   isTentative: boolean;
   stravaActivityId?: string;
   manualOverride?: boolean;
+  note?: string;
 }
 
 const QUALITY_OPTIONS: { value: WorkoutQuality; label: string }[] = [
@@ -72,6 +73,7 @@ function SourceDot({ source }: { source: WorkoutSource }) {
   const colors: Record<WorkoutSource, string> = {
     strava: "bg-[#FC4C02]",
     manual: "bg-[#0A0A0A]",
+    team: "bg-[#E8FF00]",
     assumed: "bg-[#E5E5E5]",
   };
   return <span className={`inline-block w-2 h-2 mr-1.5 ${colors[source]}`} />;
@@ -399,11 +401,14 @@ export default function SchedulePage() {
                               {w.distance > 0 && (
                                 <span className="text-xs font-mono text-[#6B6B6B]">{(w.distance).toFixed(1)} km</span>
                               )}
+                              {w.note && (
+                                <span className="text-xs font-mono text-[#6B6B6B] truncate max-w-xs" title={w.note}>{w.note}</span>
+                              )}
                             </div>
                             <div className="flex items-center gap-3">
                               <SourceDot source={w.source} />
                               <span className="text-[10px] font-mono uppercase text-[#6B6B6B]">
-                                {w.isTentative && w.source === "assumed" ? "est. from load" : w.isTentative ? "planned" : w.source}
+                                {w.isTentative && w.source === "assumed" ? "est. from load" : w.source === "team" ? "team plan" : w.isTentative ? "planned" : w.source}
                               </span>
                               {w.id && w.source === "manual" && (
                                 <button
@@ -595,7 +600,7 @@ export default function SchedulePage() {
               {/* Legend */}
               <div className="mt-6 flex items-center gap-6">
                 <p className="text-xs text-[#6B6B6B] dark:text-[#A0A0A0] uppercase tracking-wider">Source:</p>
-                {(["strava", "manual", "assumed"] as WorkoutSource[]).map((s) => (
+                {(["strava", "manual", "team", "assumed"] as WorkoutSource[]).map((s) => (
                   <div key={s} className="flex items-center gap-1.5">
                     <SourceDot source={s} />
                     <span className="text-xs font-mono text-[#6B6B6B] capitalize">{s}</span>

@@ -55,6 +55,64 @@ function startOfDay(d: Date): Date {
 
 // ── Main export ───────────────────────────────────────────────────────────────
 
+/**
+ * Sessions the athlete's coach planned, keyed by date. The overlay that makes
+ * the planned-session verdict work with no Strava and no athlete input: a
+ * team session ranks below the athlete's own record of the day (Strava or a
+ * manual entry — they know what they actually did) and above the weekly
+ * template and the assumed filler (a coach's plan for Tuesday beats a guess
+ * about Tuesdays in general).
+ */
+async function teamSessionsByDate(
+  userId: string,
+  start: Date,
+  end: Date,
+): Promise<Map<string, { type: WorkoutType; note?: string }>> {
+  const memberships = await prisma.teamMembership.findMany({
+    where: { userId, status: "ACTIVE" },
+    select: { teamId: true },
+  });
+  if (memberships.length === 0) return new Map();
+
+  const sessions = await prisma.plannedSession.findMany({
+    where: {
+      teamId: { in: memberships.map((m) => m.teamId) },
+      date: { gte: start, lte: new Date(end.getTime() + 86400000) },
+    },
+    orderBy: { date: "asc" },
+    select: { date: true, sessionType: true, description: true, targetPaces: true },
+  });
+
+  const byDate = new Map<string, { type: WorkoutType; note?: string }>();
+  for (const s of sessions) {
+    const key = isoDate(startOfDay(new Date(s.date)));
+    // Two teams planning the same day: first team wins. Rare, and any rule
+    // here is arbitrary — the athlete's coach should resolve it, not math.
+    if (byDate.has(key)) continue;
+    const note = [s.description, s.targetPaces].filter(Boolean).join(" — ") || undefined;
+    byDate.set(key, { type: s.sessionType as WorkoutType, note });
+  }
+  return byDate;
+}
+
+function teamWorkout(
+  date: Date,
+  session: { type: WorkoutType; note?: string },
+  isPast: boolean,
+): NormalizedWorkout {
+  return {
+    date,
+    type: session.type,
+    distance: 0,
+    // Nominal hour: the algorithm keys its load bonuses off the type; the
+    // duration only has to be a plausible session, not a measurement.
+    duration: 60,
+    source: "team",
+    isTentative: !isPast,
+    note: session.note,
+  };
+}
+
 export async function getWorkoutsForDateRange(
   userId: string,
   startDate: Date,
@@ -68,6 +126,8 @@ export async function getWorkoutsForDateRange(
     where: { id: userId },
     select: { stravaConnected: true },
   });
+
+  const teamByDate = await teamSessionsByDate(userId, start, end);
 
   const conflicts: WorkoutConflict[] = [];
   const result: NormalizedWorkout[] = [];
@@ -170,10 +230,30 @@ export async function getWorkoutsForDateRange(
             isTentative: false,
             stravaActivityId: stravaAct.stravaId,
           });
+        } else if (manualW) {
+          // No Strava record that day: the manual log IS the day's record.
+          // This branch was missing — a logged treadmill run on a watchless
+          // day silently vanished from the plan despite the documented
+          // "fall back to manual one-offs" contract.
+          result.push({
+            id: manualW.id,
+            date,
+            type: manualW.type as WorkoutType,
+            distance: (manualW.distance ?? 0) * 1.60934,
+            duration: manualW.duration ?? 0,
+            effort: manualW.effort,
+            quality: manualW.quality,
+            source: "manual",
+            isTentative: false,
+          });
+        } else {
+          const teamSession = teamByDate.get(key);
+          if (teamSession) result.push(teamWorkout(date, teamSession, true));
+          // Otherwise: no entry (treated as rest by algorithm)
         }
-        // If neither exists for past date: no entry (treated as rest by algorithm)
       } else {
         // FUTURE DATE
+        const teamSession = teamByDate.get(key);
         if (manualW) {
           result.push({
             id: manualW.id,
@@ -186,6 +266,8 @@ export async function getWorkoutsForDateRange(
             source: "manual",
             isTentative: true,
           });
+        } else if (teamSession) {
+          result.push(teamWorkout(date, teamSession, false));
         } else {
           // Assumed from rolling load
           result.push({
@@ -235,6 +317,8 @@ export async function getWorkoutsForDateRange(
       const isPast = date <= today;
       const oneOff = oneOffByDate.get(key);
 
+      const teamSession = teamByDate.get(key);
+
       if (oneOff) {
         result.push({
           id: oneOff.id,
@@ -247,6 +331,10 @@ export async function getWorkoutsForDateRange(
           source: "manual",
           isTentative: oneOff.isTentative || !isPast,
         });
+      } else if (teamSession) {
+        // The coach's plan for a specific date beats the weekly template —
+        // it knows about Tuesday, not Tuesdays.
+        result.push(teamWorkout(date, teamSession, isPast));
       } else {
         // Try template
         const dow = (date.getDay() + 6) % 7; // 0=Mon
