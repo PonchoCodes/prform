@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Button } from "@/components/Button";
+import { SmsEnrollment } from "@/components/SmsEnrollment";
 import { PrForm, EMPTY_PR, validatePrForm, isPrFormEmpty, type PrFormValue } from "@/components/PrForm";
 import { PR_DISTANCES, meetEventForPrDistance, prDistanceGuidance } from "@/lib/vdot";
 import { parseTimeToSeconds, getUnitForEvent } from "@/lib/performancePrediction";
@@ -82,10 +83,10 @@ export default function OnboardingPage() {
   });
   const [skipRace, setSkipRace] = useState(false);
 
-  // Step 4: Data source
-  const [stravaConnected, setStravaConnected] = useState(false);
-  const [stravaAthleteId, setStravaAthleteId] = useState<string | null>(null);
-  const [showManualSchedule, setShowManualSchedule] = useState(false);
+  // Step 4: Training week (+ optional text messages). Strava is deliberately
+  // absent from onboarding: the athlete cap (10) means most new users cannot
+  // connect anyway, and the product has to stand on its own without it. It is
+  // offered afterward, from the dashboard and /strava, as an upgrade.
   const [weekTemplate, setWeekTemplate] = useState<WeekTemplate>(defaultWeek);
 
   const [unitPreference, setUnitPreference] = useState<"imperial" | "metric">("imperial");
@@ -99,28 +100,9 @@ export default function OnboardingPage() {
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
-    if (params.get("connected") === "1") {
-      setStravaConnected(true);
-      setStep(4);
-      window.history.replaceState({}, "", "/onboarding");
-      return;
-    }
     const stepParam = params.get("step");
     if (stepParam) setStep(parseInt(stepParam));
   }, []);
-
-  useEffect(() => {
-    if (step !== 4) return;
-    fetch("/api/strava/status")
-      .then((r) => r.json())
-      .then((d) => {
-        if (d.connected) {
-          setStravaConnected(true);
-          setStravaAthleteId(d.athleteName ?? null);
-        }
-      })
-      .catch(() => {});
-  }, [step]);
 
   // The PR step is skippable: leaving it blank falls back to history-inferred
   // paces. A partly-filled form is a mistake though, so it blocks until fixed.
@@ -485,89 +467,59 @@ export default function OnboardingPage() {
               </div>
             )}
 
-            {/* Step 3: Connect Your Data */}
+            {/* Step 4: Your Training Week */}
             {step === 4 && (
               <div>
                 <p className="text-xs font-bold uppercase tracking-[0.3em] text-[#6B6B6B] dark:text-[#A0A0A0] mb-2">Step 4 of {TOTAL_STEPS}</p>
-                <h1 className="font-black text-3xl uppercase mb-2">Connect Your Data</h1>
+                <h1 className="font-black text-3xl uppercase mb-2">Your Training Week</h1>
                 <p className="text-sm text-[#6B6B6B] dark:text-[#A0A0A0] mb-8">
-                  Connect Strava and PRform updates your sleep plan automatically after every run.
+                  Sketch a typical week — sleep targets move with your training load.
+                  You can adjust any day later, or log workouts as they happen.
                 </p>
 
-                {/* Strava card */}
-                <div className={`border-2 p-6 mb-4 transition-colors ${stravaConnected ? "border-[#0A0A0A] dark:border-[#F5F5F5]" : "border-[#E5E5E5] dark:border-[#444]"}`}>
-                  <div className="flex items-center gap-4 mb-4">
-                    <div>
-                      <p className="font-black text-sm uppercase tracking-wider">Strava</p>
-                      <p className="text-xs text-[#6B6B6B] dark:text-[#A0A0A0] font-mono">Recommended — automatic sync</p>
-                    </div>
-                    {stravaConnected && (
-                      <div className="ml-auto bg-[#E8FF00] px-2 py-1 text-xs font-bold uppercase tracking-wider">
-                        Connected
+                <div className="border border-[#E5E5E5] dark:border-[#444] p-4 space-y-3">
+                  {DAYS.map((day, i) => (
+                    <div key={day} className="border border-[#E5E5E5] dark:border-[#333] p-4">
+                      <p className="text-xs font-bold uppercase tracking-wider mb-3">{day}</p>
+                      <div className="flex gap-3">
+                        <select
+                          value={weekTemplate[i]?.type ?? "rest"}
+                          onChange={(e) => updateDay(i, "type", e.target.value)}
+                          className="flex-1 border border-[#E5E5E5] dark:border-[#444] dark:bg-[#2a2a2a] dark:text-[#F5F5F5] px-3 py-2 text-xs font-bold uppercase focus:outline-none focus:border-[#0A0A0A] dark:focus:border-[#F5F5F5] bg-white"
+                        >
+                          {WORKOUT_TYPES.map((t) => (
+                            <option key={t.value} value={t.value}>{t.label}</option>
+                          ))}
+                        </select>
+                        {weekTemplate[i]?.type !== "rest" && (
+                          <input
+                            type="number"
+                            value={weekTemplate[i]?.distance ?? ""}
+                            onChange={(e) => updateDay(i, "distance", e.target.value)}
+                            placeholder="Miles"
+                            className="w-24 border border-[#E5E5E5] dark:border-[#444] dark:bg-[#2a2a2a] dark:text-[#F5F5F5] px-3 py-2 text-xs focus:outline-none focus:border-[#0A0A0A] dark:focus:border-[#F5F5F5]"
+                          />
+                        )}
                       </div>
-                    )}
-                  </div>
-                  {stravaConnected ? (
-                    <p className="text-xs text-[#6B6B6B] dark:text-[#A0A0A0] font-mono">
-                      {stravaAthleteId ? `Logged in as ${stravaAthleteId}.` : "Strava account linked."} Your runs will sync automatically.
-                    </p>
-                  ) : (
-                    <div>
-                      <a href="/api/strava/connect?returnTo=/onboarding">
-                        <img
-                          src="/strava/btn_strava_connect.png"
-                          alt="Connect with Strava"
-                          style={{ height: "48px", width: "auto", cursor: "pointer" }}
-                        />
-                      </a>
-                      <p className="text-[10px] font-mono text-[#6B6B6B] dark:text-[#A0A0A0] mt-3">
-                        By connecting Strava, you agree to our{" "}
-                        <a href="/privacy" className="underline hover:text-[#0A0A0A]">Privacy Policy</a>{" "}
-                        and the{" "}
-                        <a href="https://www.strava.com/legal/api" target="_blank" rel="noopener noreferrer" className="underline hover:text-[#0A0A0A]">Strava API Agreement</a>.
-                      </p>
                     </div>
-                  )}
+                  ))}
                 </div>
 
-                {/* Manual fallback toggle */}
-                <button
-                  onClick={() => setShowManualSchedule((v) => !v)}
-                  className="w-full text-left border border-[#E5E5E5] dark:border-[#444] p-4 text-xs font-bold uppercase tracking-wider text-[#6B6B6B] dark:text-[#A0A0A0] hover:border-[#0A0A0A] dark:hover:border-[#F5F5F5] hover:text-[#0A0A0A] dark:hover:text-[#F5F5F5] transition-colors flex items-center justify-between"
-                >
-                  <span>Set weekly schedule manually {stravaConnected ? "(optional override)" : ""}</span>
-                  <span>{showManualSchedule ? "▲" : "▼"}</span>
-                </button>
+                <p className="text-[10px] font-mono text-[#6B6B6B] dark:text-[#A0A0A0] mt-4">
+                  Use Strava? You can connect it any time from your dashboard —
+                  synced runs then take over from this schedule automatically.
+                </p>
 
-                {showManualSchedule && (
-                  <div className="border border-t-0 border-[#E5E5E5] dark:border-[#444] p-4 space-y-3">
-                    {DAYS.map((day, i) => (
-                      <div key={day} className="border border-[#E5E5E5] dark:border-[#333] p-4">
-                        <p className="text-xs font-bold uppercase tracking-wider mb-3">{day}</p>
-                        <div className="flex gap-3">
-                          <select
-                            value={weekTemplate[i]?.type ?? "rest"}
-                            onChange={(e) => updateDay(i, "type", e.target.value)}
-                            className="flex-1 border border-[#E5E5E5] dark:border-[#444] dark:bg-[#2a2a2a] dark:text-[#F5F5F5] px-3 py-2 text-xs font-bold uppercase focus:outline-none focus:border-[#0A0A0A] dark:focus:border-[#F5F5F5] bg-white"
-                          >
-                            {WORKOUT_TYPES.map((t) => (
-                              <option key={t.value} value={t.value}>{t.label}</option>
-                            ))}
-                          </select>
-                          {weekTemplate[i]?.type !== "rest" && (
-                            <input
-                              type="number"
-                              value={weekTemplate[i]?.distance ?? ""}
-                              onChange={(e) => updateDay(i, "distance", e.target.value)}
-                              placeholder="Miles"
-                              className="w-24 border border-[#E5E5E5] dark:border-[#444] dark:bg-[#2a2a2a] dark:text-[#F5F5F5] px-3 py-2 text-xs focus:outline-none focus:border-[#0A0A0A] dark:focus:border-[#F5F5F5]"
-                            />
-                          )}
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                )}
+                {/* Optional: text messages. Self-enrolment with explicit consent;
+                    fully skippable — Continue works with this untouched. */}
+                <h2 className="font-black text-xl uppercase mt-10 mb-2 border-b border-[#E5E5E5] dark:border-[#333] pb-3">
+                  Texts, Not Tabs{" "}
+                  <span className="text-xs font-mono normal-case text-[#6B6B6B] dark:text-[#A0A0A0]">(optional)</span>
+                </h2>
+                <p className="text-sm text-[#6B6B6B] dark:text-[#A0A0A0] mb-6">
+                  One text each evening, one each morning — run PRform without opening the site.
+                </p>
+                <SmsEnrollment />
               </div>
             )}
           </motion.div>
