@@ -10,6 +10,7 @@ import { toClientUser, CLIENT_USER_SELECT } from "@/lib/clientUser";
 import { calculatePMC, calculateVDOT, type StravaActivityInput } from "@/lib/performanceAnalysis";
 import { resolvePaces } from "@/lib/paceSource";
 import { computeSleepDebtMinutes } from "@/lib/verdict";
+import { isValidTimeZone, localClockOf } from "@/lib/messaging/time";
 
 /**
  * PMC needs the 90-day window plus its 42-day warm-up; 200 days covers that
@@ -37,6 +38,7 @@ export async function GET() {
       biologicalSex: true,
       currentWakeTime: true,
       currentBedTime: true,
+      ianaTimezone: true,
       sport: true,
       planAggressiveness: true,
       bedtimeAdjustmentMinutes: true,
@@ -147,6 +149,25 @@ export async function GET() {
     recommendedBedtime: l.recommendedBedtime,
   }));
 
+  // Wake times the athlete declared by text, keyed by the plan's own date keys.
+  //
+  // `declaredWakeAt` is an instant, and the plan needs a wall-clock time, so the
+  // conversion has to go through the athlete's IANA zone — reading it in UTC
+  // would show a Boston runner a 10:00 wake for the 05:00 they actually
+  // declared, and would be an hour out for half the year on top. Without a
+  // stored zone there is no honest conversion available, so the plan falls back
+  // to their default wake exactly as it did before.
+  const declaredWakeByDate: Record<string, string> = {};
+  if (isValidTimeZone(user.ianaTimezone)) {
+    for (const log of sleepLogs) {
+      if (!log.declaredWakeAt) continue;
+      declaredWakeByDate[new Date(log.date).toISOString().slice(0, 10)] = localClockOf(
+        log.declaredWakeAt,
+        user.ianaTimezone,
+      );
+    }
+  }
+
   const meetsForPlan = meets.map((m) => ({
     date: m.date,
     priority: m.priority as "A" | "B" | "C",
@@ -168,7 +189,12 @@ export async function GET() {
     // The algorithm has always accepted a TSB for its pre-race fatigue boost;
     // until now nothing computed one to pass.
     tsb ?? undefined,
-    { startDayOffset: -1, sleepLogs: sleepLogsForPlan, recentSleepLogs: recentSleepLogsForPlan },
+    {
+      startDayOffset: -1,
+      sleepLogs: sleepLogsForPlan,
+      recentSleepLogs: recentSleepLogsForPlan,
+      declaredWakeByDate,
+    },
   );
 
   const yesterdayPlan = allPlans[0];

@@ -40,7 +40,13 @@ export async function GET(req: NextRequest) {
       },
     }),
     prisma.sleepLog.findMany({
-      where: { userId, date: { gte: fetchFrom } },
+      // Flagged nights are excluded at the query, not filtered later. A row is
+      // flagged precisely because its duration could not be trusted, and this
+      // chart is the thing the whole product points at — a single 27-hour night
+      // would lift a fortnight of the rolling mean and look like progress.
+      // The write path already refuses to store a duration on a flagged row;
+      // this is the second lock on the same door.
+      where: { userId, date: { gte: fetchFrom }, needsReview: false },
       orderBy: { date: "asc" },
       select: { date: true, actualSleepHours: true, targetSleepHours: true },
     }),
