@@ -67,9 +67,14 @@ export async function POST(req: NextRequest) {
       actualBedtime: resolvedActualBedtime,
       actualWakeTime: actualWakeTime ?? null,
       actualSleepHours: Math.round(actualSleepHours * 100) / 100,
-      source: "manual",
+      // A web log is the athlete recalling a clock time after the fact, not a
+      // timestamp we observed. MANUAL is reserved for exactly this route.
+      source: "MANUAL",
     },
     update: {
+      // The pre-enum version of this route set `source` on create only, so
+      // re-logging a night left it stale. It is now written on both branches.
+      source: "MANUAL",
       recommendedBedtime,
       // Never overwrite a stored target with null — a re-log from a client that
       // did not send one must not erase the night's original target.

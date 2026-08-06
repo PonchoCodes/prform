@@ -68,11 +68,42 @@ model User {
   stravaReminder1At  DateTime?
   stravaReminder2At  DateTime?
 
+  // ── SMS layer ──────────────────────────────────────────────────────────────
+  // Always stored E.164-normalized ("+15551234567"). Unique for two reasons,
+  // both load-bearing: an inbound webhook identifies the sender only by their
+  // number, so a duplicate would make routing ambiguous; and it is the one
+  // schema-level guarantee that a coach cannot attach an athlete's number to a
+  // second account. Nullable-unique in Postgres permits many NULLs, so users
+  // without SMS are unaffected.
+  phoneNumber     String?   @unique
+  // Set only after a verification code is confirmed. Null means never send.
+  phoneVerifiedAt DateTime?
+  // IANA identifier, e.g. "America/New_York". Never a UTC offset — an offset is
+  // wrong for half the year and would put a lights-out text an hour off.
+  ianaTimezone    String?
+  smsOptInAt      DateTime?
+  // The exact consent copy the athlete agreed to, captured verbatim at opt-in.
+  // Stored rather than referenced so that later edits to the wording cannot
+  // rewrite what a past user actually consented to.
+  smsOptInText    String?
+  smsStatus       SmsStatus @default(UNVERIFIED)
+
   workouts         Workout[]
   meets            Meet[]
   sessions         Session[]
   stravaActivities StravaActivity[]
   sleepLogs        SleepLog[]
+  sentMessages     SentMessage[]
+  inboundMessages  InboundMessage[]
+  phoneVerifications PhoneVerification[]
+}
+
+/// UNVERIFIED is the default and the safe state: no message may be sent in it.
+/// STOPPED is terminal until the athlete opts in again themselves.
+enum SmsStatus {
+  UNVERIFIED
+  ACTIVE
+  STOPPED
 }
 
 enum WaitlistRole {
@@ -181,9 +212,208 @@ model SleepLog {
   actualBedtime      String?
   actualWakeTime     String?
   actualSleepHours   Float?
-  source             String   @default("manual")
+
+  // ── Instants, as opposed to the "HH:MM" strings above ──────────────────────
+  // The string columns cannot express a night at all: they carry a clock face
+  // with no date, so a duration derived from them is modular and a bed-at-23:00
+  // / wake-at-22:00 pair scores 23 hours with no way to tell that from a real
+  // one. These three are real timestamps, so a duration computed from them is
+  // either right or obviously wrong.
+  //
+  // sleepOnsetAt   — when the athlete actually went down. For a "BED" reply this
+  //                  is the message receipt timestamp, which is why it is an
+  //                  instant and not a reported time.
+  // wakeAt         — when they actually got up.
+  // declaredWakeAt — the wake time they told us the evening before. The anchor
+  //                  the bedtime is computed backward from, kept so that a plan
+  //                  can be audited against what was known when it was made.
+  sleepOnsetAt   DateTime?
+  wakeAt         DateTime?
+  declaredWakeAt DateTime?
+
+  /// 0–1. How much the duration on this row can be trusted: a timestamped night
+  /// is near 1, a recalled one lower, an inferred one lower still. Null on rows
+  /// that predate the SMS layer rather than guessed at.
+  confidence Float?
+
+  source     SleepSource @default(MANUAL)
+  /// Set when the night could not be scored — a duration outside the plausible
+  /// window, or two BED replies with no UP between them. The row is kept, but
+  /// every consumer that averages durations must exclude it.
+  needsReview     Boolean  @default(false)
+  needsReviewNote String?
+
   createdAt          DateTime @default(now())
   user               User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([userId, date])
+}
+
+/// Where a night's sleep timing came from, in descending order of trust.
+/// TIMESTAMPED — a "BED"/"UP" text; the instant is our own receipt time.
+/// RECALLED    — the athlete told us a time after the fact ("I got down at 11").
+/// INFERRED    — no signal arrived and we closed the record at the declared wake.
+/// MANUAL      — logged through the website. Every pre-SMS row is this.
+enum SleepSource {
+  TIMESTAMPED
+  RECALLED
+  INFERRED
+  MANUAL
+}
+
+/// Every outbound message, whether scheduled, sent, or only logged by DRY_RUN.
+/// This table is the send ledger: the per-user daily cap is counted from it, so
+/// nothing may go out without a row here first.
+model SentMessage {
+  id     String @id @default(cuid())
+  userId String
+
+  /// The athlete's local calendar date, "YYYY-MM-DD" in their own timezone.
+  /// Deliberately a string and not a DateTime. SleepLog.date is a DateTime
+  /// pinned to UTC midnight, and that pattern is precisely what makes local-date
+  /// reasoning error-prone here — a DateTime invites comparison against an
+  /// instant, and "the athlete's Tuesday" is not an instant.
+  localDate   String
+  messageType MessageType
+
+  /// The UTC instant we asked the provider to send at. Null for an immediate
+  /// send. Twilio requires this to be 15 min – 35 days out.
+  scheduledFor DateTime?
+  /// When it actually went out. Null while still SCHEDULED.
+  sentAt       DateTime?
+
+  /// Twilio's SM… identifier. Null under DRY_RUN. This is what makes a
+  /// scheduled message cancellable: on STOP, or when the athlete revises a wake
+  /// time we have already scheduled around, we cancel by this SID. Without it
+  /// stored, an opt-out at 9pm cannot stop the 6am message already queued.
+  providerMessageSid String?
+  status             MessageStatus
+
+  /// The exact text sent, kept verbatim for the DRY_RUN review and for any
+  /// later dispute about what an athlete was actually told.
+  body String
+
+  /// How many times this (user, day, type) has been sent. The unique constraint
+  /// below collapses repeats onto one row, which would otherwise let the daily
+  /// cap undercount the genuinely repeatable types — a clarification reply, or
+  /// a second BED acknowledgment on a split night.
+  sendCount Int @default(1)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  /// The retry guard. A cron that runs twice, or overlapping daily windows,
+  /// collide here instead of texting someone the same thing twice.
+  @@unique([userId, localDate, messageType])
+  /// Status callbacks arrive keyed by SID alone.
+  @@index([providerMessageSid])
+  /// Drives the cancellation sweep and the housekeeping pass.
+  @@index([status, scheduledFor])
+}
+
+enum MessageType {
+  /// "What time are you up tomorrow?" — scheduled ~90 min before computed bedtime.
+  EVENING_WAKE_QUESTION
+  /// "Then lights out by 8:15. Reply BED when you're down." — immediate reply.
+  LIGHTS_OUT
+  /// "Got it — 8:31. Sleep well." — immediate reply.
+  BED_ACK
+  /// The verdict, scheduled for the declared wake time.
+  MORNING_VERDICT
+  /// Sent when nothing parsed. Asks; never guesses.
+  CLARIFICATION
+  /// Mandatory carrier-required replies. Must work in every state, always.
+  HELP_REPLY
+  STOP_ACK
+  /// Step 8 phone verification.
+  VERIFICATION_CODE
+}
+
+enum MessageStatus {
+  /// Composed and logged, handed to no provider. The DRY_RUN terminal state.
+  DRY_RUN
+  /// Accepted by the provider with a future send time; cancellable.
+  SCHEDULED
+  SENT
+  DELIVERED
+  FAILED
+  CANCELED
+}
+
+/// Every inbound message, stored before it is interpreted. The raw body is kept
+/// verbatim because the parser will be wrong about real messages in ways no test
+/// table anticipates, and the only way to fix it is to read what people actually
+/// wrote.
+model InboundMessage {
+  id String @id @default(cuid())
+
+  /// Null when the sending number matches no user. An unrecognized inbound is
+  /// still recorded — that case is evidence about a routing or verification bug,
+  /// and discarding it would hide exactly the problem worth seeing.
+  userId     String?
+  fromNumber String
+
+  /// Exactly what arrived: original case, spacing, punctuation, and emoji. Never
+  /// trimmed or upper-cased on the way in — normalization belongs to the parser,
+  /// and this column is the record of what the parser was given.
+  rawBody String
+
+  /// What the parser made of it. UNPARSED is a real, expected outcome.
+  intent InboundIntent
+  /// The normalized payload, when there is one: "05:30" for a wake time, minutes
+  /// for a duration. Null for intents that carry no value.
+  parsedValue String?
+
+  /// Our receipt timestamp. For a BED reply this becomes SleepLog.sleepOnsetAt,
+  /// which is why it is recorded here rather than derived later.
+  receivedAt         DateTime
+  providerMessageSid String?
+
+  createdAt DateTime @default(now())
+  user      User?    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, receivedAt])
+  @@index([providerMessageSid])
+  @@index([intent])
+}
+
+/// STOP and UNSUBSCRIBE both normalize to STOP — they mean the same thing, and
+/// the branch that honours them must not depend on which word was used.
+enum InboundIntent {
+  STOP
+  HELP
+  BED
+  UP
+  WAKE_TIME
+  DURATION
+  UNPARSED
+}
+
+/// Phone verification codes. Separate from User so a code has a lifetime, an
+/// attempt count, and an audit trail rather than being a mutable field on the
+/// account it protects.
+model PhoneVerification {
+  id     String @id @default(cuid())
+  userId String
+
+  /// The number this code was issued for, E.164. Held here rather than read from
+  /// User at confirm time so that a code cannot be issued for one number and
+  /// redeemed against another.
+  phoneNumber String
+  /// HMAC-SHA256 of the code, keyed with the app secret and bound to the number
+  /// above — never the code itself. Keyed rather than a bare hash because a
+  /// plain digest of six digits is reversible by trying all million inputs, so
+  /// a leaked database dump would hand over every live code.
+  codeHash    String
+  expiresAt   DateTime
+  /// Incremented per failed confirmation. A six-digit code is trivially
+  /// brute-forceable without a ceiling on guesses.
+  attempts    Int       @default(0)
+  consumedAt  DateTime?
+
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, createdAt])
 }

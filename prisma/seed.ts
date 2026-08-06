@@ -166,7 +166,7 @@ async function main() {
       actualBedtime: recommendedBedtime,
       actualWakeTime: wakeTime,
       actualSleepHours: computeSleepHours(recommendedBedtime, wakeTime),
-      source: "manual",
+      source: "MANUAL" as const,
     });
   }
 
@@ -188,7 +188,7 @@ async function main() {
       actualBedtime,
       actualWakeTime: wakeTime,
       actualSleepHours: computeSleepHours(actualBedtime, wakeTime),
-      source: "manual",
+      source: "MANUAL" as const,
     });
   }
 
