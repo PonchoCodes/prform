@@ -60,7 +60,25 @@ export interface DailySleepPlan {
   date: Date;
   recommendedBedtime: string;  // "HH:MM" 24h
   recommendedWakeTime: string; // "HH:MM" 24h — shifts earlier during advance window
+  /** The night's sleep need — what the athlete *should* get. Unchanged meaning. */
   totalSleepHours: number;
+  /**
+   * The wake time the athlete declared for this day, or null when they didn't
+   * and the plan fell back to their default.
+   */
+  declaredWakeTime: string | null;
+  /**
+   * What the prescription actually delivers, after the 20:00 floor and the
+   * 45-min-per-night shift limit have had their say. Equal to `totalSleepHours`
+   * on an ordinary night; lower when the declared wake makes the target
+   * physically unreachable.
+   */
+  achievableSleepHours: number;
+  /**
+   * `totalSleepHours - achievableSleepHours` in minutes, floored at zero. The
+   * number the verdict names instead of printing an impossible bedtime.
+   */
+  sleepShortfallMinutes: number;
   trainingLoadLevel: "low" | "medium" | "high";
   daysUntilNextMeet: number | null;
   nextMeetName: string | null;
@@ -123,6 +141,37 @@ function minutesToTime(minutes: number): string {
   const h = Math.floor(total / 60);
   const m = total % 60;
   return `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`;
+}
+
+/**
+ * Validating parser for wake times that arrive from outside the app — a
+ * declared wake comes from a text message and has been through a parser that
+ * can be wrong. `timeToMinutes` would turn "half five" into NaN and poison the
+ * entire day's arithmetic silently; this returns null so the caller can fall
+ * back to the athlete's default instead.
+ */
+function parseClockTime(time: string | null | undefined): number | null {
+  if (typeof time !== "string") return null;
+  const m = /^(\d{1,2}):(\d{2})$/.exec(time.trim());
+  if (!m) return null;
+  const h = Number(m[1]);
+  const min = Number(m[2]);
+  if (!Number.isInteger(h) || !Number.isInteger(min)) return null;
+  if (h < 0 || h > 23 || min < 0 || min > 59) return null;
+  return h * 60 + min;
+}
+
+/**
+ * Minutes of sleep between a bedtime and a wake time, both wrapped to a single
+ * clock face. Safe to compute modularly here — unlike a self-reported pair,
+ * both values are derived: the bedtime is the wake time minus a sleep need of
+ * at most ~11 h, and the two clamps below only ever shorten that window. It can
+ * never silently wrap past 24 h the way `actualSleepHours` can.
+ */
+function sleepWindowMinutes(bedMinutes: number, wakeMinutes: number): number {
+  const bed = ((bedMinutes % 1440) + 1440) % 1440;
+  const wake = ((wakeMinutes % 1440) + 1440) % 1440;
+  return ((wake - bed + 1440) % 1440);
 }
 
 function daysApart(a: Date, b: Date): number {
@@ -400,16 +449,41 @@ export function calculateSleepPlan(
   meets: MeetInput[],
   workoutDataSource: NormalizedWorkout[],
   currentTSB?: number,
-  opts?: { startDayOffset?: number; sleepLogs?: SleepLogForPlan[]; recentSleepLogs?: SleepLogForPlan[] }
+  opts?: {
+    startDayOffset?: number;
+    sleepLogs?: SleepLogForPlan[];
+    recentSleepLogs?: SleepLogForPlan[];
+    /**
+     * Wake times the athlete has explicitly declared, keyed "YYYY-MM-DD" and
+     * valued "HH:MM" 24h. Any day without an entry falls back to the athlete's
+     * default `currentWakeTime`, which is the pre-existing behaviour for every
+     * day of the plan.
+     *
+     * A map rather than a single time because the product this serves asks the
+     * question once per night: our athletes are boarding-school students whose
+     * wake time moves between 03:00 and 08:30 with their academic load, so a
+     * 14-day plan needs to express a different anchor on different days. A
+     * caller who only knows tonight's passes a one-entry map.
+     */
+    declaredWakeByDate?: Record<string, string>;
+  }
 ): DailySleepPlan[] {
   const startDayOffset = opts?.startDayOffset ?? 0;
   const sleepLogs = opts?.sleepLogs ?? [];
+  const declaredWakeByDate = opts?.declaredWakeByDate ?? {};
   const aggFactor = Math.min(100, Math.max(50, user.planAggressiveness ?? 85)) / 100;
   const bedtimeAdj = Math.min(45, Math.max(-45, user.bedtimeAdjustmentMinutes ?? 0));
 
   const today = new Date();
   today.setHours(0, 0, 0, 0);
 
+  // The athlete's habitual wake time. This is the *circadian* baseline: the
+  // phase their body clock actually sits at, which is what the PRC engine and
+  // the meet-shift schedule are entitled to reason about. A one-off declared
+  // wake — an exam at 04:00 — does not move it. Setting an alarm does not
+  // advance a circadian pacemaker, and feeding a declaration in here would
+  // quietly rewrite the race prep, which is the one thing this change must not
+  // touch.
   const baseWakeMinutes = timeToMinutes(user.currentWakeTime);
   const baseMinutes = baseSleepMinutes(user);
 
@@ -563,10 +637,22 @@ export function calculateSleepPlan(
     const totalBedtimeShift = bestPreRaceShift + bestCircadianShift;
     // For afternoon/evening races wake stays at baseline — only bedtime shifts earlier.
     const isBedtimeOnly = controllingSchedule?.bedtimeOnlyAdvance ?? false;
-    const dayWakeMinutes = isBedtimeOnly ? baseWakeMinutes : baseWakeMinutes - bestPreRaceShift;
+    // The circadian wake for this day: the baseline, advanced by however much of
+    // the PRC ramp has been applied. This is what the light-exposure window is
+    // derived from, and it is computed exactly as it was before.
+    const circadianWakeMinutes = isBedtimeOnly ? baseWakeMinutes : baseWakeMinutes - bestPreRaceShift;
+
+    // The anchor tonight's bedtime is counted backward from. A declaration wins
+    // over the circadian wake because it is a fact about tomorrow morning
+    // rather than an assumption about it — which is the whole point of asking.
+    // An unparseable declaration is discarded, not trusted: falling back to the
+    // athlete's default is wrong by an hour or two, while NaN is wrong by a day.
+    const declaredWakeMinutes = parseClockTime(declaredWakeByDate[dateStr]);
+    const anchorWakeMinutes = declaredWakeMinutes ?? circadianWakeMinutes;
+
     // When bedtime-only, fold preRaceShift into bedtime offset so the total shift is preserved.
     const bedtimeOnlyExtra = isBedtimeOnly ? bestPreRaceShift : 0;
-    const rawBedtimeMinutes = dayWakeMinutes - sleepNeed - bestCircadianShift - bedtimeOnlyExtra - recoveryShift;
+    const rawBedtimeMinutes = anchorWakeMinutes - sleepNeed - bestCircadianShift - bedtimeOnlyExtra - recoveryShift;
     let bedtimeMinutes = Math.round(rawBedtimeMinutes + bedtimeAdj);
     if (plans.length > 0) {
       const prevBedMin = timeToMinutes(plans[plans.length - 1].recommendedBedtime);
@@ -578,8 +664,21 @@ export function calculateSleepPlan(
     // Emergency floor: bedtime can never be earlier than 8 PM (1200 min)
     if (((bedtimeMinutes % 1440) + 1440) % 1440 < 1200) bedtimeMinutes = 1200;
     const recommendedBedtime = minutesToTime(bedtimeMinutes);
-    const recommendedWakeTime = minutesToTime(dayWakeMinutes);
+    // What the athlete is actually doing tomorrow morning, which is the declared
+    // time when there is one. The circadian wake stays internal — showing it
+    // back to someone who just told us they're up at 03:00 would read as the
+    // app not having listened.
+    const recommendedWakeTime = minutesToTime(anchorWakeMinutes);
     const totalSleepHours = Math.round((sleepNeed / 60) * 10) / 10;
+
+    // Both clamps above can only push bedtime later, never earlier, so whatever
+    // window they leave is what the athlete can actually get. Measuring the gap
+    // is the point of the exercise: before this, a declared 03:00 wake produced
+    // a bedtime of 17:45, which the floor silently moved to 20:00 and the app
+    // then printed as though it were achievable.
+    const achievableMinutes = sleepWindowMinutes(bedtimeMinutes, anchorWakeMinutes);
+    const achievableSleepHours = Math.round((achievableMinutes / 60) * 10) / 10;
+    const sleepShortfallMinutes = Math.max(0, Math.round(sleepNeed - achievableMinutes));
 
     // SOURCE: Chang et al. (2015) — eReader use suppresses melatonin 55% and delays
     // DLMO 1.5 h; suppression persists ~45 min post-exposure. Phase 3 corrected to T-45.
@@ -593,7 +692,7 @@ export function calculateSleepPlan(
     let circadian: CircadianPlan | null = null;
     if (controllingSchedule && totalBedtimeShift > 0) {
       circadian = computePRCPlan(
-        dayWakeMinutes,
+        circadianWakeMinutes,
         bedtimeMinutes,
         bestDailyRate,
         totalBedtimeShift,
@@ -692,6 +791,9 @@ export function calculateSleepPlan(
       recommendedBedtime,
       recommendedWakeTime,
       totalSleepHours,
+      declaredWakeTime: declaredWakeMinutes === null ? null : minutesToTime(declaredWakeMinutes),
+      achievableSleepHours,
+      sleepShortfallMinutes,
       trainingLoadLevel: trainingLevel,
       daysUntilNextMeet,
       nextMeetName: nextMeet?.name ?? null,
