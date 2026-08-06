@@ -18,6 +18,15 @@ export const authOptions: NextAuthOptions = {
         try {
           const user = await prisma.user.findUnique({
             where: { email: credentials.email },
+            // The one query in the app allowed to read the password hash, and
+            // it reads nothing else — the row never leaves this function.
+            select: {
+              id: true,
+              email: true,
+              name: true,
+              onboardingDone: true,
+              password: true,
+            },
           });
 
           if (!user) return null;

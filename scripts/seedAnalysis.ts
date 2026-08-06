@@ -47,7 +47,7 @@ function rnd(val: number, jitterPct: number): number {
 }
 
 async function main() {
-  const user = await prisma.user.findUnique({ where: { email: "demo@prform.com" } });
+  const user = await prisma.user.findUnique({ where: { email: "demo@prform.com" }, select: { id: true } });
   if (!user) {
     console.error("Demo user not found. Run `npm run seed` first.");
     process.exit(1);
