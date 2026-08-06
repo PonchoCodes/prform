@@ -1,7 +1,14 @@
+import type { Metadata } from "next";
 import { Navbar } from "@/components/Navbar";
+import { pageOpenGraph } from "@/lib/seo";
 
-export const metadata = {
-  title: "Privacy Policy — PRform",
+export const metadata: Metadata = {
+  // The root layout's title template appends " — PRform".
+  title: "Privacy Policy",
+  description:
+    "How PRform collects, stores, and uses your sleep logs, training data, and Strava activity.",
+  alternates: { canonical: "/privacy" },
+  openGraph: pageOpenGraph({ url: "/privacy", title: "PRform Privacy Policy" }),
 };
 
 function Section({ title, children }: { title: string; children: React.ReactNode }) {

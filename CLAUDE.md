@@ -42,7 +42,10 @@ EARLY_ACCESS          # "true" = invite-only gate active (see EARLY ACCESS TOGGL
 ADMIN_EMAIL           # Email allowed into /admin (waitlist approval UI)
 ```
 
-Production is deployed at **https://prformm.vercel.app** (Vercel project `prform-o3m8`).
+Production is served at **https://prform.app** — the canonical host, and the value of
+`SITE_URL` in `lib/seo.ts`. The Vercel deployment URL **https://prformm.vercel.app**
+(project `prform-o3m8`) still resolves and serves the same app, so every page emits a
+canonical tag pointing at prform.app to keep the two hosts from competing as duplicates.
 
 ## Architecture
 
@@ -147,6 +150,26 @@ NextAuth v4 with a credentials provider (`lib/auth.ts`). The session JWT carries
 ### Strava Integration
 
 OAuth flow: `/api/strava/connect` → Strava OAuth → `/api/strava/callback` (stores tokens on User). Activities sync via webhook (`/api/strava/webhook`) and manual trigger (`/api/strava/sync`). Strava activities are stored in `StravaActivity` and fed into `workoutDataSource` alongside manual workouts.
+
+### SEO
+
+`lib/seo.ts` holds the canonical host, title, description, and keywords — change copy there,
+not in individual pages. Two constants (`SUBSCRIPTION_PRICE_USD`, `TRIAL_DAYS`) mirror
+`/subscribe` and must be kept in sync with it, because they are asserted publicly in JSON-LD.
+
+- `app/robots.ts` and `app/sitemap.ts` generate /robots.txt and /sitemap.xml. The sitemap is
+  `force-dynamic` so it lists `/request-access` or `/signup` depending on `EARLY_ACCESS`.
+- `app/opengraph-image.tsx` renders the 1200×630 social card and doubles as the Twitter image.
+  It **must** stay on `runtime = "edge"` — next/og's node build resolves its bundled fallback
+  font through `fileURLToPath` on a path that is malformed on Windows, crashing both the build
+  and the route at request time. `app/icon.tsx` and `app/apple-icon.tsx` dodge the same bug via
+  `force-dynamic`.
+- `lib/structuredData.ts` builds the landing page's Organization + WebSite + SoftwareApplication
+  JSON-LD. Everything asserted there has to be true on the page — no invented ratings.
+- Canonical URLs are set **per page**, never on the root layout: metadata cascades, so a
+  canonical there would point every page at `/`. Pages needing their own `openGraph` must build
+  it with `pageOpenGraph()` — Next replaces the `openGraph` object wholesale rather than merging,
+  so a partial silently drops og:type, og:site_name, and og:locale.
 
 ### Design System
 

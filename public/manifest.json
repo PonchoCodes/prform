@@ -1,9 +1,15 @@
 {
-  "name": "PRform",
+  "id": "/",
+  "name": "PRform: Sleep Optimization for Distance Runners",
   "short_name": "PRform",
-  "description": "Sleep Sharp. Race Faster.",
+  "description": "PRform builds a nightly sleep plan for distance runners, shifting your circadian rhythm across the 10 nights before a race so you peak at the start gun.",
+  "lang": "en-US",
+  "dir": "ltr",
+  "categories": ["health", "fitness", "sports"],
   "start_url": "/",
+  "scope": "/",
   "display": "standalone",
+  "orientation": "portrait",
   "background_color": "#0A0A0A",
   "theme_color": "#0A0A0A",
   "icons": [
@@ -15,7 +21,8 @@
     {
       "src": "/apple-icon",
       "sizes": "180x180",
-      "type": "image/png"
+      "type": "image/png",
+      "purpose": "any"
     }
   ]
 }
