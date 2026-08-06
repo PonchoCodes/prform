@@ -151,6 +151,32 @@ NextAuth v4 with a credentials provider (`lib/auth.ts`). The session JWT carries
 
 OAuth flow: `/api/strava/connect` → Strava OAuth → `/api/strava/callback` (stores tokens on User). Activities sync via webhook (`/api/strava/webhook`) and manual trigger (`/api/strava/sync`). Strava activities are stored in `StravaActivity` and fed into `workoutDataSource` alongside manual workouts.
 
+### Text Messages (SMS)
+
+**See [MESSAGING.md](./MESSAGING.md) for the full design.** Two scheduled messages a day
+that make the website optional: an evening question about tomorrow's wake time, and a
+morning verdict. Built and tested; **not live** — there is no Twilio account yet, the
+migration `20260805210000_add_sms_layer` is written but unrun, and `SMS_DRY_RUN` defaults
+to `true` so nothing can send by accident.
+
+Things to know before touching it:
+
+- **Timing belongs to Twilio, not to us.** A once-daily cron (`/api/cron/messaging`)
+  schedules messages with a `sendAt`. Vercel Hobby crons fire anywhere inside a 59-minute
+  window, so nothing may depend on when the cron actually runs.
+- **`lib/messaging/twilio.ts` is the only file allowed to import the Twilio SDK.**
+  Everything else goes through the `MessageProvider` interface so WhatsApp is a new driver.
+- **Every outbound message goes through `sendMessage`.** The daily cap is counted from the
+  `SentMessage` ledger it writes, so a send that skips it is a send the cap cannot see.
+  Never reply with TwiML — that routes around the ledger, the cap and the gate.
+- **A night is filed under the local date it *begins*** (the evening), matching the
+  dashboard's morning confirmation card. `nightDateFor` implements it: noon is the cut.
+- **Store IANA zone strings, never UTC offsets.** All local-time maths goes through
+  `lib/messaging/time.ts`.
+- `calculateSleepPlan` now accepts `opts.declaredWakeByDate`. It changes only the bedtime
+  anchor — the circadian model (CBTmin, PRC zones, meet ramp) still uses the athlete's
+  habitual wake, and `lib/sleepAlgorithm.test.ts` asserts that.
+
 ### SEO
 
 `lib/seo.ts` holds the canonical host, title, description, and keywords — change copy there,
