@@ -97,3 +97,55 @@ The verification flow is scaffolded end to end (code issue, HMAC storage,
 attempt caps, confirm endpoint) but no credentials exist, so codes are logged
 under DRY_RUN rather than sent. Enrolment therefore cannot complete against
 production until credentials land — expected and unchanged from the design.
+
+## D9. Cross-team 403s enforced by pure tests + source scan, not live HTTP
+
+**Question**: "Write tests that attempt to read another team's data and
+assert a 403" — the unit suite has no request harness or test database.
+
+**Options**: (a) build a DB-backed HTTP harness overnight; (b) split the 403
+into its two halves and pin both: `isCoachOf` (pure) is tested to refuse any
+non-coach including for nonexistent teams, and a source scan fails the build
+unless every [teamId] route calls assertCoachOf and contains a 403 — plus
+scans proving no team route reads a user identity from a request body.
+
+**Picked (b)** — (a) means new test infrastructure and a database nobody
+reviewed (and the no-new-dependencies rule almost certainly bites). The live
+version is queued as a morning decision in SESSION-REPORT.md.
+
+## D10. Coach status thresholds
+
+A night is "short" at ≥45 min under target (above self-report noise, below
+the athlete-facing 60-min line — the coach's lever needs a day of lead).
+2 short nights = amber, 3+ (or ≥60%) = red, zero logged nights = amber
+("no signal is a signal"), 1–2 logged nights = insufficient to flag unless
+already bad. All in one file (lib/team/status.ts) with the reasoning inline.
+
+## D11. Team session precedence in the merge layer
+
+Athlete's own record of a day (Strava, then manual log) > coach's planned
+session > weekly template > assumed filler. The coach's plan is dated
+knowledge and beats generic Tuesdays; the athlete's record of what actually
+happened beats everyone. Two teams planning the same date: first membership
+wins — any automatic rule is arbitrary, and coaches should resolve it.
+
+## D12. Team sessions carry a nominal 60-minute duration
+
+PlannedSession has no duration field (per your spec). The sleep algorithm
+keys load bonuses off the session type, so the duration only has to be a
+plausible session. If coaches want real durations, that's a schema addition.
+
+## D13. Fixed a pre-existing merge bug rather than preserving behaviour
+
+For Strava-connected users, a manual workout on a day with NO Strava
+activity was dropped entirely from the plan — contradicting the documented
+"fall back to manual one-offs" contract and starving the new load model.
+Fixed (manual counts when Strava is absent that day). Behaviour change for
+existing Strava users is strictly additive: days that previously showed
+nothing now show what they logged.
+
+## D14. "Leave team" lives on the Team page, not the profile
+
+The consent text originally drafted said "from my profile"; the membership
+UI landed on /team (one page, both roles), so the consent text says "from
+the Team page" instead. Recorded because consent wording is load-bearing.
