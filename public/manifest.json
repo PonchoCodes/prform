@@ -6,7 +6,7 @@
   "lang": "en-US",
   "dir": "ltr",
   "categories": ["health", "fitness", "sports"],
-  "start_url": "/",
+  "start_url": "/dashboard",
   "scope": "/",
   "display": "standalone",
   "orientation": "portrait",
@@ -14,15 +14,30 @@
   "theme_color": "#0A0A0A",
   "icons": [
     {
-      "src": "/icon",
-      "sizes": "32x32",
-      "type": "image/png"
-    },
-    {
-      "src": "/apple-icon",
-      "sizes": "180x180",
+      "src": "/icons/icon-192.png",
+      "sizes": "192x192",
       "type": "image/png",
       "purpose": "any"
+    },
+    {
+      "src": "/icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icons/icon-maskable-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Log last night",
+      "short_name": "Log sleep",
+      "url": "/sleep",
+      "icons": [{ "src": "/icons/icon-192.png", "sizes": "192x192", "type": "image/png" }]
     }
   ]
 }

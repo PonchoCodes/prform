@@ -11,13 +11,38 @@
 //   2. Nothing bypasses `sendMessage`. The daily cap is counted from the
 //      ledger, so a send that skipped the ledger would be a send the cap cannot
 //      see.
+//
+// Two channels now arrive here, and the channel is resolved once, at the top,
+// before anything is written. The row records which one won, so the ledger
+// stays the answer to "what did this athlete actually receive".
+//
+// Push cannot be scheduled by anyone but us — no push service offers a sendAt.
+// A push with a future `sendAt` is therefore written as SCHEDULED with nothing
+// handed to any provider, and lib/messaging/pushFlush.ts delivers it when it
+// comes due. That is a real difference in reliability and it is worth stating
+// plainly: a scheduled text survives this app being down, and a scheduled push
+// does not.
 
-import type { MessageType } from "@prisma/client";
+import type { MessageChannel, MessageType } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
-import { dailySendCap, isDryRun, isKillSwitchOn } from "@/lib/messaging/config";
+import {
+  dailySendCap,
+  isDryRun,
+  isEmailKillSwitchOn,
+  isKillSwitchOn,
+} from "@/lib/messaging/config";
 import { evaluateSendGate, isOncePerDay, type BlockReason } from "@/lib/messaging/gate";
 import { getProvider } from "@/lib/messaging/twilio";
-import { scheduleWindowFor, type MessageProvider } from "@/lib/messaging/provider";
+import { getPushProvider } from "@/lib/messaging/push";
+import { getEmailProvider } from "@/lib/messaging/email";
+import { isPushKillSwitchOn } from "@/lib/push/vapid";
+import { isSmsReady, resolveChannel, type NoChannelReason } from "@/lib/messaging/channel";
+import {
+  scheduleWindowFor,
+  type OutboundOptions,
+  type OutboundProvider,
+  type Recipient,
+} from "@/lib/messaging/provider";
 
 export interface SendRequest {
   userId: string;
@@ -27,14 +52,26 @@ export interface SendRequest {
   localDate: string;
   /** Deliver at this instant. Omit to send immediately. */
   sendAt?: Date;
+  /** Channel-specific extras. Ignored by SMS; used by push. */
+  options?: OutboundOptions;
+  /**
+   * Force a channel, bypassing the athlete's preference. The one legitimate
+   * use is a message that only makes sense on one road — a phone verification
+   * code has to go to the phone being verified.
+   */
+  forceChannel?: MessageChannel;
 }
 
 export type SendOutcome =
-  | { status: "scheduled"; sentMessageId: string; providerMessageSid: string | null }
-  | { status: "sent"; sentMessageId: string; providerMessageSid: string | null }
-  | { status: "dry_run"; sentMessageId: string }
+  | { status: "scheduled"; sentMessageId: string; providerMessageSid: string | null; channel: MessageChannel }
+  | { status: "sent"; sentMessageId: string; providerMessageSid: string | null; channel: MessageChannel }
+  /** Written to the ledger, due later, waiting for the push flush pass. */
+  | { status: "held"; sentMessageId: string; channel: MessageChannel }
+  | { status: "dry_run"; sentMessageId: string; channel: MessageChannel }
   | { status: "duplicate" }
   | { status: "blocked"; reason: BlockReason }
+  /** No channel could carry it. Nothing was refused; there is nowhere to send. */
+  | { status: "no_channel"; reason: NoChannelReason }
   | { status: "failed"; reason: string };
 
 const GATE_FIELDS = {
@@ -43,6 +80,9 @@ const GATE_FIELDS = {
   phoneVerifiedAt: true,
   smsStatus: true,
   ianaTimezone: true,
+  channelPreference: true,
+  email: true,
+  name: true,
 } as const;
 
 /** Messages already counted against this athlete on this local date. */
@@ -67,6 +107,34 @@ export async function sendMessage(req: SendRequest): Promise<SendOutcome> {
   });
   if (!user) return { status: "failed", reason: "user_not_found" };
 
+  // Which road, decided before anything is written or counted. A push provider
+  // that is not configured makes push unavailable rather than broken, exactly
+  // as absent Twilio credentials make SMS unavailable.
+  const pushProvider = getPushProvider();
+  const pushSubscriptionCount =
+    pushProvider === null
+      ? 0
+      : await prisma.pushSubscription.count({ where: { userId: req.userId, disabledAt: null } });
+
+  const emailProvider = getEmailProvider();
+
+  const channelDecision = req.forceChannel
+    ? { channel: req.forceChannel }
+    : resolveChannel({
+        preference: user.channelPreference,
+        smsReady: isSmsReady(user),
+        pushReady: pushProvider !== null && pushSubscriptionCount > 0,
+        emailReady: emailProvider !== null && Boolean(user.email),
+      });
+
+  if (channelDecision.channel === null) {
+    // Not a block — nothing refused this message, there is simply nowhere for
+    // it to go. Kept distinct so the retention view can tell "we chose not to
+    // message them" from "they never set up a way to be reached".
+    return { status: "no_channel", reason: channelDecision.reason };
+  }
+  const channel: MessageChannel = channelDecision.channel;
+
   const sentToday = await countSentToday(req.userId, req.localDate);
   const decision = evaluateSendGate({
     subject: {
@@ -74,16 +142,27 @@ export async function sendMessage(req: SendRequest): Promise<SendOutcome> {
       phoneVerifiedAt: user.phoneVerifiedAt,
       smsStatus: user.smsStatus,
       ianaTimezone: user.ianaTimezone,
+      hasPushSubscription: pushSubscriptionCount > 0,
+      emailAddress: user.email,
     },
     messageType: req.messageType,
     sentToday,
     cap: dailySendCap(),
-    killSwitch: isKillSwitchOn(),
+    // Each channel has its own brake. SMS_KILL_SWITCH stopping email would
+    // make one flag mean two things, and the flag exists to be reached for in
+    // a hurry.
+    killSwitch:
+      channel === "PUSH"
+        ? isPushKillSwitchOn()
+        : channel === "EMAIL"
+          ? isEmailKillSwitchOn()
+          : isKillSwitchOn(),
+    channel,
   });
 
   if (!decision.allowed) {
     console.warn(
-      `[messaging] blocked ${req.messageType} for user=${req.userId} date=${req.localDate} reason=${decision.reason}`,
+      `[messaging] blocked ${req.messageType} for user=${req.userId} date=${req.localDate} channel=${channel} reason=${decision.reason}`,
     );
     return { status: "blocked", reason: decision.reason };
   }
@@ -107,14 +186,52 @@ export async function sendMessage(req: SendRequest): Promise<SendOutcome> {
     }
   }
 
-  const to = user.phoneNumber!;
   const now = new Date();
+  const recipient: Recipient =
+    channel === "SMS"
+      ? { channel: "SMS", phoneNumber: user.phoneNumber! }
+      : channel === "EMAIL"
+        ? { channel: "EMAIL", email: user.email, name: user.name }
+        : { channel: "PUSH", userId: req.userId };
+
+  // SMS_DRY_RUN governs texts only. Applying it to the other channels would
+  // silence the two that exist during the pilot: the flag means "do not hand
+  // anything to Twilio", and neither push nor email touches Twilio.
+  const dryRun = channel === "SMS" && isDryRun();
+  const provider: OutboundProvider | null = dryRun
+    ? null
+    : channel === "SMS"
+      ? getProvider()
+      : channel === "EMAIL"
+        ? emailProvider
+        : pushProvider;
+
+  if (!dryRun && !provider) {
+    console.error(
+      channel === "SMS"
+        ? "[messaging] SMS_DRY_RUN is off but Twilio is not configured, refusing to send"
+        : channel === "EMAIL"
+          ? "[messaging] email was selected but RESEND_API_KEY is not set, refusing to send"
+          : "[messaging] push was selected but VAPID is not configured, refusing to send",
+    );
+    return { status: "failed", reason: "provider_not_configured" };
+  }
+
+  // Under an SMS dry run there is no provider object to ask, and the channel
+  // being simulated is one that can schedule. Push is the only channel that
+  // cannot, which is why the fallback is stated as "not push" rather than as a
+  // list that would need editing every time a channel is added.
+  const canSchedule = provider ? provider.canSchedule : channel !== "PUSH";
 
   // Decide how this goes out before writing anything, so the ledger row records
   // what was actually attempted.
-  let mode: "schedule" | "now";
+  let mode: "schedule" | "hold" | "now";
   if (!req.sendAt) {
     mode = "now";
+  } else if (!canSchedule) {
+    // Nobody but us will hold this. Already due means send it; otherwise the
+    // row is the queue, and lib/messaging/pushFlush.ts is what drains it.
+    mode = req.sendAt.getTime() <= now.getTime() ? "now" : "hold";
   } else {
     const window = scheduleWindowFor(req.sendAt, now);
     if (window === "too_far") {
@@ -129,17 +246,15 @@ export async function sendMessage(req: SendRequest): Promise<SendOutcome> {
     mode = window === "too_soon" ? "now" : "schedule";
   }
 
-  const dryRun = isDryRun();
-  const provider = dryRun ? null : getProvider();
-  if (!dryRun && !provider) {
-    console.error(
-      "[messaging] SMS_DRY_RUN is off but Twilio is not configured — refusing to send",
-    );
-    return { status: "failed", reason: "provider_not_configured" };
-  }
-
-  const intendedStatus = dryRun ? "DRY_RUN" : mode === "schedule" ? "SCHEDULED" : "SENT";
-  const scheduledFor = mode === "schedule" ? req.sendAt ?? null : null;
+  // A held push is SCHEDULED in the ledger for the same reason a Twilio one is:
+  // it is a message with a future send time that has not gone out. What differs
+  // is who is holding it, and that is answerable from `channel`.
+  const intendedStatus = dryRun
+    ? "DRY_RUN"
+    : mode === "schedule" || mode === "hold"
+      ? "SCHEDULED"
+      : "SENT";
+  const scheduledFor = mode === "schedule" || mode === "hold" ? req.sendAt ?? null : null;
 
   // Reserve first. See invariant 1 at the top of the file.
   const row = await prisma.sentMessage.upsert({
@@ -154,12 +269,14 @@ export async function sendMessage(req: SendRequest): Promise<SendOutcome> {
       userId: req.userId,
       localDate: req.localDate,
       messageType: req.messageType,
+      channel,
       status: intendedStatus,
       body: req.body,
       scheduledFor,
       sentAt: mode === "now" ? now : null,
     },
     update: {
+      channel,
       status: intendedStatus,
       body: req.body,
       scheduledFor,
@@ -175,7 +292,7 @@ export async function sendMessage(req: SendRequest): Promise<SendOutcome> {
       [
         "[messaging][DRY RUN] nothing was sent",
         `  type:      ${req.messageType}`,
-        `  to:        ${to}`,
+        `  to:        ${user.phoneNumber}`,
         `  localDate: ${req.localDate}`,
         mode === "schedule"
           ? `  sendAt:    ${req.sendAt!.toISOString()}`
@@ -183,13 +300,20 @@ export async function sendMessage(req: SendRequest): Promise<SendOutcome> {
         `  body:      ${JSON.stringify(req.body)}`,
       ].join("\n"),
     );
-    return { status: "dry_run", sentMessageId: row.id };
+    return { status: "dry_run", sentMessageId: row.id, channel };
+  }
+
+  if (mode === "hold") {
+    // Deliberately nothing else. The row is the queue; the flush pass owns it
+    // from here. Returning before any provider call is what keeps a held
+    // message from being a half-sent one.
+    return { status: "held", sentMessageId: row.id, channel };
   }
 
   const result =
     mode === "schedule"
-      ? await provider.schedule(to, req.body, req.sendAt!)
-      : await provider.sendNow(to, req.body);
+      ? await provider.schedule(recipient, req.body, req.sendAt!, req.options)
+      : await provider.sendNow(recipient, req.body, req.options);
 
   if (!result.ok) {
     await prisma.sentMessage.update({
@@ -197,7 +321,7 @@ export async function sendMessage(req: SendRequest): Promise<SendOutcome> {
       data: { status: "FAILED" },
     });
     console.error(
-      `[messaging] send failed type=${req.messageType} user=${req.userId}: ${result.error}`,
+      `[messaging] send failed type=${req.messageType} user=${req.userId} channel=${channel}: ${result.error}`,
     );
     return { status: "failed", reason: result.error ?? "provider_error" };
   }
@@ -208,8 +332,18 @@ export async function sendMessage(req: SendRequest): Promise<SendOutcome> {
   });
 
   return mode === "schedule"
-    ? { status: "scheduled", sentMessageId: row.id, providerMessageSid: result.providerMessageSid }
-    : { status: "sent", sentMessageId: row.id, providerMessageSid: result.providerMessageSid };
+    ? {
+        status: "scheduled",
+        sentMessageId: row.id,
+        providerMessageSid: result.providerMessageSid,
+        channel,
+      }
+    : {
+        status: "sent",
+        sentMessageId: row.id,
+        providerMessageSid: result.providerMessageSid,
+        channel,
+      };
 }
 
 // ── cancellation ─────────────────────────────────────────────────────────────
@@ -243,13 +377,17 @@ export async function cancelScheduled(scope: CancelScope): Promise<number> {
   });
   if (rows.length === 0) return 0;
 
-  const provider: MessageProvider | null = isDryRun() ? null : getProvider();
+  const provider: OutboundProvider | null = isDryRun() ? null : getProvider();
   let closed = 0;
 
   for (const row of rows) {
     if (!row.providerMessageSid || !provider) {
-      // A DRY_RUN row, or one that never got a SID, has nothing queued at the
-      // provider — closing the ledger is the whole job.
+      // A DRY_RUN row, one that never got a SID, or a held push — none of them
+      // has anything queued at a provider, so closing the ledger is the whole
+      // job. A held push is the important case: the row IS the queue, and
+      // flipping it to CANCELED is exactly what stops the flush pass sending
+      // it. That is also why push cancellation is reliable in a way scheduling
+      // is not — nothing has left the building yet.
       await prisma.sentMessage.update({ where: { id: row.id }, data: { status: "CANCELED" } });
       closed++;
       continue;

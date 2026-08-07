@@ -75,10 +75,10 @@ export default function PrivacyPage() {
         <Section title="How We Use Your Data">
           <p>We use the data we collect to:</p>
           <ul className="list-none space-y-1 pl-4">
-            <li>— Calculate your personalized nightly sleep recommendations</li>
-            <li>— Analyze your training load and performance trends</li>
-            <li>— Generate your recovery score and wind-down protocol</li>
-            <li>— Improve the accuracy of your sleep-performance correlation</li>
+            <li>· Calculate your personalized nightly sleep recommendations</li>
+            <li>· Analyze your training load and performance trends</li>
+            <li>· Generate your recovery score and wind-down protocol</li>
+            <li>· Improve the accuracy of your sleep-performance correlation</li>
           </ul>
           <p>
             All data processing is performed to provide you with the PRform service. We do not use your data
@@ -141,11 +141,11 @@ export default function PrivacyPage() {
         <Section title="Your Rights">
           <p>You have the right to:</p>
           <ul className="list-none space-y-1 pl-4">
-            <li>— Access the personal data we hold about you</li>
-            <li>— Request correction of inaccurate data</li>
-            <li>— Request deletion of your account and all associated data</li>
-            <li>— Withdraw consent for Strava data access at any time</li>
-            <li>— Export your data upon request</li>
+            <li>· Access the personal data we hold about you</li>
+            <li>· Request correction of inaccurate data</li>
+            <li>· Request deletion of your account and all associated data</li>
+            <li>· Withdraw consent for Strava data access at any time</li>
+            <li>· Export your data upon request</li>
           </ul>
           <p>
             To exercise any of these rights, contact us at:{" "}

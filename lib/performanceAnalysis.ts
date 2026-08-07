@@ -380,7 +380,7 @@ export function calculateVDOT(
     // Deliberately no fallback to "most recent run of any kind" — an easy run
     // tells us nothing about maximal capacity, and a confidently wrong VDOT is
     // worse than none. A declared PR covers this case instead.
-    return empty("No race or hard effort in this window yet — race or run a hard session to calculate VDOT from your training.");
+    return empty("No race or hard effort in this window yet. Race or run a hard session to calculate VDOT from your training.");
   }
 
   // Near-best rather than best: with enough efforts, drop the top decile so a
@@ -664,11 +664,11 @@ export function calculateSleepPerformanceCorrelation(
     const needed = 5 - scatterData.length;
     insight = `PRform only tracks runs where you've confirmed your sleep the night before. Log your sleep each morning to build your personal sleep-pace profile. You need ${needed} more confirmed night${needed !== 1 ? "s" : ""} to unlock your correlation.`;
   } else if (Math.abs(correlation) < 0.3) {
-    insight = `No strong correlation detected across ${scatterData.length} confirmed nights (r = ${correlation}). Your pace is consistent regardless of when you go to bed relative to your PRform target — good mental consistency.`;
+    insight = `No strong correlation detected across ${scatterData.length} confirmed nights (r = ${correlation}). Your pace is consistent regardless of when you go to bed relative to your PRform target. Good mental consistency.`;
   } else if (correlation > 0) {
     insight = `Clear signal across ${scatterData.length} confirmed nights (r = ${correlation}): going to bed closer to your PRform target is associated with better pace scores. Bedtime discipline is directly translating to faster runs.`;
   } else {
-    insight = `Inverse pattern across ${scatterData.length} confirmed nights (r = ${correlation}). Your PRform target bedtime may need adjustment, or there are confounding factors — consider logging how you feel on recovery days.`;
+    insight = `Inverse pattern across ${scatterData.length} confirmed nights (r = ${correlation}). Your PRform target bedtime may need adjustment, or there are confounding factors. Consider logging how you feel on recovery days.`;
   }
 
   return { correlation, insight, scatterData };

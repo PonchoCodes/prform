@@ -5,7 +5,7 @@ export async function GET() {
   const checks: Record<string, string> = {
     DATABASE_URL: process.env.DATABASE_URL ? "set" : "MISSING",
     NEXTAUTH_SECRET: process.env.NEXTAUTH_SECRET ? "set" : "MISSING",
-    NEXTAUTH_URL: process.env.NEXTAUTH_URL ?? "(not set — Vercel auto-detects)",
+    NEXTAUTH_URL: process.env.NEXTAUTH_URL ?? "(not set, Vercel auto-detects)",
     NODE_ENV: process.env.NODE_ENV ?? "unknown",
   };
 

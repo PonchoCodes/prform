@@ -33,11 +33,11 @@ const CustomTooltip = ({ active, payload }: any) => {
     <div className="bg-[#0A0A0A] border border-[#333] p-3 text-[11px] font-mono">
       <p className="text-[#6B6B6B] mb-1.5">7 days to {shortDate(p.date)}</p>
       <p className="text-white">
-        Slept <span className="font-bold">{p.sleepHours ?? "—"}h</span>
+        Slept <span className="font-bold">{p.sleepHours ?? "–"}h</span>
         {p.targetHours != null && <span className="text-[#6B6B6B]"> of {p.targetHours}h</span>}
       </p>
       <p className="text-[#E8FF00]">
-        On target <span className="font-bold">{p.compliance ?? "—"}%</span>
+        On target <span className="font-bold">{p.compliance ?? "–"}%</span>
       </p>
       <p className="text-[#6B6B6B] mt-1.5">
         {p.nightsInWindow} night{p.nightsInWindow === 1 ? "" : "s"} · {p.runsInWindow} run
@@ -74,7 +74,7 @@ export function SleepPaceTrendChart({ trend, onAddPr, hasPaces = true, windowDay
         </p>
         <p className="mt-3 text-xs font-mono text-[#6B6B6B] dark:text-[#A0A0A0] leading-relaxed max-w-[52ch]">
           {hasPaces
-            ? "Then you'll see whether sleeping more actually moves your paces — measured on you, not on a study."
+            ? "Then you'll see whether sleeping more actually moves your paces."
             : "Pace compliance needs a pace to measure against."}
         </p>
         {!hasPaces && onAddPr && (

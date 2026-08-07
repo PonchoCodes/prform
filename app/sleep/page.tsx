@@ -64,7 +64,7 @@ function DeviationBadge({ log }: { log: SleepLog }) {
       </span>
     );
   }
-  return <span className="text-xs font-mono text-[#6B6B6B] dark:text-[#A0A0A0]">—</span>;
+  return <span className="text-xs font-mono text-[#6B6B6B] dark:text-[#A0A0A0]">–</span>;
 }
 
 function StatusBadge({ log }: { log: SleepLog | null }) {
@@ -246,9 +246,15 @@ export default function SleepPage() {
           {streak && (
             <div className="grid grid-cols-2 md:grid-cols-4 gap-px bg-[#222]">
               {[
-                [streak.currentStreak, "Night Streak"],
-                [`${streak.hitRateLast7}%`, "Last 7 Days"],
-                [`${streak.hitRateLast30}%`, "Last 30 Days"],
+                // The check-in streak, not the target-hit one that used to sit
+                // here under the same label. "Night Streak" next to two
+                // target-hit rates read as a third target-hit number, and it
+                // told an athlete who logged an honest bad night that they had
+                // lost something. The hit rates beside it are still honest —
+                // they say "hit rate" and mean it.
+                [streak.checkIn?.current ?? 0, "Check-In Streak"],
+                [`${streak.hitRateLast7}%`, "Target Hit, 7 Days"],
+                [`${streak.hitRateLast30}%`, "Target Hit, 30 Days"],
                 [`${streak.avgDeviationMinutes > 0 ? "+" : ""}${streak.avgDeviationMinutes} min`, "Avg Deviation"],
               ].map(([val, label]) => (
                 <div key={label as string} className="bg-[#0A0A0A] p-4">
@@ -295,11 +301,11 @@ export default function SleepPage() {
                       {log?.actualBedtime ? (
                         <p className="text-xs font-mono dark:text-[#F5F5F5]">{formatTime12h(log.actualBedtime)}</p>
                       ) : (
-                        <p className="text-xs font-mono text-[#6B6B6B] dark:text-[#A0A0A0]">—</p>
+                        <p className="text-xs font-mono text-[#6B6B6B] dark:text-[#A0A0A0]">–</p>
                       )}
                     </div>
                     <div className="bg-white dark:bg-[#242424] px-4 py-3 flex items-center">
-                      {log ? <DeviationBadge log={log} /> : <span className="text-xs font-mono text-[#6B6B6B] dark:text-[#A0A0A0]">—</span>}
+                      {log ? <DeviationBadge log={log} /> : <span className="text-xs font-mono text-[#6B6B6B] dark:text-[#A0A0A0]">–</span>}
                     </div>
                     <div className="bg-white dark:bg-[#242424] px-4 py-3 flex items-center justify-between">
                       <StatusBadge log={log} />

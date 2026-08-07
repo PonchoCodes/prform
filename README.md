@@ -372,9 +372,11 @@ model Meet {
 
 ## Roadmap
 
-- [ ] Push notifications (Service Worker + Web Push API)
+- [x] Push notifications (Service Worker + Web Push API) — installable PWA, offline shell, and
+      push routed through the same send path as SMS. See the PWA section in CLAUDE.md.
 - [ ] Wearable integrations (Garmin, Whoop, Oura ring) to auto-import actual sleep vs. target
-- [ ] Group/team dashboard for coaches to monitor athlete recovery scores
+- [x] Group/team dashboard for coaches to monitor athlete recovery scores — shipped as an
+      exception list (colors and counts, never sleep values)
 - [ ] AI-personalized wind-down adjustments based on logged perceived effort patterns
 - [ ] Exportable race-week sleep plans (PDF) for athletes sharing with coaches
 

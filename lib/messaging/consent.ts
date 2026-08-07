@@ -37,4 +37,4 @@ export const SMS_CONSENT_TEXT = [
  * because most of the people reading it are 15.
  */
 export const SMS_MINOR_NOTICE =
-  "If you're under 18, check with a parent or guardian before turning this on. Only you can enable texts for your own number — a coach cannot do it for you.";
+  "If you're under 18, check with a parent or guardian before turning this on. Only you can enable texts for your own number.";

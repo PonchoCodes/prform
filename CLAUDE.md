@@ -62,6 +62,9 @@ STRAVA_REDIRECT_URI   # http://localhost:3000/api/strava/callback for local dev
 STRAVA_WEBHOOK_VERIFY_TOKEN
 EARLY_ACCESS          # "true" = invite-only gate active (see EARLY ACCESS TOGGLE below)
 ADMIN_EMAIL           # Email allowed into /admin (waitlist approval UI)
+VAPID_PUBLIC_KEY      # Web push. Generate with `npm run push:keys`
+VAPID_PRIVATE_KEY     # Rotating the pair unsubscribes every device
+VAPID_SUBJECT         # mailto: or https:// — how a push service contacts you
 ```
 
 Production is served at **https://prform.app** — the canonical host, and the value of
@@ -198,6 +201,181 @@ Things to know before touching it:
 - `calculateSleepPlan` now accepts `opts.declaredWakeByDate`. It changes only the bedtime
   anchor — the circadian model (CBTmin, PRC zones, meet ramp) still uses the athlete's
   habitual wake, and `lib/sleepAlgorithm.test.ts` asserts that.
+
+### Teams
+
+Anyone signed in can create a team and becomes its **owner**. There is no role to be granted,
+no approval, and no billing gate — a captain organizing six people needs a roster as much as a
+salaried coach does. There is deliberately **no directory, no browse and no search**: a team is
+reachable by join code alone, which is what keeps a roster of minors from being enumerable.
+
+- **"Owner", not "coach", throughout.** `Team.ownerId`, `assertOwnerOf`, `OWNER_VISIBILITY_NOTE`.
+  The permissions never depended on which of the two you were; only the word did. Renamed in
+  `20260807000000_rename_coach_to_owner` with `ALTER TABLE ... RENAME COLUMN` — a generated
+  drop-and-add would have detached every existing team from its owner.
+- **Owning a team and being on it are separate facts, and both can be true.** An owner may join
+  their own team (a captain runs too), still past the consent screen with no carve-out. An owner
+  who never joins still owns it. Leaving ends the membership and not the ownership.
+- **A user can hold any number of ACTIVE memberships** — cross country and track are two
+  rosters. Nothing has ever limited this; `GET /api/teams` returns `owned` and `memberships`
+  separately, with `ownedByYou` on a membership so the UI can explain a team appearing in both.
+- **Two guards, and they are not interchangeable.** `assertOwnerOf` for anything that changes
+  state or exposes one athlete's status to another; `assertMemberOf` for team-wide reads the
+  whole squad is entitled to. `lib/team/guard.test.ts` scans every route source and **fails the
+  build if an owner-only route uses the weaker check** — downgrading requires adding the file to
+  `MEMBER_SCOPED_ROUTES` in that test, where it is visible in review.
+- **Self-enrolment is the only path onto a roster.** No endpoint under `/api/teams` writes a
+  membership for anyone but the session user, and the guard test fails the build if `body.userId`,
+  `body.athleteId` or `body.email` ever appears in one of these files.
+- **The consent text is stored verbatim per membership** (`TEAM_CONSENT_VERSION`). Rewording
+  `lib/team/consent.ts` governs future joins only and never rewrites a past athlete's record.
+  It has moved twice: `2026-08-07.1` when "my coach" became "the person who runs this team",
+  and `2026-08-07.2` when the leaderboard added a disclosure to *teammates*.
+
+#### The consistency leaderboard
+
+`lib/team/leaderboard.ts` (pure) + `GET /api/teams/[teamId]/leaderboard` (the only
+member-scoped team route).
+
+- **It ranks nights logged out of nights possible. Nothing else, ever.** Not duration, not
+  bedtime, not whether a target was hit. An athlete can decide to open the app; they cannot
+  decide to sleep nine hours before a chemistry final. Ranking a squad on duration would put
+  the kid with the hardest life at the bottom of a public list and teach everyone that the way
+  to climb it is to lie.
+- **The query is the privacy boundary.** It selects `date` from SleepLog and nothing else — the
+  values are never loaded, so no careless spread can put one on the wire.
+  `tests/integration/teams.leaderboard.test.ts` walks the real response for sleep-shaped keys,
+  clock times, decimals, and the seeded athlete's actual values.
+- **Weekly, Monday to Sunday, reset every Monday** — an all-time board buries the athlete who
+  missed a fortnight in September until June.
+- **The window ends yesterday**, because a night is filed under the date it *begins*; counting
+  today would mark everyone late every day.
+- **A mid-week joiner is not judged on the days before they joined**, and "no nights possible
+  yet" is `rate: null`, not 0% — having had no chance is not a miss.
+
+### Retention measurement
+
+`lib/retention.ts` (pure) + `/api/admin/retention` + `/admin/retention`. **No third-party
+analytics, deliberately** — the people measured here are mostly minors, and their behavioural
+data does not go to a vendor whose retention policy we do not control. Everything is computed
+from rows already held.
+
+- **Guarded twice**: the page redirects non-admins, the API refuses them independently, and it
+  fails closed when `ADMIN_EMAIL` is unset. A page guard protects the page, not the data.
+- **The payload is counts.** No names, no emails, no user ids. Team names appear because
+  comparing teams is the point of the rollup. `tests/integration/admin.retention.test.ts` walks
+  the response for athlete names, emails, ids and sleep values.
+- **Funnel steps are strict subsets**, in order: signed up → onboarded → first log → 7
+  consecutive days → active in week 4 (days 21–27 after signup). Someone who skipped onboarding
+  but logged anyway is excluded from the later steps, or the shape stops being a funnel.
+- **Seven consecutive days here is strict** — no forgiveness, no holds. The athlete-facing
+  streak is generous on purpose; a retention number that inherited that would report a habit
+  that had not formed.
+- **A cohort younger than four weeks reports "too soon", never 0%**, which would read as a
+  collapse rather than as arithmetic that has not happened yet.
+- **Weekly active = logged at least one night that week.** Not opens, not page views.
+- **Team rows are not a partition**: an athlete on two teams counts in both, and the solo row is
+  users on no team, so the rows do not sum to the account total.
+- `User.onboardingCompletedAt` is the timestamp the funnel needs; the boolean alone cannot
+  answer "signed up in week 12 and onboarded". Pre-existing rows were backfilled to `createdAt`,
+  which understates the gap rather than inventing one.
+
+### The check-in streak
+
+`lib/streak.ts` (pure). **Counts consecutive days CHECKED IN, never targets hit.** An athlete who
+was up until 1am with a lab report and logged it honestly at 6:30 has kept their streak — they
+did the thing the streak is for. Breaking it there would teach them to stop reporting bad nights,
+which destroys the data the product runs on.
+
+- **Three different "streaks" exist and must never share a label.** `computeCheckInStreak` is the
+  habit shown to the athlete. `currentStreak` in `/api/sleep-log/streak` counts consecutive nights
+  that hit their target and survives only because the hit rates beside it are the same family of
+  number. `sleepStreak` in `lib/sleepAlgorithm.ts` feeds the recovery score and is physiology —
+  leave it alone.
+- **One skipped night per week, rolling, automatic.** A miss is bridged only if no other miss was
+  bridged in the previous seven days. Calendar-week allowances would forgive a Sunday *and* a
+  Monday — two nights in two days out of a promise that says one a week. Two misses in a row
+  therefore always break it.
+- **A forgiven night adds nothing to the count.** Forgiveness buys continuity, not credit.
+- **Last night unlogged is `atRisk`, not broken.** Athletes log on the way to practice; a streak
+  that broke at midnight would be wrong for the seven hours they were asleep.
+- **Silent below three days** (`STREAK_ANNOUNCE_FROM`) — announcing a one-day streak tells someone
+  they have nothing to protect. `streakSentence` is the single source of the wording, shared by
+  the dashboard and the morning message so the two cannot disagree.
+- **The morning message drops the streak, never the verdict**, when the body would exceed
+  `MAX_BODY_LENGTH`.
+- **A hold, not a freeze.** `StreakHold` is a date range the athlete marks as away. Held days are
+  removed from the question entirely: not counted, not missed, and they **do not consume the
+  weekly forgiveness**. A held night is never `atRisk`. It needs no limit because a held day is
+  not a checked-in day either, so it cannot be farmed. See D16 in DECISIONS.md.
+
+### PWA and Web Push
+
+PRform is installable, and web push is a second delivery channel sitting behind the same
+send path as SMS. During the pilot — no Twilio account yet — **push is the only channel that
+exists**, which is why the routing below fails toward push rather than toward nothing.
+
+- **`public/sw.js` is hand-written; there is no next-pwa or workbox.** It caches only
+  content-hashed build output. **No page HTML and no API response is ever cached**: every page
+  is personalized behind a session, so a cached page is one athlete's dashboard on disk, and on
+  a shared device the next person offline would be shown it. Navigations are network-only with
+  `public/offline.html` as the fallback.
+- **`lib/messaging/push.ts` is the only file allowed to import `web-push`**, exactly as
+  `twilio.ts` is the only one allowed to import Twilio.
+- **The provider contract is split.** `OutboundProvider` (schedule / sendNow / cancel, plus
+  `channel` and `canSchedule`) is what `sendMessage` talks to; `MessageProvider` extends it with
+  the inbound half (`verifySignature`, `normalizeInbound`) that only SMS has. The inbound
+  webhook types its provider as `MessageProvider`, so a push driver cannot be wired to it.
+- **Push cannot be scheduled by anyone but us.** No push service has a `sendAt`. A push with a
+  future send time is written to the ledger as SCHEDULED with nothing handed to a provider —
+  `sendMessage` returns `held` — and `lib/messaging/pushFlush.ts` delivers it when due, or
+  abandons it if it is more than two hours overdue. **A scheduled text survives this app being
+  down; a scheduled push does not.**
+- **`/api/cron/push-flush` needs a five-minute trigger and is deliberately NOT in
+  `vercel.json`.** Hobby allows two crons, once a day, and both slots are taken — a third entry
+  fails the deploy. On Pro, add `{ "path": "/api/cron/push-flush", "schedule": "*/5 * * * *" }`.
+  Until then an external pinger with the same `Bearer CRON_SECRET` works, and
+  `/api/cron/messaging` calls the flush opportunistically so the queue degrades rather than
+  silently accumulating.
+- **There are three channels: SMS, PUSH and EMAIL.** `lib/messaging/email.ts` is the only file
+  allowed to build message emails, and it is the **only channel besides SMS that can schedule** —
+  Resend accepts a `scheduledAt`, so an athlete on EMAIL gets working scheduled reminders with
+  no five-minute flush trigger and no Vercel upgrade.
+- **Email is not in the messaging cron's candidate query by address alone.** Every account has
+  an email, so including it would enrol the whole user base in a daily message nobody asked
+  for. An athlete reaches it by setting `channelPreference = EMAIL`.
+- **Channel routing lives in `lib/messaging/channel.ts`** and is pure. AUTO goes SMS, then push,
+  then email, which is a ranking of how likely a message is to be read at 21:00. An explicit
+  choice is honoured strictly with no substitution.
+- **Three kill switches**, one per channel (`SMS_KILL_SWITCH`, `PUSH_KILL_SWITCH`,
+  `EMAIL_KILL_SWITCH`). They exist to be reached for in a hurry, and a flag that stops three
+  channels when you meant to stop one is a flag nobody trusts at 2am.
+  **Replies are pinned with `forceChannel: "SMS"`** — HELP, BED_ACK, LIGHTS_OUT, CLARIFICATION,
+  and the verification code, which proves control of the number it is sent to. Only the
+  scheduled messages route by channel.
+- **`STOP` silences every channel.** The gate refuses a push from a STOPPED athlete too;
+  delivering the same message by another road because STOP is an SMS word is the behaviour
+  `gate.test.ts` and `push.send.test.ts` both pin shut.
+- **The daily cap counts both channels from one ledger.** An athlete's attention does not have
+  separate budgets for a text and a notification.
+- **A push-only athlete's timezone comes from the browser**, captured by `/api/push/subscribe`.
+  Without it the gate refuses everything with `no_timezone`. It only ever fills a blank — a
+  zone chosen during SMS enrolment is never overwritten.
+- **iOS requires the PWA be installed before push exists at all.** In a Safari tab `PushManager`
+  is absent, so a permission request there does nothing. `lib/pwa/install.ts` detects this
+  (including an iPad reporting a Mac user agent, caught via `maxTouchPoints`) and returns
+  `needs_install`, which the UI renders as the literal Share → Add to Home Screen steps.
+- **The install prompt appears after a night has been logged**, not on first visit — except in
+  onboarding (step 5), where the ask is part of setup. Dismissal is stored on the User so it
+  does not reappear on their other device, and `/profile` is the way back for anyone who
+  dismissed it.
+- **Icons in `public/icons/` are built from the wordmark** by
+  `node scripts/buildIcons.mjs "path/to/PRForm Favicon.png"`. Android Chrome will not offer to
+  install without a 192 and a 512. The maskable variant draws the mark at 66% so a launcher can
+  crop it to any shape, and `icon-badge.png` is alpha-only because Android discards a badge's
+  colour and keeps the silhouette. Re-run the script when the artwork changes.
+- `npm run push:keys` generates a VAPID pair. **Rotating it unsubscribes every device**, because
+  a subscription is minted against one public key.
 
 ### SEO
 

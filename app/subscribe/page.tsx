@@ -82,7 +82,7 @@ export default function SubscribePage() {
             disabled={loading}
             className="w-full bg-[#E8FF00] text-[#0A0A0A] font-black text-sm uppercase tracking-widest py-4 hover:bg-[#d4e800] transition-colors disabled:opacity-50"
           >
-            {loading ? "Redirecting…" : "Start Free Trial — No charge for 30 days"}
+            {loading ? "Redirecting…" : "Start Free Trial. No charge for 30 days"}
           </button>
 
           <p className="text-[10px] font-mono text-[#6B6B6B] text-center mt-4">

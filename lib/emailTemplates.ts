@@ -54,7 +54,7 @@ function layout(bodyHtml: string): string {
       </p>
       <hr style="border:none;border-top:1px solid #E5E5E5;margin:32px 0 16px;">
       <p style="font-size:11px;color:${GRAY};letter-spacing:0.1em;text-transform:uppercase;">
-        PRform — Sleep optimization for competitive runners
+        PRform · Sleep optimization for competitive runners
       </p>
     </div>
   </div>`;
@@ -77,11 +77,11 @@ export function approvalEmail(name?: string | null): { subject: string; html: st
     heading("You're in") +
       para(`${greeting}'re approved for PRform early access.`) +
       para(
-        `Connect Strava so your training load drives your sleep plan tonight. Without it your plan stays generic — with it, every hard session shifts your bedtime automatically.`
+        `Connect Strava so your training load drives your sleep plan tonight. Without it your plan stays generic. With it, every hard session shifts your bedtime automatically.`
       ) +
       ctaButton(href, CTA_LABEL)
   );
-  return { subject: "You're in — connect Strava to start", html };
+  return { subject: "You're in. Connect Strava to start", html };
 }
 
 export function reminder1Email(name?: string | null): { subject: string; html: string } {
@@ -89,7 +89,7 @@ export function reminder1Email(name?: string | null): { subject: string; html: s
   const greeting = name ? `${name}, your` : "Your";
   const html = layout(
     heading("Your spot is reserved") +
-      para(`${greeting} PRform spot is reserved — but your plan is generic until Strava is connected.`) +
+      para(`${greeting} PRform spot is reserved, but your plan is generic until Strava is connected.`) +
       para(
         `PRform reads your training load from Strava to move your bedtime earlier on hard days and around race week. Until it's connected, you're getting a one-size-fits-all schedule.`
       ) +
@@ -100,7 +100,7 @@ export function reminder1Email(name?: string | null): { subject: string; html: s
 
 export function reminder2Email(name?: string | null): { subject: string; html: string } {
   const href = stravaDeepLink();
-  const greeting = name ? `${name} — ` : "";
+  const greeting = name ? `${name}: ` : "";
   const html = layout(
     heading("Last note") +
       para(`${greeting}spots are capped at 10 athletes, and unconnected spots may be released to make room.`) +
@@ -109,5 +109,5 @@ export function reminder2Email(name?: string | null): { subject: string; html: s
       ) +
       ctaButton(href, CTA_LABEL)
   );
-  return { subject: "Last note — connect Strava to keep your spot", html };
+  return { subject: "Last note: connect Strava to keep your spot", html };
 }

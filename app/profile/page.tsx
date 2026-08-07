@@ -8,6 +8,8 @@ import { Navbar } from "@/components/Navbar";
 import { Footer } from "@/components/Footer";
 import { Button } from "@/components/Button";
 import { SmsEnrollment } from "@/components/SmsEnrollment";
+import { PushEnrollment } from "@/components/PushEnrollment";
+import { ChannelPreference } from "@/components/ChannelPreference";
 import { formatTime12h } from "@/lib/sleepAlgorithm";
 
 function parseTimeMin(t: string): number {
@@ -235,6 +237,19 @@ export default function ProfilePage() {
               </div>
             </div>
 
+            {/* Push notifications. This is the only place an athlete who
+                dismissed the dashboard notice can get back to it — "not now"
+                has to be recoverable, or a single tap permanently removes the
+                one channel that exists during the pilot. */}
+            <h2 className="font-black text-xl uppercase mt-10 mb-6 border-b border-[#E5E5E5] dark:border-[#333] pb-3">App Notifications</h2>
+            <PushEnrollment compact />
+
+            {/* The channel picker sits after both enrolment panels, because
+                every option it offers is unlocked by one of them. */}
+            <div className="mt-6">
+              <ChannelPreference />
+            </div>
+
             {/* Text messages — self-enrolment only; see components/SmsEnrollment.tsx */}
             <h2 className="font-black text-xl uppercase mt-10 mb-6 border-b border-[#E5E5E5] dark:border-[#333] pb-3">Text Messages</h2>
             <SmsEnrollment />
@@ -349,7 +364,7 @@ export default function ProfilePage() {
                         )}
                       </>
                     ) : (
-                      <p className="text-xs text-[#6B6B6B] dark:text-[#A0A0A0] font-mono">Not connected — using manual schedule</p>
+                      <p className="text-xs text-[#6B6B6B] dark:text-[#A0A0A0] font-mono">Not connected. Using manual schedule</p>
                     )}
                   </div>
                 </div>

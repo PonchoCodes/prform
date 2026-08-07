@@ -27,7 +27,7 @@ function sortRank(e: WaitlistEntry): number {
 }
 
 function formatDate(iso: string | null): string {
-  return iso ? new Date(iso).toLocaleDateString() : "—";
+  return iso ? new Date(iso).toLocaleDateString() : "–";
 }
 
 export function AdminWaitlist() {
@@ -105,7 +105,7 @@ export function AdminWaitlist() {
         {capReached && (
           <div className="bg-[#0A0A0A] px-4 py-3 mb-6">
             <p className="text-xs font-bold uppercase tracking-wider text-[#E8FF00]">
-              Approval cap reached — {cap} early-access members approved
+              Approval cap reached: {cap} early-access members approved
             </p>
           </div>
         )}

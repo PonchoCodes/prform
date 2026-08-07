@@ -87,7 +87,7 @@ export function VerdictCard({ verdict, onAddPr }: Props) {
               onClick={onAddPr}
               className="inline-flex items-center min-h-[44px] px-4 text-[11px] font-bold uppercase tracking-widest border border-[#0A0A0A] dark:border-[#F5F5F5] text-[#0A0A0A] dark:text-[#F5F5F5] hover:bg-[#E8FF00] hover:border-[#E8FF00] hover:text-[#0A0A0A] transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#E8FF00]"
             >
-              {verdict.confidence === "low" ? "Low confidence" : "Provisional"} — add a PR to
+              {verdict.confidence === "low" ? "Low confidence" : "Provisional"}. Add a PR to
               sharpen this →
             </button>
           ) : (
@@ -95,7 +95,7 @@ export function VerdictCard({ verdict, onAddPr }: Props) {
               href={verdict.action?.target === "strava" ? "/api/strava/connect" : "/sleep"}
               className="inline-flex items-center min-h-[44px] px-4 text-[11px] font-bold uppercase tracking-widest border border-[#0A0A0A] dark:border-[#F5F5F5] text-[#0A0A0A] dark:text-[#F5F5F5] hover:bg-[#E8FF00] hover:border-[#E8FF00] hover:text-[#0A0A0A] transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#E8FF00]"
             >
-              {verdict.confidence === "low" ? "Low confidence" : "Provisional"} —{" "}
+              {verdict.confidence === "low" ? "Low confidence" : "Provisional"}.{" "}
               {verdict.action?.target === "strava"
                 ? "connect Strava to sharpen this"
                 : "log your sleep to sharpen this"}{" "}

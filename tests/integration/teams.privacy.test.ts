@@ -1,10 +1,10 @@
 // The privacy boundary, which matters as much as the authorization one.
 //
-// A coach is allowed to see their own roster. What they are never allowed to
-// see is when an athlete slept. lib/team/consent.ts is the promise — "my coach
+// An owner is allowed to see their own roster. What they are never allowed to
+// see is when an athlete slept. lib/team/consent.ts is the promise — "they
 // CANNOT see my bedtimes, wake times, or hours slept" — and these tests hold
-// the responses to it, for the coach's OWN team, where the guard is satisfied
-// and nothing else stands between the athlete and the coach except the shape
+// the responses to it, for the owner's OWN team, where the guard is satisfied
+// and nothing else stands between the athlete and the owner except the shape
 // of the payload.
 //
 // Second half: join codes are secrets, so the API must not confirm which
@@ -61,8 +61,8 @@ const CLOCK_TIME = /\b\d{1,2}:\d{2}\b/;
 /** "5.35", "9.25" — an hours value. Bare integers are counts and allowed. */
 const DECIMAL_NUMBER = /\b\d+\.\d+\b/;
 
-describe("a coach's own team: readiness, never sleep", () => {
-  beforeEach(() => signInAs(world.coachA.id));
+describe("an owner’s own team: readiness, never sleep", () => {
+  beforeEach(() => signInAs(world.ownerA.id));
 
   it("the exception list contains no clock time, no hours value, and no raw sleep field", async () => {
     const result = await invoke(exceptionsGET, { teamId: world.teamA.id });
@@ -114,8 +114,8 @@ describe("a coach's own team: readiness, never sleep", () => {
     expect(TEAM_CONSENT_TEXT).toContain("a weekly count");
   });
 
-  it("the planned sessions payload carries only coach-authored fields", async () => {
-    // targetPaces is coach-authored free text and legitimately holds things
+  it("the planned sessions payload carries only owner-authored fields", async () => {
+    // targetPaces is owner-authored free text and legitimately holds things
     // like "6x1200 @ 3:52/km", so the clock-time rule cannot apply here. The
     // guarantee instead is that no athlete-derived field exists in the shape.
     const result = await invoke(sessionsGET, { teamId: world.teamA.id });
@@ -127,10 +127,10 @@ describe("a coach's own team: readiness, never sleep", () => {
     expect(result.text).not.toContain(world.athleteA.name);
   });
 
-  it("the team list gives a coach counts, not athletes", async () => {
+  it("the team list gives an owner counts, not athletes", async () => {
     const result = await invoke(teamsGET);
     expect(result.status).toBe(200);
-    expect(result.body.coached[0].athleteCount).toBe(1);
+    expect(result.body.owned[0].athleteCount).toBe(1);
 
     expect(result.text).not.toContain(world.athleteA.name);
     for (const key of allKeys(result.body)) {
@@ -150,7 +150,7 @@ describe("join codes are not enumerable", () => {
       data: {
         name: "Umberland Striders",
         sport: "track",
-        coachId: world.coachB.id,
+        ownerId: world.ownerB.id,
         joinCode: EXPIRED_CODE,
         joinCodeExpiresAt: new Date(Date.now() - 60_000),
       },
@@ -168,11 +168,22 @@ describe("join codes are not enumerable", () => {
   });
 
   it("an expired code does not reveal the team it belongs to, or admit anyone", async () => {
+    const before = await prisma.teamMembership.count({ where: { userId: world.athleteA.id } });
     const expired = await invoke(joinPOST, { body: { code: EXPIRED_CODE, consent: true } });
 
     expect(expired.text).not.toContain("Umberland Striders");
-    const memberships = await prisma.teamMembership.count({ where: { userId: world.athleteA.id } });
-    expect(memberships).toBe(1); // still only their own team
+
+    // Asserted as "nothing was added", not as a fixed total. An athlete can be
+    // on any number of teams, so a hard-coded count here would break every time
+    // the seeded world grows — and would fail for a reason that has nothing to
+    // do with what this test is about.
+    const after = await prisma.teamMembership.count({ where: { userId: world.athleteA.id } });
+    expect(after).toBe(before);
+
+    const admitted = await prisma.teamMembership.findFirst({
+      where: { userId: world.athleteA.id, team: { joinCode: EXPIRED_CODE } },
+    });
+    expect(admitted).toBeNull();
   });
 
   it("a malformed code is rejected on format alone, before any lookup", async () => {

@@ -12,6 +12,7 @@
     "test:integration": "vitest run --config vitest.integration.config.ts",
     "test:db:setup": "node scripts/createTestDb.mjs",
     "test:db:push": "node scripts/pushTestDb.mjs",
+    "push:keys": "node scripts/generateVapidKeys.mjs",
     "seed": "npx ts-node --project tsconfig.seed.json prisma/seed.ts",
     "seed:analysis": "npx ts-node --project tsconfig.seed.json scripts/seedAnalysis.ts",
     "postinstall": "prisma generate"
@@ -50,6 +51,7 @@
     "tailwind-merge": "^3.5.0",
     "three": "^0.184.0",
     "twilio": "^6.0.2",
+    "web-push": "^3.6.7",
     "ws": "^8.20.0",
     "zustand": "^5.0.12"
   },
@@ -57,6 +59,7 @@
     "@types/node": "^20",
     "@types/react": "^18",
     "@types/react-dom": "^18",
+    "@types/web-push": "^3.6.4",
     "eslint": "^8",
     "eslint-config-next": "14.2.35",
     "postcss": "^8",

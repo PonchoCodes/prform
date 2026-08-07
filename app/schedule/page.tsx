@@ -259,7 +259,7 @@ export default function SchedulePage() {
           <div className="border-b border-[#222] bg-[#0A0A0A] px-6 py-4">
             <div className="max-w-[1200px] mx-auto">
               <p className="text-xs font-bold uppercase tracking-[0.3em] text-[#E8FF00] mb-3">
-                Workout Conflicts — Strava and manual entries overlap
+                Workout Conflicts: Strava and manual entries overlap
               </p>
               <div className="space-y-2">
                 {conflicts.map((c) => (
@@ -449,7 +449,7 @@ export default function SchedulePage() {
                   <div className="border border-[#E5E5E5] dark:border-[#333] p-6 mb-6">
                     <h3 className="font-black text-sm uppercase tracking-wider mb-1">Log a Workout</h3>
                     <p className="text-xs font-mono text-[#6B6B6B] dark:text-[#A0A0A0] mb-4">
-                      Duration × effort feeds your training load — no watch or Strava needed.
+                      Duration × effort feeds your training load. No watch or Strava needed.
                     </p>
                     <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
                       <input
@@ -489,7 +489,7 @@ export default function SchedulePage() {
                         <option value="">Effort (RPE)…</option>
                         {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((r) => (
                           <option key={r} value={r}>
-                            {r} — {r <= 2 ? "very easy" : r <= 4 ? "easy" : r <= 6 ? "moderate" : r <= 8 ? "hard" : "maximal"}
+                            {r}: {r <= 2 ? "very easy" : r <= 4 ? "easy" : r <= 6 ? "moderate" : r <= 8 ? "hard" : "maximal"}
                           </option>
                         ))}
                       </select>

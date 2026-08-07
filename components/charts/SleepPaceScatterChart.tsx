@@ -71,7 +71,7 @@ export function SleepPaceScatterChart({ data, correlation, unit = "imperial" }: 
         <p className="text-xs font-mono text-[#6B6B6B] leading-relaxed">
           PRform calculates a target bedtime each day based on your training load and sleep need.
           Each dot is one of your runs. The X axis shows how far your estimated bedtime was from
-          that day&apos;s PRform target — left is late, right is early.
+          that day&apos;s PRform target. Left is late, right is early.
           The Y axis is your pace score (z-score vs. your average).
           The yellow line is the trend.{" "}
           {confirmedCount > 0 && (

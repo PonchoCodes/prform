@@ -154,7 +154,7 @@ export function SmsEnrollment() {
       <p className="text-sm text-[#6B6B6B] dark:text-[#A0A0A0] leading-relaxed">
         Two messages a day: one in the evening asking what time you&rsquo;re up tomorrow, one
         when you wake up with the call on today&rsquo;s run. Reply BED when you get down and
-        that timestamp becomes your sleep record — no app to open.
+        that timestamp becomes your sleep record.
       </p>
 
       {active ? (
@@ -242,7 +242,7 @@ export function SmsEnrollment() {
               {zoneOptions.map((z) => (
                 <option key={z} value={z}>
                   {z.replace(/_/g, " ")}
-                  {z === detectedZone ? " — detected" : ""}
+                  {z === detectedZone ? " (detected)" : ""}
                 </option>
               ))}
             </select>

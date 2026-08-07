@@ -24,12 +24,12 @@ export function lightsOut(bedtime: string): string {
 
 /** Confirms a BED reply. `onset` is the receipt time, "H:MM am/pm". */
 export function bedAcknowledged(onset: string): string {
-  return `Got it — ${onset}. Sleep well.`;
+  return `Got it. ${onset}. Sleep well.`;
 }
 
 /** When nothing parsed. Asks for one specific thing rather than guessing. */
 export function clarification(): string {
-  return "Sorry — I didn't catch that. What time are you getting up? Something like 5:30am works.";
+  return "Sorry, I didn't catch that. What time are you getting up? Something like 5:30am works.";
 }
 
 export function helpReply(): string {
@@ -53,10 +53,30 @@ export function verificationCode(code: string): string {
  * re-scheduled if a BED reply changes the answer — which is why the two parts
  * are separate arguments rather than one composed string.
  */
-export function morningMessage(input: { headline: string; askForBedtime: boolean }): string {
-  return input.askForBedtime
+export function morningMessage(input: {
+  headline: string;
+  askForBedtime: boolean;
+  /**
+   * The check-in streak clause, or null when there is nothing worth saying —
+   * built by `streakSentence` in lib/streak.ts so the text and the dashboard
+   * cannot disagree about the number.
+   */
+  streak?: string | null;
+}): string {
+  // Order matters. The verdict is the instruction and goes first; the streak is
+  // context and goes last, after the question, so it never sits between an
+  // athlete and the thing they are being asked.
+  const essential = input.askForBedtime
     ? `${input.headline} What time did you get down last night?`
     : input.headline;
+
+  if (!input.streak) return essential.slice(0, MAX_BODY_LENGTH);
+
+  const full = `${essential} ${input.streak}`;
+  // Over two segments. The streak is what gets dropped — a half-sentence about
+  // a streak is worse than no sentence about a streak, and both the verdict and
+  // the question are load-bearing.
+  return full.length <= MAX_BODY_LENGTH ? full : essential.slice(0, MAX_BODY_LENGTH);
 }
 
 /**

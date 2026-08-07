@@ -149,18 +149,18 @@ export default function HistoryPage() {
                           <span className="text-[#6B6B6B] dark:text-[#A0A0A0] ml-2">{formatDistance(row.activity.distance, unit)} · {formatPace(row.activity.averageSpeed, unit)}</span>
                         </span>
                       ) : (
-                        <span className="text-[#AAAAAA]">—</span>
+                        <span className="text-[#AAAAAA]">–</span>
                       )}
                     </div>
                     <div className="bg-white dark:bg-[#242424] px-4 py-3 font-mono text-xs">
-                      {row.sleepLog?.recommendedBedtime ? formatTime12h(row.sleepLog.recommendedBedtime) : "—"}
+                      {row.sleepLog?.recommendedBedtime ? formatTime12h(row.sleepLog.recommendedBedtime) : "–"}
                     </div>
                     <div className="bg-white dark:bg-[#242424] px-4 py-3 font-mono text-xs text-[#6B6B6B] dark:text-[#A0A0A0]">
                       {row.sleepLog?.hitTarget === true
                         ? formatTime12h(row.sleepLog.recommendedBedtime)
                         : row.sleepLog?.actualBedtime
                         ? formatTime12h(row.sleepLog.actualBedtime)
-                        : "—"}
+                        : "–"}
                     </div>
                     <div className="bg-white dark:bg-[#242424] px-4 py-3">
                       <span className={`px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider ${statusClass}`}>

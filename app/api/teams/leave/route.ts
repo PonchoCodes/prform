@@ -5,9 +5,13 @@ import { prisma } from "@/lib/prisma";
 
 // An athlete leaves a team. Session user only — same one-identity rule as
 // joining. The row flips to LEFT rather than being deleted so the consent
-// record survives; the coach's exception list excludes non-ACTIVE members,
-// so departure removes their status from the coach's view immediately, which
+// record survives; the owner's exception list excludes non-ACTIVE members,
+// so departure removes their status from the owner's view immediately, which
 // is what the consent screen promises.
+//
+// An owner who joined their own team can leave it, and that only ends their
+// membership — they still own the team. The two are separate rows and this
+// route touches exactly one of them.
 
 export async function POST(req: Request) {
   const session = await getServerSession(authOptions);

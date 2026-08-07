@@ -187,6 +187,11 @@ export async function POST(req: NextRequest) {
     messageType: "VERIFICATION_CODE",
     body: verificationCodeBody(code),
     localDate: localDateOf(now, ianaTimezone),
+    // Pinned to SMS, and this one is not a preference: the code proves control
+    // of the number it is sent to. Delivered any other way it proves nothing,
+    // and an athlete who had set their channel to push would be able to verify
+    // a number that is not theirs.
+    forceChannel: "SMS",
   });
 
   if (outcome.status === "blocked" || outcome.status === "failed") {

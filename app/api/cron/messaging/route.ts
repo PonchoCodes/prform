@@ -4,6 +4,7 @@ import { calculateSleepPlan } from "@/lib/sleepAlgorithm";
 import { getWorkoutsForDateRange } from "@/lib/workoutDataSource";
 import { sendMessage } from "@/lib/messaging/send";
 import { closeUnresolvedNights } from "@/lib/messaging/night";
+import { flushDuePushMessages } from "@/lib/messaging/pushFlush";
 import { eveningWakeQuestion } from "@/lib/messaging/copy";
 import {
   addLocalDays,
@@ -125,15 +126,40 @@ export async function GET(req: NextRequest) {
   // since opted out still has to be closed rather than left dangling.
   const housekeeping = await closeUnresolvedNights(now);
 
-  // Only athletes who finished onboarding, confirmed their number, and have not
-  // opted out. The send gate checks all of this again per message — this is
-  // narrowing the query, not enforcing the rule.
+  // Opportunistic, not the real trigger. Anything push-shaped that came due
+  // since the last flush goes out now, so the queue still drains if the
+  // dedicated five-minute trigger is not set up (see the header comment in
+  // app/api/cron/push-flush/route.ts). Once a day is not a schedule a push
+  // channel can be run on — this only means a daily-cron-only deployment
+  // degrades rather than silently accumulating a queue nobody drains.
+  const pushFlush = await flushDuePushMessages(now);
+
+  // Everyone reachable on some channel: a confirmed phone number, or at least
+  // one live push subscription. The send gate checks all of this again per
+  // message — this is narrowing the query, not enforcing the rule.
+  //
+  // The OR is what admits the pilot's athletes at all. Before push, this query
+  // asked for a verified phone number and nothing else, so a user who had
+  // installed the app and enabled notifications but never given us a number
+  // matched nothing and was never messaged.
+  //
+  // A timezone is still required of everyone, because "the athlete's evening"
+  // cannot be computed without one. For a push user it is captured by
+  // /api/push/subscribe from the browser rather than typed into a form.
+  //
+  // Email is deliberately NOT in this OR. Every account has an address, so
+  // including it would enrol the entire user base in a daily message nobody
+  // asked for. Email is a fallback for an athlete who has opted into being
+  // messaged and has no better channel, not an opt-out mailing list, so an
+  // athlete reaches it by setting channelPreference to EMAIL.
   const candidates = await prisma.user.findMany({
     where: {
-      smsStatus: "ACTIVE",
-      phoneVerifiedAt: { not: null },
-      phoneNumber: { not: null },
       ianaTimezone: { not: null },
+      OR: [
+        { smsStatus: "ACTIVE", phoneVerifiedAt: { not: null }, phoneNumber: { not: null } },
+        { pushSubscriptions: { some: { disabledAt: null } } },
+        { channelPreference: "EMAIL" },
+      ],
     },
     select: {
       id: true,
@@ -147,7 +173,16 @@ export async function GET(req: NextRequest) {
     },
   });
 
-  const tally = { scheduled: 0, duplicate: 0, dryRun: 0, blocked: 0, failed: 0, skipped: 0 };
+  const tally = {
+    scheduled: 0,
+    held: 0,
+    duplicate: 0,
+    dryRun: 0,
+    blocked: 0,
+    noChannel: 0,
+    failed: 0,
+    skipped: 0,
+  };
 
   for (const user of candidates) {
     const tz = user.ianaTimezone;
@@ -199,12 +234,22 @@ export async function GET(req: NextRequest) {
         body: eveningWakeQuestion(),
         localDate,
         sendAt: instant,
+        // Routes by channel. On push it lands as a notification that opens the
+        // dashboard — there is no reply-by-text on that road, so the tap has to
+        // land somewhere the athlete can answer.
+        options: { tag: "EVENING_WAKE_QUESTION", url: "/dashboard" },
       });
 
       switch (outcome.status) {
         case "scheduled":
         case "sent":
           tally.scheduled++;
+          break;
+        // Queued in our own ledger for the push flush pass rather than handed
+        // to a provider. Counted separately because the two have different
+        // reliability: a scheduled text survives this app being down.
+        case "held":
+          tally.held++;
           break;
         case "dry_run":
           tally.dryRun++;
@@ -214,6 +259,9 @@ export async function GET(req: NextRequest) {
           break;
         case "blocked":
           tally.blocked++;
+          break;
+        case "no_channel":
+          tally.noChannel++;
           break;
         default:
           tally.failed++;
@@ -231,5 +279,6 @@ export async function GET(req: NextRequest) {
     ...tally,
     nightsClosed: housekeeping.closed,
     nightsFlagged: housekeeping.flagged,
+    pushFlush,
   });
 }

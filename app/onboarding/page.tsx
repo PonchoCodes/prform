@@ -5,6 +5,7 @@ import { useSession } from "next-auth/react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Button } from "@/components/Button";
 import { SmsEnrollment } from "@/components/SmsEnrollment";
+import { PushEnrollment } from "@/components/PushEnrollment";
 import { PrForm, EMPTY_PR, validatePrForm, isPrFormEmpty, type PrFormValue } from "@/components/PrForm";
 import { PR_DISTANCES, meetEventForPrDistance, prDistanceGuidance } from "@/lib/vdot";
 import { parseTimeToSeconds, getUnitForEvent } from "@/lib/performancePrediction";
@@ -189,7 +190,7 @@ export default function OnboardingPage() {
     router.push(data.earlyAccessUser ? "/dashboard" : "/subscribe");
   };
 
-  const TOTAL_STEPS = 4;
+  const TOTAL_STEPS = 5;
   const progress = (step / TOTAL_STEPS) * 100;
 
   return (
@@ -287,7 +288,7 @@ export default function OnboardingPage() {
                 <p className="text-xs font-bold uppercase tracking-[0.3em] text-[#6B6B6B] dark:text-[#A0A0A0] mb-2">Step 2 of {TOTAL_STEPS}</p>
                 <h1 className="font-black text-3xl uppercase mb-2">Current Fitness</h1>
                 <p className="text-sm text-[#6B6B6B] dark:text-[#A0A0A0] font-mono mb-8">
-                  One recent race result and PRform can prescribe every training pace today —
+                  One recent race result and PRform can prescribe every training pace today,
                   no waiting for weeks of data.
                 </p>
 
@@ -351,7 +352,7 @@ export default function OnboardingPage() {
                     }}
                     className="w-full text-center text-xs font-mono text-[#6B6B6B] dark:text-[#A0A0A0] hover:text-[#0A0A0A] dark:hover:text-[#F5F5F5] py-2 transition-colors"
                   >
-                    Skip — I&apos;ll let PRform learn from my training →
+                    Skip. Let PRform learn from my training →
                   </button>
                 </div>
               </div>
@@ -416,14 +417,14 @@ export default function OnboardingPage() {
                           <p className="text-sm font-mono">
                             {pr.time}{" "}
                             <span className="text-[#6B6B6B] dark:text-[#A0A0A0]">
-                              — from the PR you entered
+                              from the PR you entered
                             </span>
                           </p>
                         </div>
                       ) : (
                         <div>
                           <label className="block text-xs font-bold uppercase tracking-wider mb-1">
-                            Personal Best <span className="text-[#6B6B6B] dark:text-[#A0A0A0] normal-case">(optional — e.g. 51.8 or 1:52.4)</span>
+                            Personal Best <span className="text-[#6B6B6B] dark:text-[#A0A0A0] normal-case">(optional, e.g. 51.8 or 1:52.4)</span>
                           </label>
                           <input
                             type="text"
@@ -473,7 +474,7 @@ export default function OnboardingPage() {
                 <p className="text-xs font-bold uppercase tracking-[0.3em] text-[#6B6B6B] dark:text-[#A0A0A0] mb-2">Step 4 of {TOTAL_STEPS}</p>
                 <h1 className="font-black text-3xl uppercase mb-2">Your Training Week</h1>
                 <p className="text-sm text-[#6B6B6B] dark:text-[#A0A0A0] mb-8">
-                  Sketch a typical week — sleep targets move with your training load.
+                  Sketch a typical week. Sleep targets move with your training load.
                   You can adjust any day later, or log workouts as they happen.
                 </p>
 
@@ -506,18 +507,39 @@ export default function OnboardingPage() {
                 </div>
 
                 <p className="text-[10px] font-mono text-[#6B6B6B] dark:text-[#A0A0A0] mt-4">
-                  Use Strava? You can connect it any time from your dashboard —
+                  Use Strava? You can connect it any time from your dashboard,
                   synced runs then take over from this schedule automatically.
                 </p>
+              </div>
+            )}
 
-                {/* Optional: text messages. Self-enrolment with explicit consent;
-                    fully skippable — Continue works with this untouched. */}
+            {/* Step 5: Staying on plan.
+                Both channels in one place, and both entirely optional — the
+                finish button works with neither touched.
+
+                It is the last step on purpose. Asking for notification
+                permission is a request, and a request made after four screens
+                of setup is one an athlete has context for; the same request on
+                the first screen is a stranger asking for access to a lock
+                screen. It is also the step that matters most for whether this
+                account is still here in a month, which is why it is a step
+                rather than a line at the bottom of another one. */}
+            {step === 5 && (
+              <div>
+                <p className="text-xs font-bold uppercase tracking-[0.3em] text-[#6B6B6B] dark:text-[#A0A0A0] mb-2">Step 5 of {TOTAL_STEPS}</p>
+                <h1 className="font-black text-3xl uppercase mb-2">Stay On Plan</h1>
+                <p className="text-sm text-[#6B6B6B] dark:text-[#A0A0A0] font-mono mb-8">
+                  Pick how PRform reaches you, or skip and open the app when you want it.
+                </p>
+
+                <PushEnrollment />
+
                 <h2 className="font-black text-xl uppercase mt-10 mb-2 border-b border-[#E5E5E5] dark:border-[#333] pb-3">
                   Texts, Not Tabs{" "}
                   <span className="text-xs font-mono normal-case text-[#6B6B6B] dark:text-[#A0A0A0]">(optional)</span>
                 </h2>
                 <p className="text-sm text-[#6B6B6B] dark:text-[#A0A0A0] mb-6">
-                  One text each evening, one each morning — run PRform without opening the site.
+                  One text each evening, one each morning.
                 </p>
                 <SmsEnrollment />
               </div>

@@ -225,7 +225,7 @@ export function validatePrTime(distanceId: string, timeSeconds: number): PrValid
   if (bounds && timeSeconds < bounds.min) {
     return {
       ok: false,
-      error: `That's faster than the ${distance.label} world record. Check the format — ${formatBound(bounds.min)} or slower.`,
+      error: `That's faster than the ${distance.label} world record. Check the format. ${formatBound(bounds.min)} or slower.`,
     };
   }
   if (bounds && timeSeconds > bounds.max) {
@@ -278,7 +278,7 @@ export function prDistanceGuidance(distanceId: string): DistanceGuidance {
   return {
     reliable: false,
     warning:
-      "800m is largely anaerobic, so it overstates aerobic fitness — your training paces will come out faster than they should. A PR from 1500m or longer gives a more accurate table.",
+      "800m is largely anaerobic, so it overstates aerobic fitness, and your training paces will come out faster than they should. A PR from 1500m or longer gives a more accurate table.",
     preferredAlternatives: PR_DISTANCES.filter((d) => d.meters > meters).slice(0, 4),
   };
 }
@@ -460,7 +460,7 @@ export function blendVdot(input: BlendInput): PaceSource {
       declaredConfidence: confidence,
       qualifyingEfforts: efforts,
       label: "Based on your last 6 weeks",
-      detail: `Your logged training has fully replaced the PR you entered — ${efforts} qualifying efforts.`,
+      detail: `Your logged training has fully replaced the PR you entered. ${efforts} qualifying efforts.`,
     };
   }
 

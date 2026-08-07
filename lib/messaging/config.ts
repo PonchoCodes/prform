@@ -42,6 +42,17 @@ export function isKillSwitchOn(): boolean {
 }
 
 /**
+ * The global brake for email, separate from the SMS and push ones.
+ *
+ * Three flags rather than one because they exist to be reached for in a hurry,
+ * and a flag that stops three channels when you meant to stop one is a flag
+ * nobody trusts at 2am.
+ */
+export function isEmailKillSwitchOn(): boolean {
+  return envFlag("EMAIL_KILL_SWITCH", false);
+}
+
+/**
  * Hard ceiling on messages to one athlete in one of their local days, counted
  * in code from the SentMessage ledger rather than inferred from the schedule.
  * The schedule is a plan; the ledger is what happened.

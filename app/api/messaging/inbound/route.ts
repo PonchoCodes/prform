@@ -29,6 +29,7 @@ import {
   morningMessage,
   verdictHeadline,
 } from "@/lib/messaging/copy";
+import { computeCheckInStreak, streakSentence } from "@/lib/streak";
 import { verdictForUser, VERDICT_USER_SELECT } from "@/lib/messaging/verdictFor";
 import type { DailySleepPlan } from "@/lib/sleepAlgorithm";
 
@@ -205,6 +206,17 @@ export async function POST(req: NextRequest) {
         messageType: "HELP_REPLY",
         body: helpReply(),
         localDate,
+        // Every send in this file is pinned to SMS, and all of them for the
+        // same reason: these are REPLIES. Someone who just texted us is holding
+        // a phone with a conversation open on it, and answering in a push
+        // notification would leave that conversation looking unanswered. HELP
+        // is the strict case — a carrier requires the reply to arrive by text —
+        // but a BED acknowledgment landing somewhere other than the thread it
+        // belongs to is the same mistake with lower stakes.
+        //
+        // The scheduled messages (the evening question, the morning verdict)
+        // are the ones that route by channel, because nobody is mid-sentence.
+        forceChannel: "SMS",
       });
       return twiml();
 
@@ -220,6 +232,7 @@ export async function POST(req: NextRequest) {
         messageType: "BED_ACK",
         body: bedAcknowledged(friendlyTime(localClockOf(receivedAt, tz))),
         localDate,
+        forceChannel: "SMS", // a reply belongs in the thread it answers
       });
       // Now that onset is known, the morning message no longer needs to ask for
       // it. Re-scheduling is the only way to change text already queued.
@@ -275,6 +288,7 @@ export async function POST(req: NextRequest) {
         messageType: "LIGHTS_OUT",
         body: lightsOut(friendlyTime(plan?.recommendedBedtime ?? fallbackBedtime)),
         localDate,
+        forceChannel: "SMS", // a reply belongs in the thread it answers
       });
 
       await scheduleMorning({
@@ -293,6 +307,7 @@ export async function POST(req: NextRequest) {
         messageType: "CLARIFICATION",
         body: clarification(),
         localDate,
+        forceChannel: "SMS", // a reply belongs in the thread it answers
       });
       return twiml();
   }
@@ -341,14 +356,42 @@ async function scheduleMorning(input: {
     plans.get(addLocalDays(input.nightDate, 1)),
   );
 
+  // Dates only — the streak is a habit measure and must not see a duration.
+  // Computed as of the morning the message lands, not tonight, because that is
+  // when the athlete reads it and what the number has to be true of.
+  const [loggedDates, holds] = await Promise.all([
+    prisma.sleepLog.findMany({
+      where: { userId: input.user.id },
+      select: { date: true },
+      orderBy: { date: "desc" },
+      take: 400,
+    }),
+    prisma.streakHold.findMany({
+      where: { userId: input.user.id },
+      select: { startsOn: true, endsOn: true },
+    }),
+  ]);
+  const streak = computeCheckInStreak({
+    loggedDates: loggedDates.map((l) => l.date.toISOString().slice(0, 10)),
+    today: morningDate,
+    holds: holds.map((h) => ({
+      startsOn: h.startsOn.toISOString().slice(0, 10),
+      endsOn: h.endsOn.toISOString().slice(0, 10),
+    })),
+  });
+
   await sendMessage({
     userId: input.user.id,
     messageType: "MORNING_VERDICT",
     body: morningMessage({
       headline: verdictHeadline(verdict),
       askForBedtime: input.askForBedtime,
+      streak: streakSentence(streak),
     }),
     localDate: morningDate,
     sendAt: input.wakeInstant,
+    // Not pinned: this is a scheduled message, not a reply, so it goes by
+    // whichever channel the athlete is actually set up on.
+    options: { tag: "MORNING_VERDICT" },
   });
 }

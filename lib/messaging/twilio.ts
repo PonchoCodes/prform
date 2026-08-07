@@ -11,13 +11,37 @@ import {
   type CancelResult,
   type MessageProvider,
   type NormalizedInbound,
-  type PhoneNumber,
+  type Recipient,
   type SendResult,
 } from "@/lib/messaging/provider";
 
 function errorText(e: unknown): string {
   if (e instanceof Error) return e.message;
   return String(e);
+}
+
+/**
+ * The recipient's number, or a failure if this is not an SMS recipient at all.
+ *
+ * Belt and braces: `sendMessage` picks the driver from the same resolved
+ * channel it puts in the Recipient, so a mismatch is impossible by
+ * construction. It is checked anyway because the failure it would otherwise
+ * cause — reading `phoneNumber` off a push recipient — is `undefined` handed
+ * to Twilio's API, and the error that comes back would say nothing about why.
+ */
+function phoneOf(to: Recipient): { ok: true; number: string } | { ok: false; result: SendResult } {
+  if (to.channel !== "SMS") {
+    return {
+      ok: false,
+      result: {
+        ok: false,
+        providerMessageSid: null,
+        providerStatus: null,
+        error: `twilio driver was handed a ${to.channel} recipient`,
+      },
+    };
+  }
+  return { ok: true, number: to.phoneNumber };
 }
 
 /**
@@ -30,6 +54,9 @@ const PERMANENT_FAILURE_CODES = new Set([21610, 21211, 21614]);
 
 export class TwilioProvider implements MessageProvider {
   readonly name = "twilio";
+  readonly channel = "SMS" as const;
+  /** Twilio holds a future message for us; that is why the cron can run daily. */
+  readonly canSchedule = true;
   private readonly config: TwilioConfig;
   private client: Twilio | null = null;
 
@@ -44,7 +71,10 @@ export class TwilioProvider implements MessageProvider {
     return this.client;
   }
 
-  async schedule(to: PhoneNumber, body: string, sendAt: Date): Promise<SendResult> {
+  async schedule(to: Recipient, body: string, sendAt: Date): Promise<SendResult> {
+    const recipient = phoneOf(to);
+    if (!recipient.ok) return recipient.result;
+
     // Checked here rather than left to the API so a rejection is a decision the
     // caller can act on — send now, or skip — instead of an exception thrown
     // from inside a cron at 03:00.
@@ -63,7 +93,7 @@ export class TwilioProvider implements MessageProvider {
 
     try {
       const message = await this.getClient().messages.create({
-        to,
+        to: recipient.number,
         body,
         messagingServiceSid: this.config.messagingServiceSid,
         scheduleType: "fixed",
@@ -80,10 +110,13 @@ export class TwilioProvider implements MessageProvider {
     }
   }
 
-  async sendNow(to: PhoneNumber, body: string): Promise<SendResult> {
+  async sendNow(to: Recipient, body: string): Promise<SendResult> {
+    const recipient = phoneOf(to);
+    if (!recipient.ok) return recipient.result;
+
     try {
       const message = await this.getClient().messages.create({
-        to,
+        to: recipient.number,
         body,
         messagingServiceSid: this.config.messagingServiceSid,
       });

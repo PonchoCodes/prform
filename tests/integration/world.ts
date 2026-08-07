@@ -1,11 +1,18 @@
-// The world these tests run against: two coaches, two teams, athletes on each.
+// The world these tests run against: two owners with a team each, athletes on
+// both, plus a captain who owns a third team and also runs on it.
+//
+// The captain is not decoration. Once anyone can make a team, the person who
+// organizes the squad is usually also on it, and "owner" and "member" became
+// two facts that can both be true of one person. Every guard, every roster
+// count and every leaderboard has to survive that, and it is the case that no
+// amount of testing with a non-running coach would ever exercise.
 //
 // Every string that identifies team B is deliberately unusual — "Vermillion
 // Ridge Distance", "Xanthe Quackenbush". A leak test is only as good as its
 // needle: searching a response body for "Team" or "Sarah" would either match
 // something innocent or fail to match a real leak. These strings appear in
-// exactly one place in the database, so finding one in a response Coach A
-// received means Coach A was shown team B's data, with no ambiguity.
+// exactly one place in the database, so finding one in a response owner A
+// received means owner A was shown team B's data, with no ambiguity.
 
 import { prisma } from "@/lib/prisma";
 import { TEAM_CONSENT_TEXT } from "@/lib/team/consent";
@@ -21,11 +28,18 @@ export async function resetDatabase() {
 }
 
 export interface World {
-  coachA: { id: string; email: string };
-  coachB: { id: string; email: string };
+  ownerA: { id: string; email: string };
+  ownerB: { id: string; email: string };
+  /** Owns team C and is an ACTIVE member of it — a captain who also runs. */
+  captain: { id: string; name: string; email: string };
   teamA: { id: string; name: string; joinCode: string };
   teamB: { id: string; name: string; joinCode: string };
-  /** ACTIVE on team A. Sleeps badly, so she lands on Coach A's exception list. */
+  teamC: { id: string; name: string; joinCode: string };
+  /**
+   * ACTIVE on team A and on team C — cross country and track are different
+   * rosters, and one athlete belongs to both. Sleeps badly, so she lands on
+   * both owners' exception lists.
+   */
   athleteA: { id: string; name: string };
   /** ACTIVE on team B. */
   athleteB: { id: string; name: string };
@@ -57,8 +71,9 @@ async function makeUser(email: string, name: string) {
 }
 
 export async function seedWorld(): Promise<World> {
-  const coachA = await makeUser("coach.a@example.test", "Ptolemy Marchetti");
-  const coachB = await makeUser("coach.b@example.test", "Isolde Fairweather");
+  const ownerA = await makeUser("owner.a@example.test", "Ptolemy Marchetti");
+  const ownerB = await makeUser("owner.b@example.test", "Isolde Fairweather");
+  const captain = await makeUser("captain.c@example.test", "Grizelda Ashenfelter");
   const athleteA = await makeUser("athlete.a@example.test", "Wilhelmina Trzaskowski");
   const athleteB = await makeUser("athlete.b@example.test", "Xanthe Quackenbush");
   const formerAthleteB = await makeUser("former.b@example.test", "Barnabas Oyelaran");
@@ -68,7 +83,7 @@ export async function seedWorld(): Promise<World> {
       name: "Kestrel Hollow Distance",
       sport: "track",
       season: "Cross Country 2026",
-      coachId: coachA.id,
+      ownerId: ownerA.id,
       joinCode: "AAAAAA",
       joinCodeExpiresAt: joinCodeExpiry(),
     },
@@ -80,8 +95,22 @@ export async function seedWorld(): Promise<World> {
       name: "Vermillion Ridge Distance",
       sport: "track",
       season: "Cross Country 2026",
-      coachId: coachB.id,
+      ownerId: ownerB.id,
       joinCode: "BBBBBB",
+      joinCodeExpiresAt: joinCodeExpiry(),
+    },
+    select: { id: true, name: true, joinCode: true },
+  });
+
+  // The captain's team. Owned by someone who is also on the roster, which is
+  // the arrangement open team creation makes ordinary.
+  const teamC = await prisma.team.create({
+    data: {
+      name: "Thistlewaite Track Club",
+      sport: "track",
+      season: "Outdoor 2027",
+      ownerId: captain.id,
+      joinCode: "CCCCCC",
       joinCodeExpiresAt: joinCodeExpiry(),
     },
     select: { id: true, name: true, joinCode: true },
@@ -91,9 +120,14 @@ export async function seedWorld(): Promise<World> {
 
   await prisma.teamMembership.createMany({
     data: [
-      { teamId: teamA.id, userId: athleteA.id, status: "ACTIVE", ...consent },
-      { teamId: teamB.id, userId: athleteB.id, status: "ACTIVE", ...consent },
-      { teamId: teamB.id, userId: formerAthleteB.id, status: "LEFT", ...consent },
+      { teamId: teamA.id, userId: athleteA.id, status: "ACTIVE", joinedAt: joinedDaysAgo(40), ...consent },
+      { teamId: teamB.id, userId: athleteB.id, status: "ACTIVE", joinedAt: joinedDaysAgo(39), ...consent },
+      { teamId: teamB.id, userId: formerAthleteB.id, status: "LEFT", joinedAt: joinedDaysAgo(38), ...consent },
+      // The captain on her own roster.
+      { teamId: teamC.id, userId: captain.id, status: "ACTIVE", joinedAt: joinedDaysAgo(37), ...consent },
+      // Athlete A on a second team. Two ACTIVE memberships for one user is the
+      // normal case, not an edge one: cross country and track are two rosters.
+      { teamId: teamC.id, userId: athleteA.id, status: "ACTIVE", joinedAt: joinedDaysAgo(36), ...consent },
     ],
   });
 
@@ -122,10 +156,16 @@ export async function seedWorld(): Promise<World> {
   });
 
   return {
-    coachA: { id: coachA.id, email: coachA.email },
-    coachB: { id: coachB.id, email: coachB.email },
+    ownerA: { id: ownerA.id, email: ownerA.email },
+    ownerB: { id: ownerB.id, email: ownerB.email },
+    captain: {
+      id: captain.id,
+      name: captain.name as string,
+      email: captain.email,
+    },
     teamA,
     teamB,
+    teamC,
     athleteA: { id: athleteA.id, name: athleteA.name as string },
     athleteB: { id: athleteB.id, name: athleteB.name as string },
     formerAthleteB: { id: formerAthleteB.id, name: formerAthleteB.name as string },
@@ -151,10 +191,31 @@ async function seedShortNights(
 ) {
   const rows = [];
   for (let daysAgo = 1; daysAgo <= 5; daysAgo++) {
+    // UTC midnight, matching how the app itself writes a night:
+    // `new Date(dateStr + "T00:00:00.000Z")` in /api/sleep-log. Local midnight
+    // here would store 04:00Z for an athlete in New York, and every consumer
+    // that reads a date back with toISOString().slice(0, 10) would be reading
+    // rows that are shaped differently from production ones.
     const date = new Date();
-    date.setHours(0, 0, 0, 0);
-    date.setDate(date.getDate() - daysAgo);
+    date.setUTCHours(0, 0, 0, 0);
+    date.setUTCDate(date.getUTCDate() - daysAgo);
     rows.push({ userId, date, ...night, hitTarget: false });
   }
   await prisma.sleepLog.createMany({ data: rows });
+}
+
+/**
+ * A membership that has existed for a while.
+ *
+ * Everyone joining "just now" is not a roster, it is a roster's first minute,
+ * and several things are vacuous against it: the leaderboard gives a
+ * brand-new member zero possible nights (correctly — they have not had a night
+ * as a member yet), so a world where everybody joined today produces a board
+ * of zeroes that proves nothing. Staggered so `orderBy: { joinedAt: "asc" }`
+ * stays deterministic.
+ */
+function joinedDaysAgo(days: number): Date {
+  const d = new Date();
+  d.setUTCDate(d.getUTCDate() - days);
+  return d;
 }

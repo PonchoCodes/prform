@@ -119,7 +119,7 @@ export function PrForm({
               className="mt-0.5"
             />
             <span className="text-[#6B6B6B] dark:text-[#A0A0A0]">
-              I understand — use my {prDistanceById(value.distanceId)?.label} PR anyway.
+              I understand. Use my {prDistanceById(value.distanceId)?.label} PR anyway.
             </span>
           </label>
         </div>
@@ -144,7 +144,7 @@ export function PrForm({
           className="text-xs font-mono text-[#6B6B6B] dark:text-[#A0A0A0] mt-2"
         >
           {previewVdot
-            ? `VDOT ${previewVdot} — we'll build your full pace table from this.`
+            ? `VDOT ${previewVdot}. We'll build your full pace table from this.`
             : value.distanceId
               ? `Format: ${prTimePlaceholder(value.distanceId)}`
               : "Pick a distance first."}
@@ -169,7 +169,7 @@ export function PrForm({
           ))}
         </select>
         <p className="text-xs font-mono text-[#6B6B6B] dark:text-[#A0A0A0] mt-2">
-          An older PR still gets you started — we just lean on your logged training sooner.
+          An older PR still gets you started. We just lean on your logged training sooner.
         </p>
       </div>
 

@@ -115,7 +115,7 @@ export default function StravaPage() {
         <div className="bg-[#0A0A0A] px-6 py-3">
           <p className="max-w-[1200px] mx-auto text-xs font-bold uppercase tracking-wider text-white">
             {connectionError === "athlete_cap"
-              ? "Strava sync is full right now — you're set up without it, and we'll connect you as soon as a slot opens. Everything works in the meantime."
+              ? "Strava sync is full right now. You're set up without it, and we'll connect you as soon as a slot opens."
               : "The Strava connection didn't complete. Please try again."}
           </p>
         </div>
@@ -150,7 +150,7 @@ export default function StravaPage() {
                       {statusData.totalRuns} runs synced
                     </p>
                     <p className="font-mono text-xs text-[#6B6B6B] dark:text-[#A0A0A0] mt-0.5">
-                      Auto-sync: {statusData.webhookActive ? "active — new runs appear automatically" : "unavailable — use Sync Now after your runs"}
+                      Auto-sync: {statusData.webhookActive ? "active, new runs appear automatically" : "unavailable, use Sync Now after your runs"}
                     </p>
                     {statusData.lastSyncedAt && (
                       <p className="font-mono text-xs text-[#6B6B6B] dark:text-[#A0A0A0] mt-0.5">
@@ -218,7 +218,7 @@ export default function StravaPage() {
                       <div className="bg-white dark:bg-[#242424] px-4 py-3 font-mono text-xs col-span-2 truncate">{act.name}</div>
                       <div className="bg-white dark:bg-[#242424] px-4 py-3 font-mono text-xs">{formatDistance(act.distance, unit)}</div>
                       <div className="bg-white dark:bg-[#242424] px-4 py-3 font-mono text-xs">{formatPace(act.averageSpeed, unit)}</div>
-                      <div className="bg-white dark:bg-[#242424] px-4 py-3 font-mono text-xs">{act.averageHeartrate ? `${Math.round(act.averageHeartrate)} bpm` : "—"}</div>
+                      <div className="bg-white dark:bg-[#242424] px-4 py-3 font-mono text-xs">{act.averageHeartrate ? `${Math.round(act.averageHeartrate)} bpm` : "–"}</div>
                     </div>
                   ))
                 ) : (

@@ -13,18 +13,23 @@ import type { World } from "./world";
 // ── who is logged in ────────────────────────────────────────────────────────
 
 let signedInUserId: string | null = null;
+let signedInEmail: string | null = null;
 
-export function signInAs(userId: string) {
+export function signInAs(userId: string, email?: string) {
   signedInUserId = userId;
+  // The admin routes identify by email rather than id, so a session has to be
+  // able to carry one. Optional because every other route reads only the id.
+  signedInEmail = email ?? null;
 }
 
 export function signOut() {
   signedInUserId = null;
+  signedInEmail = null;
 }
 
 /** Read by the next-auth mock each test file installs. */
 export function currentSession() {
-  return signedInUserId ? { user: { id: signedInUserId } } : null;
+  return signedInUserId ? { user: { id: signedInUserId, email: signedInEmail } } : null;
 }
 
 // ── calling a handler ───────────────────────────────────────────────────────

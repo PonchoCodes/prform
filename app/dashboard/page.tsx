@@ -20,8 +20,10 @@ import { VerdictCard } from "@/components/VerdictCard";
 import { TonightsTarget } from "@/components/TonightsTarget";
 import { NextMeetCard } from "@/components/NextMeetCard";
 import { SubscribeStrip } from "@/components/SubscribeStrip";
+import { InstallNotice } from "@/components/InstallNotice";
 import { RaceReadiness } from "@/components/RaceReadiness";
 import { computeVerdict } from "@/lib/verdict";
+import { STREAK_ANNOUNCE_FROM } from "@/lib/streak";
 import type { TrendResult } from "@/lib/trend";
 
 // Recharts is ~115 kB and the chart sits below the fold. Loading it with the
@@ -327,7 +329,7 @@ function InterventionCard({
                 <p className="text-xs font-mono text-[#6B6B6B] mb-3 leading-relaxed">
                   Your recommended bedtime has been{" "}
                   <span className="text-[#0A0A0A] dark:text-white font-bold">{formatTime12h(recommendedBedtime)}</span> but you&apos;ve been going to
-                  bed around <span className="text-[#0A0A0A] dark:text-white font-bold">{formatTime12h(avgActualTime)}</span> instead — an average of{" "}
+                  bed around <span className="text-[#0A0A0A] dark:text-white font-bold">{formatTime12h(avgActualTime)}</span> instead, an average of{" "}
                   <span className="text-[#0A0A0A] dark:text-white font-bold">{avgDeviationMinutes} minutes late</span>.
                 </p>
                 <p className="text-xs font-mono text-[#0A0A0A] dark:text-[#E8FF00] mb-4 leading-relaxed">
@@ -344,7 +346,7 @@ function InterventionCard({
                     disabled={phase === "adjusting"}
                     className="w-full p-4 bg-[#E8FF00] text-[#0A0A0A] text-left hover:bg-[#d4e800] transition-colors disabled:opacity-50"
                   >
-                    <p className="font-black text-xs uppercase tracking-widest">Yes — Adjust My Targets</p>
+                    <p className="font-black text-xs uppercase tracking-widest">Yes, Adjust My Targets</p>
                     <p className="text-xs mt-1 text-[#0A0A0A]">
                       PRform will shift your recommended bedtime{" "}
                       {Math.abs(Math.min(45, Math.round(avgDeviationMinutes / 5) * 5))} minutes later to match your actual pattern, while minimising performance impact.
@@ -354,7 +356,7 @@ function InterventionCard({
                     onClick={() => dismiss(onKeep)}
                     className="w-full p-4 bg-white dark:bg-[#1a1a1a] text-[#0A0A0A] dark:text-white text-left border border-[#E5E5E5] dark:border-[#333] hover:bg-[#F5F5F5] dark:hover:bg-[#2a2a2a] transition-colors"
                   >
-                    <p className="font-black text-xs uppercase tracking-widest">No — Keep My Current Targets</p>
+                    <p className="font-black text-xs uppercase tracking-widest">No, Keep My Current Targets</p>
                     <p className="text-xs text-[#6B6B6B] mt-1">I&apos;ll work on hitting {formatTime12h(recommendedBedtime)}.</p>
                   </button>
                   <button
@@ -536,7 +538,7 @@ function PerformanceSummary({ report, unit }: { report: PerformanceReport; unit:
             {decoupling.trend === "improving" ? "↓ Improving" : decoupling.trend === "declining" ? "↑ Declining" : "→ Stable"}
           </p>
         </div>
-        <p className="text-xs text-[#6B6B6B] dark:text-[#A0A0A0]">Avg decoupling — lower is better</p>
+        <p className="text-xs text-[#6B6B6B] dark:text-[#A0A0A0]">Avg decoupling, lower is better</p>
       </div>
 
       <div className="bg-white dark:bg-[#242424] p-6">
@@ -551,6 +553,157 @@ function PerformanceSummary({ report, unit }: { report: PerformanceReport; unit:
         </a>
       </div>
     </div>
+  );
+}
+
+// ── Check-in streak ───────────────────────────────────────────────────────────
+//
+// One line, no flame, no confetti, no badge. The streak is a habit the athlete
+// is keeping, not a prize we are giving them, and the visual weight should
+// match — a counter that celebrates itself every morning becomes noise by the
+// second week, and noise is what people mute.
+//
+// It counts days CHECKED IN. A late night that wrecked the target keeps the
+// streak, which is exactly the point: the alternative teaches athletes to stop
+// logging bad nights, and bad nights are the data this product exists to act
+// on.
+
+interface CheckInSummary {
+  current: number;
+  atRisk: boolean;
+  canSkipTonight: boolean;
+  longest: number;
+  onHoldToday: boolean;
+}
+
+function CheckInStreakStrip({
+  checkIn,
+  onHoldSaved,
+}: {
+  checkIn?: CheckInSummary;
+  onHoldSaved: () => void;
+}) {
+  const [planning, setPlanning] = useState(false);
+  const [from, setFrom] = useState("");
+  const [to, setTo] = useState("");
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  // Silent below three days. See STREAK_ANNOUNCE_FROM in lib/streak.ts.
+  if (!checkIn || checkIn.current < STREAK_ANNOUNCE_FROM) return null;
+
+  const beatingBest = checkIn.current >= checkIn.longest && checkIn.current > 3;
+
+  const save = async () => {
+    setSaving(true);
+    setError(null);
+    const res = await fetch("/api/streak/hold", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ startsOn: from, endsOn: to || from }),
+    });
+    if (res.ok) {
+      setPlanning(false);
+      setFrom("");
+      setTo("");
+      onHoldSaved();
+    } else {
+      const data = await res.json().catch(() => ({}));
+      setError(data.error ?? "That didn't save. Try again.");
+    }
+    setSaving(false);
+  };
+
+  return (
+    <section className="border-b border-[#E5E5E5] dark:border-[#333] px-6 py-4">
+      <div className="max-w-[1200px] mx-auto">
+        <div className="flex flex-wrap items-baseline gap-x-4 gap-y-1">
+          <p className="font-mono text-sm">
+            <span className="font-black tabular-nums">Day {checkIn.current}</span>
+            <span className="text-[#6B6B6B] dark:text-[#A0A0A0]"> of checking in</span>
+          </p>
+          {beatingBest && (
+            <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-[#6B6B6B] dark:text-[#A0A0A0]">
+              Your longest yet
+            </span>
+          )}
+          {checkIn.onHoldToday ? (
+            <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-[#6B6B6B] dark:text-[#A0A0A0]">
+              On hold
+            </span>
+          ) : checkIn.atRisk ? (
+            // Not "you lost it". Last night is still open, and at 6:40am the
+            // athlete can still keep it by logging on the way to practice.
+            <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-[#6B6B6B] dark:text-[#A0A0A0]">
+              Log last night to keep it
+            </span>
+          ) : (
+            checkIn.canSkipTonight && (
+              <span className="text-[10px] font-mono text-[#6B6B6B] dark:text-[#A0A0A0]">
+                One skip in hand
+              </span>
+            )
+          )}
+
+          {!checkIn.onHoldToday && !planning && (
+            <button
+              type="button"
+              onClick={() => setPlanning(true)}
+              className="ml-auto text-[10px] font-bold uppercase tracking-wider text-[#6B6B6B] dark:text-[#A0A0A0] hover:text-[#0A0A0A] dark:hover:text-[#F5F5F5] transition-colors"
+            >
+              Going away?
+            </button>
+          )}
+        </div>
+
+        {planning && (
+          <div className="mt-4 border border-[#E5E5E5] dark:border-[#333] p-4 max-w-lg">
+            <p className="text-xs font-bold uppercase tracking-[0.3em] text-[#6B6B6B] dark:text-[#A0A0A0] mb-1">
+              Mark days away
+            </p>
+            <p className="text-xs font-mono text-[#6B6B6B] dark:text-[#A0A0A0] mb-4">
+              These days won&apos;t count for or against your streak.
+            </p>
+            <div className="flex flex-wrap gap-3 items-end">
+              <label className="text-[10px] font-bold uppercase tracking-wider">
+                <span className="block mb-1">From</span>
+                <input
+                  type="date"
+                  value={from}
+                  onChange={(e) => setFrom(e.target.value)}
+                  className="border border-[#E5E5E5] dark:border-[#444] dark:bg-[#2a2a2a] dark:text-[#F5F5F5] px-3 py-2 text-sm font-mono focus:outline-none focus:border-[#0A0A0A] dark:focus:border-[#F5F5F5]"
+                />
+              </label>
+              <label className="text-[10px] font-bold uppercase tracking-wider">
+                <span className="block mb-1">To</span>
+                <input
+                  type="date"
+                  value={to}
+                  onChange={(e) => setTo(e.target.value)}
+                  className="border border-[#E5E5E5] dark:border-[#444] dark:bg-[#2a2a2a] dark:text-[#F5F5F5] px-3 py-2 text-sm font-mono focus:outline-none focus:border-[#0A0A0A] dark:focus:border-[#F5F5F5]"
+                />
+              </label>
+              <button
+                type="button"
+                onClick={save}
+                disabled={!from || saving}
+                className="text-[10px] font-bold uppercase tracking-wider border border-[#0A0A0A] dark:border-[#F5F5F5] bg-[#0A0A0A] dark:bg-[#F5F5F5] text-white dark:text-[#0A0A0A] px-4 py-2 disabled:opacity-40 hover:bg-transparent hover:text-[#0A0A0A] dark:hover:bg-transparent dark:hover:text-[#F5F5F5] transition-colors"
+              >
+                {saving ? "Saving…" : "Save"}
+              </button>
+              <button
+                type="button"
+                onClick={() => { setPlanning(false); setError(null); }}
+                className="text-[10px] font-bold uppercase tracking-wider text-[#6B6B6B] dark:text-[#A0A0A0] hover:text-[#0A0A0A] dark:hover:text-[#F5F5F5] transition-colors"
+              >
+                Cancel
+              </button>
+            </div>
+            {error && <p className="text-xs font-mono text-[#FF4444] mt-3">{error}</p>}
+          </div>
+        )}
+      </div>
+    </section>
   );
 }
 
@@ -897,6 +1050,15 @@ export default function DashboardPage() {
         <SubscribeStrip />
       )}
 
+      {/* Install notice for accounts that predate the app being installable.
+          New accounts meet this as a step in onboarding instead. It shows
+          itself only when it has something to ask for — not in the installed
+          app, not once a device is subscribed, not after it has been
+          dismissed, and not before the athlete has logged a night. */}
+      <div className="px-6 pt-6 max-w-[1200px] mx-auto">
+        <InstallNotice />
+      </div>
+
       {prPromptOpen && (
         <div className="px-6 pt-6 max-w-[1200px] mx-auto">
           <PrPrompt
@@ -965,6 +1127,16 @@ export default function DashboardPage() {
 
       {activeTab === "Sleep" && (
         <>
+          {/* 0. The check-in streak. Quiet by design and quiet by default —
+                 it says nothing at all until day three, because announcing a
+                 one-day streak tells someone they have nothing to protect. */}
+          <CheckInStreakStrip
+            checkIn={streakData?.checkIn}
+            onHoldSaved={() =>
+              fetchJson("/api/sleep-log/streak").then((s) => s && setStreakData(s))
+            }
+          />
+
           {/* 1. Intervention card */}
           {showIntervention && yesterdayPlan && (
             <InterventionCard

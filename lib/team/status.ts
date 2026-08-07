@@ -1,5 +1,5 @@
-// Derived athlete status for the coach dashboard — the ONLY lens a coach ever
-// gets on an athlete's sleep.
+// Derived athlete status for the team dashboard — the ONLY lens a team owner
+// ever gets on an athlete's sleep.
 //
 // The contract with the consent screen (lib/team/consent.ts) is enforced by
 // shape: this module's output contains a color, a trend sentence built from
@@ -26,7 +26,7 @@ export interface AthleteStatus {
   color: AthleteStatusColor;
   /** "Short on sleep 3 of 5 nights" — counts only, never times or hours. */
   trend: string;
-  /** What the coach should do with today's session. */
+  /** What the owner should do with today's session. */
   recommendation: string;
   /** True when the athlete belongs on the exception list. */
   flagged: boolean;
@@ -35,8 +35,8 @@ export interface AthleteStatus {
 /**
  * A night is short when it misses its target by at least this much. 45 min
  * sits above self-report noise but below the hour the verdict treats as a
- * deficit — the coach view is meant to flag earlier than the athlete view
- * panics, because the coach's lever (tomorrow's session) needs a day of lead.
+ * deficit — the owner view is meant to flag earlier than the athlete view
+ * panics, because the owner's lever (tomorrow's session) needs a day of lead.
  */
 const SHORT_NIGHT_DEFICIT_HOURS = 0.75;
 
@@ -57,7 +57,7 @@ export function deriveAthleteStatus(nights: NightForStatus[], windowDays = 7): A
       color: "amber",
       trend: `No sleep logged in the last ${windowDays} days`,
       recommendation:
-        "No signal is a signal — check in. Until they log, treat hard sessions as optional.",
+        "No signal is a signal. Until they log, treat hard sessions as optional.",
       flagged: true,
     };
   }
@@ -79,7 +79,7 @@ export function deriveAthleteStatus(nights: NightForStatus[], windowDays = 7): A
       return {
         color: "red",
         trend: trendShort,
-        recommendation: "Pull today's intensity — aerobic volume only until a full night lands.",
+        recommendation: "Pull today's intensity. Aerobic volume only until a full night lands.",
         flagged: true,
       };
     }
@@ -96,7 +96,7 @@ export function deriveAthleteStatus(nights: NightForStatus[], windowDays = 7): A
       color: "red",
       trend: trendShort,
       recommendation:
-        "Move the next hard session — on this pattern it costs more than it returns. Aerobic work only today.",
+        "Move the next hard session. On this pattern it costs more than it returns. Aerobic work only today.",
       flagged: true,
     };
   }
@@ -106,7 +106,7 @@ export function deriveAthleteStatus(nights: NightForStatus[], windowDays = 7): A
       color: "amber",
       trend: trendShort,
       recommendation:
-        "Run today as planned, but tonight decides tomorrow — a third short night should move the next quality session.",
+        "Run today as planned, but tonight decides tomorrow. A third short night should move the next quality session.",
       flagged: true,
     };
   }

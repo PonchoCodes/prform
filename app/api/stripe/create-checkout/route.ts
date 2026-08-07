@@ -25,7 +25,7 @@ export async function POST() {
     // them to Stripe checkout.
     if (user.earlyAccessUser) {
       return NextResponse.json(
-        { error: "Early access accounts have free access — no subscription needed." },
+        { error: "Early access accounts have free access. No subscription needed." },
         { status: 403 }
       );
     }

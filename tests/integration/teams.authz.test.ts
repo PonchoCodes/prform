@@ -1,5 +1,5 @@
 // Cross-team authorization, exercised as a person would: authenticate as one
-// coach, ask for another coach's data, and look at what comes back.
+// owner, ask for another owner's data, and look at what comes back.
 //
 // The source-scan tests in lib/team/guard.test.ts stay — they are cheap and
 // they catch a brand new route that forgets the guard entirely. What they
@@ -23,6 +23,7 @@ import {
 } from "@/app/api/teams/[teamId]/sessions/route";
 import { GET as teamsGET, POST as teamsPOST } from "@/app/api/teams/route";
 import { POST as leavePOST } from "@/app/api/teams/leave/route";
+import { POST as joinPOST } from "@/app/api/teams/join/route";
 import { prisma } from "@/lib/prisma";
 import { invoke, signInAs, signOut, expectRefusal, type Invocation } from "./harness";
 
@@ -78,16 +79,20 @@ const TEAM_SCOPED_ROUTES: Array<{ name: string; call: (teamId: string) => Promis
   },
 ];
 
-// Everyone who is not team B's coach. The distinction that matters is not
+// Everyone who is not team B's owner. The distinction that matters is not
 // "logged out" — it is "logged in, legitimately, as somebody else".
 const OUTSIDERS: Array<{ name: string; userId: (w: World) => string }> = [
-  { name: "Coach A, who coaches a different team", userId: (w) => w.coachA.id },
-  { name: "an athlete on team B asking for the coach view of their own team", userId: (w) => w.athleteB.id },
+  { name: "owner A, who runs a different team", userId: (w) => w.ownerA.id },
+  { name: "an athlete on team B asking for the owner view of their own team", userId: (w) => w.athleteB.id },
   { name: "a former member of team B whose status is LEFT", userId: (w) => w.formerAthleteB.id },
   { name: "an athlete on another team entirely", userId: (w) => w.athleteA.id },
+  // Owning a team of your own grants nothing anywhere else. Worth stating now
+  // that anyone can create one: "is an owner" is not a role a person holds, it
+  // is a fact about one team.
+  { name: "a captain who owns and runs a team of their own", userId: (w) => w.captain.id },
 ];
 
-describe("a coach route asked for someone else's team", () => {
+describe("an owner route asked for someone else’s team", () => {
   for (const route of TEAM_SCOPED_ROUTES) {
     describe(route.name, () => {
       for (const outsider of OUTSIDERS) {
@@ -104,7 +109,7 @@ describe("a coach route asked for someone else's team", () => {
       });
 
       it("answers 'no such team' and 'not your team' identically", async () => {
-        signInAs(world.coachA.id);
+        signInAs(world.ownerA.id);
         const notYours = await route.call(world.teamB.id);
         const missing = await route.call(world.missingTeamId);
 
@@ -120,7 +125,7 @@ describe("a coach route asked for someone else's team", () => {
 
 describe("refusal leaves the data alone", () => {
   it("a refused POST does not create a session on the victim's team", async () => {
-    signInAs(world.coachA.id);
+    signInAs(world.ownerA.id);
     await invoke(sessionsPOST, {
       teamId: world.teamB.id,
       body: { date: new Date().toISOString(), sessionType: "tempo", description: "intrusion" },
@@ -132,7 +137,7 @@ describe("refusal leaves the data alone", () => {
   });
 
   it("a refused join-code POST does not rotate the victim's join code", async () => {
-    signInAs(world.coachA.id);
+    signInAs(world.ownerA.id);
     await invoke(joinCodePOST, { teamId: world.teamB.id, method: "POST" });
 
     const team = await prisma.team.findUnique({ where: { id: world.teamB.id } });
@@ -140,10 +145,10 @@ describe("refusal leaves the data alone", () => {
   });
 
   it("a session id from another team cannot be deleted by passing your own teamId", async () => {
-    // The guard passes here — Coach A really does coach team A — so the only
-    // thing standing between Coach A and team B's session is the teamId in
+    // The guard passes here — owner A really does own team A — so the only
+    // thing standing between owner A and team B's session is the teamId in
     // the deleteMany filter.
-    signInAs(world.coachA.id);
+    signInAs(world.ownerA.id);
     const result = await invoke(sessionsDELETE, {
       teamId: world.teamA.id,
       method: "DELETE",
@@ -157,7 +162,7 @@ describe("refusal leaves the data alone", () => {
   });
 
   it("leaving a team you were never on changes nothing, and reads the same as a team that does not exist", async () => {
-    signInAs(world.coachA.id);
+    signInAs(world.ownerA.id);
     const notMine = await invoke(leavePOST, { body: { teamId: world.teamB.id } });
     const missing = await invoke(leavePOST, { body: { teamId: world.missingTeamId } });
 
@@ -184,8 +189,8 @@ describe("refusal leaves the data alone", () => {
 // If the guard refused everything, every test above would pass. These are the
 // tests that fail when it does.
 describe("the guard is not simply refusing everyone", () => {
-  it("Coach A can read their own team's exception list, athlete names and all", async () => {
-    signInAs(world.coachA.id);
+  it("owner A can read their own team’s exception list, athlete names and all", async () => {
+    signInAs(world.ownerA.id);
     const result = await invoke(exceptionsGET, { teamId: world.teamA.id });
 
     expect(result.status).toBe(200);
@@ -195,8 +200,8 @@ describe("the guard is not simply refusing everyone", () => {
     expect(result.body.exceptions).toHaveLength(1);
   });
 
-  it("Coach A can rotate their own join code", async () => {
-    signInAs(world.coachA.id);
+  it("owner A can rotate their own join code", async () => {
+    signInAs(world.ownerA.id);
     const result = await invoke(joinCodePOST, { teamId: world.teamA.id, method: "POST" });
 
     expect(result.status).toBe(200);
@@ -204,8 +209,8 @@ describe("the guard is not simply refusing everyone", () => {
     expect(result.body.joinCode).not.toBe(world.teamA.joinCode);
   });
 
-  it("Coach A can create, read and delete sessions on their own team", async () => {
-    signInAs(world.coachA.id);
+  it("owner A can create, read and delete sessions on their own team", async () => {
+    signInAs(world.ownerA.id);
 
     const created = await invoke(sessionsPOST, {
       teamId: world.teamA.id,
@@ -230,35 +235,129 @@ describe("the guard is not simply refusing everyone", () => {
     expect(deleted.body.deleted).toBe(1);
   });
 
-  it("an athlete can read their own membership, without the join code", async () => {
+  it("an athlete can read their own memberships, without any join code", async () => {
     signInAs(world.athleteA.id);
     const result = await invoke(teamsGET);
 
     expect(result.status).toBe(200);
-    expect(result.body.coached).toHaveLength(0);
-    expect(result.body.memberships).toHaveLength(1);
-    expect(result.body.memberships[0].team.name).toBe(world.teamA.name);
+    expect(result.body.owned).toHaveLength(0);
+    // Two teams, because cross country and track are two rosters. Nothing
+    // limits a user to one, and this is what says so.
+    expect(result.body.memberships).toHaveLength(2);
+    expect(result.body.memberships.map((m: any) => m.team.name).sort()).toEqual(
+      [world.teamA.name, world.teamC.name].sort(),
+    );
     // A member holding a working invite would make the roster effectively open.
     expect(result.text).not.toContain(world.teamA.joinCode);
+    expect(result.text).not.toContain(world.teamC.joinCode);
   });
 
-  it("a coach listing their teams sees their own and only their own", async () => {
-    signInAs(world.coachA.id);
+  it("a member of two teams is not shown as owning either of them", async () => {
+    signInAs(world.athleteA.id);
+    const result = await invoke(teamsGET);
+
+    for (const membership of result.body.memberships) {
+      expect(membership.ownedByYou).toBe(false);
+    }
+  });
+
+  it("an owner listing their teams sees their own and only their own", async () => {
+    signInAs(world.ownerA.id);
     const result = await invoke(teamsGET);
 
     expect(result.status).toBe(200);
-    expect(result.body.coached).toHaveLength(1);
-    expect(result.body.coached[0].name).toBe(world.teamA.name);
-    expect(result.body.coached[0].athleteCount).toBe(1);
+    expect(result.body.owned).toHaveLength(1);
+    expect(result.body.owned[0].name).toBe(world.teamA.name);
+    expect(result.body.owned[0].athleteCount).toBe(1);
     expect(result.text).not.toContain(world.teamB.name);
   });
 
-  it("creating a team makes the creator its coach, and nobody else's", async () => {
+  it("creating a team makes the creator its owner, and nobody else’s", async () => {
     signInAs(world.athleteA.id);
     const result = await invoke(teamsPOST, { body: { name: "Cindersole Harriers" } });
 
     expect(result.status).toBe(201);
     const team = await prisma.team.findUnique({ where: { id: result.body.id } });
-    expect(team?.coachId).toBe(world.athleteA.id);
+    expect(team?.ownerId).toBe(world.athleteA.id);
+  });
+
+  it("any signed-in athlete can create a team — there is no role to be granted", async () => {
+    // The rule open team creation actually turns on. An athlete who has never
+    // coached anything, holds no waitlist role and pays nothing gets a roster
+    // and a join code, because the person who organizes the squad is usually
+    // one of the people running in it.
+    signInAs(world.athleteB.id);
+    const result = await invoke(teamsPOST, { body: { name: "Pennyroyal Striders" } });
+
+    expect(result.status).toBe(201);
+    expect(result.body.joinCode).toMatch(/^[A-Z0-9]{6}$/);
+  });
+});
+
+describe("owning a team and being on it are separate facts", () => {
+  it("an owner who joined their own team appears in both lists", async () => {
+    signInAs(world.captain.id);
+    const result = await invoke(teamsGET);
+
+    expect(result.body.owned).toHaveLength(1);
+    expect(result.body.owned[0].name).toBe(world.teamC.name);
+    expect(result.body.memberships).toHaveLength(1);
+    expect(result.body.memberships[0].team.name).toBe(world.teamC.name);
+    // The flag that stops the UI showing the same team twice with no
+    // explanation of why.
+    expect(result.body.memberships[0].ownedByYou).toBe(true);
+  });
+
+  it("an owner can join the team they created", async () => {
+    // This used to be refused outright, which left the person who organized the
+    // squad off their own roster — and, once check-in consistency is ranked,
+    // off their own leaderboard.
+    signInAs(world.ownerA.id);
+    const joined = await invoke(joinPOST, {
+      body: { code: world.teamA.joinCode, consent: true },
+    });
+
+    expect(joined.status).toBe(200);
+    const membership = await prisma.teamMembership.findFirst({
+      where: { teamId: world.teamA.id, userId: world.ownerA.id },
+    });
+    expect(membership?.status).toBe("ACTIVE");
+  });
+
+  it("an owner joining their own team still has to accept the consent screen", async () => {
+    // No carve-out. An owner who is also a member has their readiness derived
+    // like anyone else's, and their consent record should be auditable in
+    // exactly the same way.
+    signInAs(world.ownerA.id);
+    const refused = await invoke(joinPOST, { body: { code: world.teamA.joinCode } });
+
+    expect(refused.status).toBe(400);
+    const membership = await prisma.teamMembership.findFirst({
+      where: { teamId: world.teamA.id, userId: world.ownerA.id },
+    });
+    expect(membership).toBeNull();
+  });
+
+  it("an owner leaving their own team keeps the team", async () => {
+    signInAs(world.captain.id);
+    const left = await invoke(leavePOST, { body: { teamId: world.teamC.id } });
+    expect(left.status).toBe(200);
+
+    const team = await prisma.team.findUnique({ where: { id: world.teamC.id } });
+    expect(team?.ownerId).toBe(world.captain.id);
+
+    const after = await invoke(teamsGET);
+    expect(after.body.owned).toHaveLength(1);
+    expect(after.body.memberships).toHaveLength(0);
+  });
+
+  it("an owner still owns their team while holding no membership at all", async () => {
+    // Owner A never joined team A. The exception list has to work for them
+    // exactly as it does for the captain who did join.
+    signInAs(world.ownerA.id);
+    const result = await invoke(exceptionsGET, { teamId: world.teamA.id });
+
+    expect(result.status).toBe(200);
+    expect(result.body.rosterSize).toBe(1);
   });
 });

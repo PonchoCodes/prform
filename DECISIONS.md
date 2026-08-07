@@ -149,3 +149,49 @@ nothing now show what they logged.
 The consent text originally drafted said "from my profile"; the membership
 UI landed on /team (one page, both roles), so the consent text says "from
 the Team page" instead. Recorded because consent wording is load-bearing.
+
+## D15. The streak counts check-ins, and the old "Night Streak" tile was wrong
+
+`/sleep` showed `currentStreak` — consecutive nights that HIT THEIR TARGET —
+under the label "Night Streak", beside two hit-rate percentages. That told an
+athlete who logged an honest bad night that they had lost something, which is
+the exact behaviour that teaches teenagers to stop logging bad nights.
+
+The tile now shows the check-in streak and the two rates are relabelled
+"Target Hit, 7 Days" / "Target Hit, 30 Days" — they were always honest numbers,
+they just needed to say what they measured. `currentStreak` stays in the API
+response for the hit-rate family; it is no longer displayed as "the streak"
+anywhere.
+
+Three quantities called "streak" now exist. They are documented together in
+CLAUDE.md so nobody merges them: the habit (lib/streak.ts), the target-hit
+count (the API), and the recovery-score input (lib/sleepAlgorithm.ts).
+
+## D16. A hold, not a freeze
+
+Requested as a proposal first; you chose the hold. Both were on the table.
+
+**A freeze** is a token spent to protect a streak across a night you know you
+will miss. Rejected because a token has a balance, a balance is a second thing
+to check, earn and be reminded about, and this product's messaging is built on
+not being one more thing to check. It also duplicates the automatic weekly
+skip, leaving one athlete with two forgiveness systems and no way to predict
+which one saved them.
+
+**A hold** is what shipped: a date range the athlete marks as away. No balance,
+no economy, no notification, no limit. Days inside a hold are removed from the
+streak question entirely, so a fortnight in hospital leaves a 40-day streak at
+40 rather than at 1.
+
+Three properties make it safe to have no rules at all:
+
+1. A held day is not a checked-in day either, so it cannot be farmed. Marking
+   every day as held gives a streak of zero.
+2. A hold does not consume the weekly forgiveness. A declared absence quietly
+   spending the one skip somebody was saving for something unforeseen would be
+   the mechanic working against its own purpose.
+3. A held night is never "at risk". Telling someone on a hospital ward to log
+   last night to keep their streak would be the app at its worst.
+
+Forgiveness covers the night you did not see coming. A hold covers the
+fortnight you did.

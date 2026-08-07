@@ -38,7 +38,7 @@ export const metadata: Metadata = {
   title: {
     default: SITE_TITLE,
     // Child pages set a bare title; this appends the brand.
-    template: `%s — ${SITE_NAME}`,
+    template: `%s · ${SITE_NAME}`,
   },
   description: SITE_DESCRIPTION,
   keywords: SITE_KEYWORDS,

@@ -2,10 +2,10 @@ import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { assertCoachOf } from "@/lib/team/guard";
+import { assertOwnerOf } from "@/lib/team/guard";
 import { deriveAthleteStatus } from "@/lib/team/status";
 
-// The coach dashboard's data: an exception list, not a roster table.
+// The team dashboard's data: an exception list, not a roster table.
 //
 // What leaves this endpoint per athlete is a name, a color, a counts-based
 // trend sentence, and a recommendation — the exact set the consent screen
@@ -21,9 +21,13 @@ export async function GET(_req: Request, { params }: { params: { teamId: string 
   if (!session?.user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   const userId = (session.user as any).id as string;
 
-  const team = await assertCoachOf(params.teamId, userId);
+  const team = await assertOwnerOf(params.teamId, userId);
   if (!team) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 
+  // An owner who also joined their own team appears here like anyone else.
+  // That is their own readiness in their own list — no new disclosure — and
+  // omitting it would give a captain a roster count that never matches the
+  // number of people actually on the team.
   const memberships = await prisma.teamMembership.findMany({
     where: { teamId: team.id, status: "ACTIVE" },
     select: {

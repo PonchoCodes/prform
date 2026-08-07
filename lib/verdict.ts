@@ -248,10 +248,10 @@ function fatigueReason(input: VerdictInput): string | null {
     return `You're ${formatSleepDebt(sleepDebtMinutes)} down on sleep this week.`;
   }
   if (recoveryScore < RECOVERY_FATIGUED) {
-    return `Recovery is ${recoveryScore}/100 — the load from the last few days hasn't cleared.`;
+    return `Recovery is ${recoveryScore}/100. The load from the last few days hasn't cleared.`;
   }
   if (tsb != null && tsb < TSB_FATIGUED) {
-    return `Your training stress balance is ${tsb} — fatigue is outrunning fitness.`;
+    return `Your training stress balance is ${tsb}. Fatigue is outrunning fitness.`;
   }
   return null;
 }
@@ -327,8 +327,8 @@ export function computeVerdict(input: VerdictInput): Verdict {
       kind: "short_night",
       verdict: `You'll be about ${short} short tonight.`,
       reason: available
-        ? `The wake time you gave leaves ${available} against a ${totalSleepHours}h target. Move tomorrow's threshold or make it aerobic — on that much sleep the session costs more than it returns.`
-        : `Tonight's target can't be reached from the wake time you gave. Move tomorrow's threshold or make it aerobic — on that much sleep the session costs more than it returns.`,
+        ? `The wake time you gave leaves ${available} against a ${totalSleepHours}h target. Move tomorrow's threshold or make it aerobic. On that much sleep the session costs more than it returns.`
+        : `Tonight's target can't be reached from the wake time you gave. Move tomorrow's threshold or make it aerobic. On that much sleep the session costs more than it returns.`,
       // Only the headline's own tokens: `nowrap` is defined as substrings of
       // `verdict`, and the hours in the reason are set at body size where a
       // line break is harmless.
@@ -361,7 +361,7 @@ export function computeVerdict(input: VerdictInput): Verdict {
   if (daysUntilNextMeet === 0) {
     return {
       kind: "race_day",
-      verdict: `Race today — shake out at ${easy}.`,
+      verdict: `Race today. Shake out at ${easy}.`,
       reason: `${meetLabel} is today. Everything that decides it has already happened.`,
       nowrap: [easy],
       confidence,
@@ -385,7 +385,7 @@ export function computeVerdict(input: VerdictInput): Verdict {
   if (fatigue && trainingLoadLevel === "high") {
     return {
       kind: "back_off",
-      verdict: `Run easy today — ${easy}.`,
+      verdict: `Run easy today at ${easy}.`,
       reason: `${fatigue} Today's hard session will cost more than it returns.`,
       nowrap: [easy],
       confidence,
@@ -396,7 +396,7 @@ export function computeVerdict(input: VerdictInput): Verdict {
   if (fatigue) {
     return {
       kind: "recover",
-      verdict: `Keep today easy — ${easy}.`,
+      verdict: `Keep today easy at ${easy}.`,
       reason: `${fatigue} Tonight's target below is how you get out of it.`,
       nowrap: [easy],
       confidence,
@@ -411,8 +411,8 @@ export function computeVerdict(input: VerdictInput): Verdict {
   ) {
     return {
       kind: "taper",
-      verdict: `Cut the volume — ${easy}.`,
-      reason: `${meetLabel} is ${daysUntilNextMeet} days out. The fitness is already banked; sharpness isn't — finish with a few strides at ${interval}.`,
+      verdict: `Cut the volume. Run at ${easy}.`,
+      reason: `${meetLabel} is ${daysUntilNextMeet} days out. The fitness is already banked; sharpness isn't. Finish with a few strides at ${interval}.`,
       nowrap: [easy],
       confidence,
       action,
@@ -423,7 +423,7 @@ export function computeVerdict(input: VerdictInput): Verdict {
     return {
       kind: "go_hard",
       verdict: `Run today's intervals at ${interval}.`,
-      reason: `Green light — recovery is ${input.recoveryScore}/100 and you're on target for sleep. Take the session.`,
+      reason: `Green light. Recovery is ${input.recoveryScore}/100 and you're on target for sleep. Take the session.`,
       nowrap: [interval],
       confidence,
       action,
@@ -434,7 +434,7 @@ export function computeVerdict(input: VerdictInput): Verdict {
     return {
       kind: "threshold",
       verdict: `Hold threshold at ${threshold} today.`,
-      reason: `Recovery is ${input.recoveryScore}/100 — comfortably hard is the point, not racing it.`,
+      reason: `Recovery is ${input.recoveryScore}/100. Comfortably hard is the point, not racing it.`,
       nowrap: [threshold],
       confidence,
       action,
@@ -443,7 +443,7 @@ export function computeVerdict(input: VerdictInput): Verdict {
 
   return {
     kind: "easy",
-    verdict: `Run easy today — ${easy}.`,
+    verdict: `Run easy today at ${easy}.`,
     nowrap: [easy],
     reason:
       input.tomorrowLoadLevel === "high"

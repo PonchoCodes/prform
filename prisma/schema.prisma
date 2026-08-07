@@ -19,6 +19,13 @@ model User {
   weeklyMileage    String?
   experienceLevel  String?
   onboardingDone   Boolean @default(false)
+  /// When onboarding was finished. The boolean above says whether; this says
+  /// when, which is the only form a funnel can use — "signed up in week 12 and
+  /// completed onboarding" is a question about two dates, and a flag cannot
+  /// answer it. Backfilled to `createdAt` for accounts that finished before
+  /// this column existed; those rows understate the gap between the two steps
+  /// rather than inventing one, and the retention page says so.
+  onboardingCompletedAt DateTime?
   sport            String? @default("track")
 
   currentWakeTime  String?
@@ -88,6 +95,23 @@ model User {
   smsOptInText    String?
   smsStatus       SmsStatus @default(UNVERIFIED)
 
+  // ── Web push ───────────────────────────────────────────────────────────────
+  /// Which channel the scheduled evening and morning messages go out on.
+  /// AUTO is the only value anything sets today and resolves per athlete in
+  /// lib/messaging/channel.ts. The explicit values exist so an athlete who has
+  /// both a verified number and a subscribed device can say which they want,
+  /// and so support can pin someone to one channel while diagnosing.
+  channelPreference ChannelPreference @default(AUTO)
+  /// First time this athlete allowed notifications on any device. Kept as the
+  /// consent timestamp for the channel; the subscriptions themselves come and
+  /// go as devices are wiped and browsers prune them.
+  pushOptInAt       DateTime?
+  /// When they dismissed the "install the app" notice. Stored on the user
+  /// rather than in localStorage so dismissing it on the phone also silences it
+  /// on the laptop — being nagged on every device is how a notice becomes
+  /// something people learn to ignore.
+  installPromptDismissedAt DateTime?
+
   workouts         Workout[]
   meets            Meet[]
   sessions         Session[]
@@ -96,8 +120,113 @@ model User {
   sentMessages     SentMessage[]
   inboundMessages  InboundMessage[]
   phoneVerifications PhoneVerification[]
-  coachedTeams     Team[]           @relation("CoachedTeams")
+  pushSubscriptions  PushSubscription[]
+  streakHolds        StreakHold[]
+  ownedTeams       Team[]           @relation("OwnedTeams")
   teamMemberships  TeamMembership[]
+}
+
+/// A stretch of days the athlete has marked as away.
+///
+/// Days inside a hold are neither counted nor missed by the check-in streak:
+/// they are removed from the question entirely, so a fortnight in hospital or a
+/// week at a training camp with no phone leaves a 40-day streak intact at 40.
+///
+/// Deliberately NOT a freeze, and the difference is the whole design. A freeze
+/// is a token with a balance, and a balance is a second thing to check, earn
+/// and be reminded about — this app's messaging is built to stay under an
+/// athlete's attention threshold, and a currency works against that. A hold has
+/// no balance, no cost, and nothing to spend. You say when you are away.
+///
+/// There is no limit on how many an athlete may take. Someone who marks every
+/// day as a hold has a streak of zero, because a held day is not a checked-in
+/// day either — the mechanic cannot be farmed, which is why it needs no rules.
+model StreakHold {
+  id     String @id @default(cuid())
+  userId String
+
+  /// Inclusive, "YYYY-MM-DD" as a UTC-midnight instant, the same shape
+  /// SleepLog.date uses so the two can be compared without conversion.
+  startsOn DateTime
+  /// Inclusive. A single day is a hold with startsOn == endsOn.
+  endsOn   DateTime
+
+  /// Free text, optional. Never shown to anyone but the athlete.
+  reason String?
+
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  /// The streak query: every hold for one athlete, newest range first.
+  @@index([userId, startsOn])
+}
+
+/// Which transport a message went out on, or should go out on.
+enum MessageChannel {
+  SMS
+  PUSH
+  /// Resend. The only channel besides SMS that can hold a future message for
+  /// us, which is what lets a once-daily cron schedule an evening reminder.
+  EMAIL
+}
+
+/// An athlete's stated channel choice. AUTO defers to whatever they have set
+/// up, resolved in lib/messaging/channel.ts.
+enum ChannelPreference {
+  AUTO
+  SMS
+  PUSH
+  EMAIL
+}
+
+/// One browser, on one device, that has agreed to receive notifications.
+///
+/// A row per device, not per athlete: someone with a phone and a laptop has
+/// two, and a message goes to all of them. Rows are disposable — a browser
+/// prunes a subscription whenever it feels like it, and a reinstalled PWA
+/// issues a fresh endpoint — so nothing may treat a subscription as durable
+/// identity. The durable consent record is User.pushOptInAt.
+model PushSubscription {
+  id     String @id @default(cuid())
+  userId String
+
+  /// The push service URL the browser minted for us. Unique because it IS the
+  /// identity of the subscription: the same device re-subscribing returns the
+  /// same endpoint, and inserting a second row would double-send to it.
+  endpoint String @unique
+  /// The subscription's public key and auth secret, base64url, straight from
+  /// the browser. Together with our VAPID private key these encrypt the
+  /// payload — the push service relays ciphertext it cannot read.
+  p256dh String
+  auth   String
+
+  /// What the browser reported at subscribe time. Kept for the iOS diagnosis
+  /// (an iOS subscription can only exist inside an installed PWA) and to make
+  /// "notifications stopped working on Android" answerable.
+  userAgent String?
+  /// "ios" | "ipados" | "android" | "desktop" | "unknown", as classified by
+  /// lib/pwa/install.ts. Denormalized from userAgent so a query can group by it.
+  platform  String?
+
+  createdAt DateTime @default(now())
+  /// Refreshed every time the browser re-registers, which it does on each load
+  /// of the app. A stale value is the signal that a device is gone.
+  lastSeenAt    DateTime @default(now())
+  lastSuccessAt DateTime?
+
+  /// Consecutive delivery failures. A push service returning 404 or 410 means
+  /// the subscription is dead and the row is deleted outright; this counts the
+  /// ambiguous failures (timeouts, 5xx) that should not delete anything on the
+  /// strength of one bad night.
+  failureCount Int @default(0)
+  /// Set when the row is retired without being deleted. Never sent to, kept so
+  /// that "this device used to work" survives in the record.
+  disabledAt DateTime?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  /// The send path's only query: every live subscription for one athlete.
+  @@index([userId, disabledAt])
 }
 
 /// UNVERIFIED is the default and the safe state: no message may be sent in it.
@@ -297,8 +426,23 @@ model SentMessage {
   localDate   String
   messageType MessageType
 
+  /// Which transport carried it. Defaults to SMS so every row written before
+  /// push existed reads correctly rather than as an unknown.
+  ///
+  /// The unique constraint below still spans (user, day, type) with no channel
+  /// in it, and that is deliberate: the evening question is one message, and
+  /// sending it by push *and* text because the athlete has both would be two
+  /// interruptions for one thought. The channel is resolved before the row is
+  /// written, and the row is the record of which one won.
+  channel MessageChannel @default(SMS)
+
   /// The UTC instant we asked the provider to send at. Null for an immediate
   /// send. Twilio requires this to be 15 min – 35 days out.
+  ///
+  /// For push it means something slightly different — nobody is holding the
+  /// message but us. A push service has no scheduling API, so a row with a
+  /// future `scheduledFor` and status SCHEDULED is a message waiting for the
+  /// flush pass (lib/messaging/pushFlush.ts) to notice it is due.
   scheduledFor DateTime?
   /// When it actually went out. Null while still SCHEDULED.
   sentAt       DateTime?
@@ -411,17 +555,23 @@ enum InboundIntent {
   UNPARSED
 }
 
-// ── Coach layer ──────────────────────────────────────────────────────────────
+// ── Team layer ───────────────────────────────────────────────────────────────
 
 model Team {
   id      String  @id @default(cuid())
   name    String
   sport   String  @default("track")
   season  String?
-  coachId String
+
+  /// Whoever made the team. Called the owner and not the coach because a
+  /// captain running a group chat for six people is as legitimate an owner as
+  /// a salaried coach, and the earlier name quietly said otherwise — it made
+  /// the athlete who organizes the team feel like they were using the wrong
+  /// product. The permissions are identical either way; only the word changed.
+  ownerId String
 
   /// Athletes join themselves with this code — it is the ONLY path onto a
-  /// team. There is deliberately no API that lets a coach attach a user:
+  /// team. There is deliberately no API that lets an owner attach a user:
   /// many athletes are minors, and enrolment has to be an act the athlete
   /// performs, on their own account, past a consent screen.
   joinCode          String   @unique
@@ -430,11 +580,11 @@ model Team {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  coach           User             @relation("CoachedTeams", fields: [coachId], references: [id], onDelete: Cascade)
+  owner           User             @relation("OwnedTeams", fields: [ownerId], references: [id], onDelete: Cascade)
   memberships     TeamMembership[]
   plannedSessions PlannedSession[]
 
-  @@index([coachId])
+  @@index([ownerId])
 }
 
 model TeamMembership {
@@ -467,11 +617,11 @@ enum MembershipStatus {
   ACTIVE
   /// The athlete left. Kept rather than deleted so the consent record survives.
   LEFT
-  /// The coach removed them. Same reasoning.
+  /// The owner removed them. Same reasoning.
   REMOVED
 }
 
-/// A session the coach plans for the whole team. Feeds each member's sleep
+/// A session the owner plans for the whole team. Feeds each member's sleep
 /// plan and verdict through the workout merge layer, so the planned-session
 /// branch works with no Strava and no athlete input at all.
 model PlannedSession {
@@ -481,6 +631,11 @@ model PlannedSession {
   date        DateTime
   /// One of the app's WorkoutType strings ("easy" | "tempo" | "track" | …).
   sessionType String
+  /// How long the owner expects the session to take. Required, and with no
+  /// default on purpose: the merge layer used to hand every team session a
+  /// nominal hour, which quietly fed a guess into the athlete's training-load
+  /// bonus. The owner knows the number; the algorithm should not invent it.
+  durationMinutes Int
   description String?
   /// Free text ("5x1k @ 3:45/km"). Display-only — pace prescriptions for the
   /// athlete's own fitness still come from their resolved pace table.

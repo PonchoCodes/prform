@@ -33,6 +33,9 @@ export async function POST(req: Request) {
       currentBedTime,
       restedFeeling,
       onboardingDone: true,
+      // The timestamp the retention funnel reads. Written alongside the flag so
+      // the two cannot disagree about whether onboarding finished.
+      onboardingCompletedAt: new Date(),
       sport,
       planAggressiveness: aggressivenessForExperienceLevel(experienceLevel ?? ""),
       ...(unitPreference === "imperial" || unitPreference === "metric" ? { unitPreference } : {}),

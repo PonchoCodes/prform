@@ -84,7 +84,7 @@ export function PrPrompt({ onResolved }: Props) {
 
       <p className="text-sm text-[#6B6B6B] dark:text-[#A0A0A0] mb-4">
         Your training paces are currently inferred from logged workouts. One race result anchors
-        them to a real maximal effort — your paces will shift toward it gradually, not all at once.
+        them to a real maximal effort. Your paces will shift toward it gradually, not all at once.
       </p>
 
       {!open ? (

@@ -67,7 +67,7 @@ async function teamSessionsByDate(
   userId: string,
   start: Date,
   end: Date,
-): Promise<Map<string, { type: WorkoutType; note?: string }>> {
+): Promise<Map<string, { type: WorkoutType; durationMinutes: number; note?: string }>> {
   const memberships = await prisma.teamMembership.findMany({
     where: { userId, status: "ACTIVE" },
     select: { teamId: true },
@@ -80,33 +80,44 @@ async function teamSessionsByDate(
       date: { gte: start, lte: new Date(end.getTime() + 86400000) },
     },
     orderBy: { date: "asc" },
-    select: { date: true, sessionType: true, description: true, targetPaces: true },
+    select: {
+      date: true,
+      sessionType: true,
+      durationMinutes: true,
+      description: true,
+      targetPaces: true,
+    },
   });
 
-  const byDate = new Map<string, { type: WorkoutType; note?: string }>();
+  const byDate = new Map<string, { type: WorkoutType; durationMinutes: number; note?: string }>();
   for (const s of sessions) {
     const key = isoDate(startOfDay(new Date(s.date)));
     // Two teams planning the same day: first team wins. Rare, and any rule
     // here is arbitrary — the athlete's coach should resolve it, not math.
     if (byDate.has(key)) continue;
-    const note = [s.description, s.targetPaces].filter(Boolean).join(" — ") || undefined;
-    byDate.set(key, { type: s.sessionType as WorkoutType, note });
+    const note = [s.description, s.targetPaces].filter(Boolean).join(". ") || undefined;
+    byDate.set(key, {
+      type: s.sessionType as WorkoutType,
+      durationMinutes: s.durationMinutes,
+      note,
+    });
   }
   return byDate;
 }
 
 function teamWorkout(
   date: Date,
-  session: { type: WorkoutType; note?: string },
+  session: { type: WorkoutType; durationMinutes: number; note?: string },
   isPast: boolean,
 ): NormalizedWorkout {
   return {
     date,
     type: session.type,
     distance: 0,
-    // Nominal hour: the algorithm keys its load bonuses off the type; the
-    // duration only has to be a plausible session, not a measurement.
-    duration: 60,
+    // The coach's own figure, required on the session form. Nothing is assumed
+    // here: a team session is the one planned workout where the duration is
+    // known in advance by the person who wrote it.
+    duration: session.durationMinutes,
     source: "team",
     isTentative: !isPast,
     note: session.note,

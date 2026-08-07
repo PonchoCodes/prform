@@ -404,7 +404,7 @@ function computePRCPlan(
     type: useOutdoor ? "outdoor" : "10000lux",
     instruction: useOutdoor
       ? "45 min outdoor sunlight, no sunglasses. Stand in direct light, not shade."
-      : "45 min at a 10,000 lux light therapy lamp — too early for outdoor sun.",
+      : "45 min at a 10,000 lux light therapy lamp. Too early for outdoor sun.",
   };
 
   // SOURCE: Chang et al. (2015) — blue-light avoidance window starts ~3 h pre-bed.
@@ -421,7 +421,7 @@ function computePRCPlan(
     cumulativeShiftMin: Math.round(cumulativeShiftMin),
     targetWakeTime,
     mechanismNote:
-      "Light after CBTmin activates ipRGCs in the retina, signaling the SCN to advance its pacemaker. Light before CBTmin does the opposite — it delays the clock.",
+      "Light after CBTmin activates ipRGCs in the retina, signaling the SCN to advance its pacemaker. Light before CBTmin does the opposite: it delays the clock.",
   };
 }
 

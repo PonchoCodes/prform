@@ -133,6 +133,155 @@ describe("the verification carve-out", () => {
   });
 });
 
+describe("the push channel", () => {
+  /** The pilot's athlete: a subscribed device and no phone number at all. */
+  function pushSubject(overrides: Partial<GateSubject> = {}): GateSubject {
+    return {
+      phoneNumber: null,
+      phoneVerifiedAt: null,
+      smsStatus: "UNVERIFIED",
+      ianaTimezone: "America/New_York",
+      hasPushSubscription: true,
+      ...overrides,
+    };
+  }
+
+  function pushGate(overrides: Partial<Parameters<typeof evaluateSendGate>[0]> = {}) {
+    return evaluateSendGate({
+      subject: pushSubject(),
+      messageType: "EVENING_WAKE_QUESTION",
+      sentToday: 0,
+      cap: 5,
+      killSwitch: false,
+      channel: "PUSH",
+      ...overrides,
+    });
+  }
+
+  it("lets through an athlete with no phone number — the entire pilot", () => {
+    // The rail this pins is the one that would have blocked every push during
+    // the month without SMS: a phone check applied to a channel that has
+    // nothing to do with phones.
+    expect(pushGate()).toEqual({ allowed: true });
+  });
+
+  it("refuses when no device is subscribed", () => {
+    expect(pushGate({ subject: pushSubject({ hasPushSubscription: false }) })).toEqual({
+      allowed: false,
+      reason: "no_push_subscription",
+    });
+  });
+
+  it("still requires a timezone — it is how the local day is computed", () => {
+    expect(pushGate({ subject: pushSubject({ ianaTimezone: null }) })).toEqual({
+      allowed: false,
+      reason: "no_timezone",
+    });
+  });
+
+  it("honours STOP on push too", () => {
+    // Someone who told us to stop has told us to stop. Delivering the same
+    // message by another road because STOP is an SMS word is the behaviour this
+    // test exists to prevent.
+    expect(pushGate({ subject: pushSubject({ smsStatus: "STOPPED" }) })).toEqual({
+      allowed: false,
+      reason: "stopped",
+    });
+  });
+
+  it("does not ask a push to be phone-verified", () => {
+    const decision = pushGate({
+      messageType: "MORNING_VERDICT",
+      subject: pushSubject({ phoneVerifiedAt: null, smsStatus: "UNVERIFIED" }),
+    });
+    expect(decision).toEqual({ allowed: true });
+  });
+
+  it("counts against the same daily cap as texts", () => {
+    // One ledger, one budget: the athlete's attention does not have a separate
+    // allowance for a notification.
+    expect(pushGate({ sentToday: 5, cap: 5 })).toEqual({ allowed: false, reason: "daily_cap" });
+  });
+
+  it("stops for the kill switch", () => {
+    expect(pushGate({ killSwitch: true })).toEqual({ allowed: false, reason: "kill_switch" });
+  });
+
+  it("defaults to SMS when no channel is named, so pre-push callers are unchanged", () => {
+    const noChannel = evaluateSendGate({
+      subject: pushSubject(),
+      messageType: "EVENING_WAKE_QUESTION",
+      sentToday: 0,
+      cap: 5,
+      killSwitch: false,
+    });
+    expect(noChannel).toEqual({ allowed: false, reason: "no_phone_number" });
+  });
+});
+
+describe("the email channel", () => {
+  /** An athlete with an address and nothing else. */
+  function emailSubject(overrides: Partial<GateSubject> = {}): GateSubject {
+    return {
+      phoneNumber: null,
+      phoneVerifiedAt: null,
+      smsStatus: "UNVERIFIED",
+      ianaTimezone: "America/New_York",
+      emailAddress: "athlete@example.test",
+      ...overrides,
+    };
+  }
+
+  function emailGate(overrides: Partial<Parameters<typeof evaluateSendGate>[0]> = {}) {
+    return evaluateSendGate({
+      subject: emailSubject(),
+      messageType: "MORNING_VERDICT",
+      sentToday: 0,
+      cap: 5,
+      killSwitch: false,
+      channel: "EMAIL",
+      ...overrides,
+    });
+  }
+
+  it("lets through an athlete with only an address", () => {
+    expect(emailGate()).toEqual({ allowed: true });
+  });
+
+  it("refuses when there is no address", () => {
+    expect(emailGate({ subject: emailSubject({ emailAddress: null }) })).toEqual({
+      allowed: false,
+      reason: "no_email_address",
+    });
+  });
+
+  it("does not ask an email to be phone-verified or push-subscribed", () => {
+    expect(emailGate({ subject: emailSubject({ phoneVerifiedAt: null }) })).toEqual({
+      allowed: true,
+    });
+  });
+
+  it("still requires a timezone", () => {
+    expect(emailGate({ subject: emailSubject({ ianaTimezone: null }) })).toEqual({
+      allowed: false,
+      reason: "no_timezone",
+    });
+  });
+
+  it("honours STOP on email too", () => {
+    // Same rule as push. Somebody who told us to stop has told us to stop, and
+    // the channel the word arrived on does not narrow what it meant.
+    expect(emailGate({ subject: emailSubject({ smsStatus: "STOPPED" }) })).toEqual({
+      allowed: false,
+      reason: "stopped",
+    });
+  });
+
+  it("counts against the same daily cap", () => {
+    expect(emailGate({ sentToday: 5, cap: 5 })).toEqual({ allowed: false, reason: "daily_cap" });
+  });
+});
+
 describe("once-per-day types", () => {
   it("covers exactly the two the cron owns", () => {
     expect(isOncePerDay("EVENING_WAKE_QUESTION")).toBe(true);

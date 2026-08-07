@@ -73,7 +73,7 @@ function RequestAccessForm() {
           PRform is in invite-only early access with a small first cohort.
           {submitted
             ? " We'll email you as soon as a spot opens up."
-            : " Your email isn't approved yet — we'll email you as soon as a spot opens up."}
+            : " Your email isn't approved yet. We'll email you as soon as a spot opens up."}
         </p>
         <Link href="/" className="font-bold text-sm text-[#0A0A0A] dark:text-[#F5F5F5] link-wipe uppercase tracking-wider">
           ← Back to home

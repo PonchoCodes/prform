@@ -10,8 +10,14 @@ import { TEAM_CONSENT_TEXT } from "@/lib/team/consent";
 //
 // The membership row is written for the SESSION user. There is no userId in
 // the request contract, and lib/team/guard.test.ts fails the build if one
-// ever appears in this file — that is the API-level enforcement of "a coach
+// ever appears in this file — that is the API-level enforcement of "an owner
 // can never enrol another person".
+//
+// An owner may join their own team, and that is not an edge case: a captain
+// who made the team is also on it. This used to be refused, which had the
+// effect of making the person who organized the squad invisible on their own
+// roster — and once check-in consistency is ranked, invisible on their own
+// leaderboard. Owning and belonging are separate facts and both can be true.
 
 export async function POST(req: Request) {
   const session = await getServerSession(authOptions);
@@ -30,28 +36,30 @@ export async function POST(req: Request) {
   // modified client cannot record a wording that was never shown.
   if (body.consent !== true) {
     return NextResponse.json(
-      { error: "You have to accept what your coach can and cannot see." },
+      { error: "You have to accept what the person running this team can and cannot see." },
       { status: 400 },
     );
   }
 
   const team = await prisma.team.findUnique({
     where: { joinCode: code },
-    select: { id: true, name: true, coachId: true, joinCodeExpiresAt: true },
+    select: { id: true, name: true, joinCodeExpiresAt: true },
   });
 
   // One message for "no such code" and "expired code": a join code is a
   // secret, and distinguishing the two confirms which strings are live codes.
   if (!team || team.joinCodeExpiresAt < new Date()) {
     return NextResponse.json(
-      { error: "That code isn't valid. Ask your coach for a fresh one." },
+      { error: "That code isn't valid. Ask for a fresh one." },
       { status: 404 },
     );
   }
 
-  if (team.coachId === userId) {
-    return NextResponse.json({ error: "You coach this team." }, { status: 400 });
-  }
+  // No owner check. Joining a team you own is allowed — see the note at the
+  // top of the file. The consent step is not waived for them either: an owner
+  // who is also a member has their readiness derived like anyone else's, and
+  // the record of them agreeing to that should look identical to everyone
+  // else's rather than being a special case nobody can audit.
 
   const now = new Date();
   const membership = await prisma.teamMembership.upsert({

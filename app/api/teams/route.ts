@@ -4,10 +4,19 @@ import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { generateJoinCode, joinCodeExpiry } from "@/lib/team/joinCode";
 
-// Teams: create one (becoming its coach), and list where you stand.
+// Teams: create one (becoming its owner), and list where you stand.
 //
-// There is deliberately no endpoint anywhere under /api/teams that writes a
-// membership for anyone but the session user. A coach gets a join code, and
+// Anyone signed in may create a team. There is no role to be granted, no
+// application, no approval — a captain organizing six people needs a roster as
+// much as a salaried coach does, and gatekeeping it would only mean the person
+// who actually does the organizing cannot.
+//
+// What is NOT open: there is no directory, no browse, no search. A team is
+// reachable by join code alone, which is what keeps a roster of minors from
+// being an enumerable list.
+//
+// And there is deliberately no endpoint anywhere under /api/teams that writes
+// a membership for anyone but the session user. An owner gets a join code, and
 // what happens next is the athlete's act, on the athlete's account, past the
 // consent screen — many of these athletes are minors, and "the coach typed
 // their email in" must not be a thing this API can express.
@@ -17,9 +26,9 @@ export async function GET() {
   if (!session?.user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   const userId = (session.user as any).id as string;
 
-  const [coached, memberships] = await Promise.all([
+  const [owned, memberships] = await Promise.all([
     prisma.team.findMany({
-      where: { coachId: userId },
+      where: { ownerId: userId },
       select: {
         id: true,
         name: true,
@@ -31,6 +40,10 @@ export async function GET() {
       },
       orderBy: { createdAt: "asc" },
     }),
+    // Every team they are ON, which is a different set from the teams they
+    // own and may overlap it. Both directions are normal: someone can run the
+    // distance squad, be a member of it, and also be on a track team somebody
+    // else runs.
     prisma.teamMembership.findMany({
       where: { userId, status: "ACTIVE" },
       select: {
@@ -39,14 +52,14 @@ export async function GET() {
         // The athlete's own view of a team never includes the join code —
         // handing every member a working invite would make the roster
         // effectively public.
-        team: { select: { id: true, name: true, sport: true, season: true } },
+        team: { select: { id: true, name: true, sport: true, season: true, ownerId: true } },
       },
       orderBy: { joinedAt: "asc" },
     }),
   ]);
 
   return NextResponse.json({
-    coached: coached.map((t) => ({
+    owned: owned.map((t) => ({
       id: t.id,
       name: t.name,
       sport: t.sport,
@@ -55,7 +68,19 @@ export async function GET() {
       joinCodeExpiresAt: t.joinCodeExpiresAt,
       athleteCount: t._count.memberships,
     })),
-    memberships,
+    memberships: memberships.map((m) => ({
+      id: m.id,
+      joinedAt: m.joinedAt,
+      team: {
+        id: m.team.id,
+        name: m.team.name,
+        sport: m.team.sport,
+        season: m.team.season,
+      },
+      // So the UI can mark "your own team" on a membership rather than listing
+      // it twice with no explanation. A boolean, not the owner's identity.
+      ownedByYou: m.team.ownerId === userId,
+    })),
   });
 }
 
@@ -76,7 +101,7 @@ export async function POST(req: Request) {
       name,
       sport: "track",
       season,
-      coachId: userId,
+      ownerId: userId,
       joinCode: generateJoinCode(),
       joinCodeExpiresAt: joinCodeExpiry(),
     },

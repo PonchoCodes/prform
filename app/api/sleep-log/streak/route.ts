@@ -2,6 +2,22 @@ import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { computeCheckInStreak } from "@/lib/streak";
+
+// Two different quantities live in this response, and confusing them is the
+// mistake this comment exists to prevent.
+//
+//   checkIn        — consecutive days the athlete CHECKED IN. A habit. This is
+//                    the one shown to the athlete as "your streak", and a
+//                    missed sleep target never breaks it.
+//   currentStreak  — consecutive nights that HIT THEIR TARGET. Kept because the
+//     / longestStreak  hit rates below are the same family of number and the
+//                    sleep page reports them honestly as such. It is not a
+//                    streak in the motivational sense and must never be
+//                    labelled as one: a teenager who was up until 1am with a
+//                    lab report and logged it honestly did the thing we want,
+//                    and zeroing a counter for it teaches them to stop
+//                    reporting bad nights.
 
 function parseTimeMin(t: string): number {
   const [h, m] = t.split(":").map(Number);
@@ -20,6 +36,15 @@ export async function GET() {
 
   if (logs.length === 0) {
     return NextResponse.json({
+      checkIn: {
+        current: 0,
+        longest: 0,
+        forgivenInCurrent: 0,
+        atRisk: false,
+        canSkipTonight: true,
+        heldInCurrent: 0,
+        onHoldToday: false,
+      },
       currentStreak: 0,
       longestStreak: 0,
       hitRateLast7: 0,
@@ -28,6 +53,23 @@ export async function GET() {
       consecutiveMisses: 0,
     });
   }
+
+  // Dates only. The streak is a habit measure and has no business seeing a
+  // duration: passing the rows in would make it possible for a future edit to
+  // start counting targets, which is the one thing it must never do.
+  const holds = await prisma.streakHold.findMany({
+    where: { userId },
+    select: { startsOn: true, endsOn: true },
+  });
+
+  const checkIn = computeCheckInStreak({
+    loggedDates: logs.map((l) => l.date.toISOString().slice(0, 10)),
+    today: new Date().toISOString().slice(0, 10),
+    holds: holds.map((h) => ({
+      startsOn: h.startsOn.toISOString().slice(0, 10),
+      endsOn: h.endsOn.toISOString().slice(0, 10),
+    })),
+  });
 
   // consecutiveMisses: most recent consecutive logs where hitTarget=false
   let consecutiveMisses = 0;
@@ -88,6 +130,7 @@ export async function GET() {
   }
 
   return NextResponse.json({
+    checkIn,
     currentStreak,
     longestStreak,
     hitRateLast7,
