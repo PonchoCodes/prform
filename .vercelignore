@@ -1,0 +1,7 @@
+# Never upload local env files with a CLI deploy. Without this, `vercel --prod`
+# ships .env inside the bundle and Next.js loads it at runtime, overriding
+# nothing that Vercel defines but filling everything it doesn't — which is how
+# production ran with NEXTAUTH_URL=http://localhost:3000 baked in.
+.env
+.env.*
+!.env.example
