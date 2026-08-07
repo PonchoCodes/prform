@@ -3,9 +3,11 @@ import { prisma } from "@/lib/prisma";
 import { calculateSleepPlan } from "@/lib/sleepAlgorithm";
 import { getWorkoutsForDateRange } from "@/lib/workoutDataSource";
 import { sendMessage } from "@/lib/messaging/send";
+import { scheduleMorning } from "@/lib/messaging/morning";
 import { closeUnresolvedNights } from "@/lib/messaging/night";
 import { flushDuePushMessages } from "@/lib/messaging/pushFlush";
 import { eveningWakeQuestion } from "@/lib/messaging/copy";
+import type { DailySleepPlan } from "@/lib/sleepAlgorithm";
 import {
   addLocalDays,
   clockToMinutes,
@@ -68,21 +70,25 @@ interface Candidate {
 }
 
 /**
- * Tonight's target bedtime for a given local date, as "HH:MM".
+ * The athlete's plan days, keyed by the date each night begins.
  *
- * Runs the real plan so the question arrives 90 minutes before the bedtime the
- * athlete is actually being asked to hit, which moves with training load and
- * meet proximity. Falls back to their stated habitual bedtime when the date
- * falls outside the plan window.
+ * Runs the real plan so the evening question arrives 90 minutes before the
+ * bedtime the athlete is actually being asked to hit, and so the morning
+ * message carries the verdict for the night it follows. Starts a day back
+ * because this cron fires at a UTC hour where much of the world's local date
+ * is still the server's yesterday; without that day the athlete's "tonight"
+ * would fall outside the map.
  */
-async function bedtimeByLocalDate(user: Candidate): Promise<Map<string, string>> {
+async function planByLocalDate(user: Candidate): Promise<Map<string, DailySleepPlan>> {
   const today = new Date();
   today.setHours(0, 0, 0, 0);
+  const start = new Date(today);
+  start.setDate(today.getDate() - 1);
   const end = new Date(today);
   end.setDate(today.getDate() + 3);
 
   const [{ workouts }, meets] = await Promise.all([
-    getWorkoutsForDateRange(user.id, today, end),
+    getWorkoutsForDateRange(user.id, start, end),
     prisma.meet.findMany({ where: { userId: user.id }, orderBy: { date: "asc" } }),
   ]);
 
@@ -102,11 +108,13 @@ async function bedtimeByLocalDate(user: Candidate): Promise<Map<string, string>>
       raceTime: m.raceTime ?? null,
     })),
     workouts,
+    undefined,
+    { startDayOffset: -1 },
   );
 
-  const byDate = new Map<string, string>();
+  const byDate = new Map<string, DailySleepPlan>();
   for (const plan of plans) {
-    byDate.set(plan.date.toISOString().slice(0, 10), plan.recommendedBedtime);
+    byDate.set(plan.date.toISOString().slice(0, 10), plan);
   }
   return byDate;
 }
@@ -194,9 +202,9 @@ export async function GET(req: NextRequest) {
       continue;
     }
 
-    let bedtimes: Map<string, string>;
+    let plans: Map<string, DailySleepPlan>;
     try {
-      bedtimes = await bedtimeByLocalDate(user);
+      plans = await planByLocalDate(user);
     } catch (e) {
       console.error(`[messaging] could not build a plan for user=${user.id}:`, e);
       tally.failed++;
@@ -210,7 +218,7 @@ export async function GET(req: NextRequest) {
     let handled = false;
 
     for (const localDate of [todayLocal, addLocalDays(todayLocal, 1)]) {
-      const bedtime = bedtimes.get(localDate) ?? user.currentBedTime ?? "22:00";
+      const bedtime = plans.get(localDate)?.recommendedBedtime ?? user.currentBedTime ?? "22:00";
       const bedMinutes = clockToMinutes(bedtime);
       if (bedMinutes === null) continue;
 
@@ -265,6 +273,69 @@ export async function GET(req: NextRequest) {
           break;
         default:
           tally.failed++;
+      }
+      handled = true;
+      break;
+    }
+
+    // The morning message, scheduled on its own window rather than piggybacked
+    // on the evening question. At the hour this cron usually fires, tonight's
+    // evening question is already inside its floor and skipped — but tonight's
+    // morning verdict is still hours ahead, and for a push or email athlete
+    // this is the only place it can come from: they have no reply that would
+    // schedule one. An SMS reply later tonight still wins — the inbound
+    // handler cancels and re-schedules at the declared wake time, while this
+    // pass never replaces an existing row.
+    for (const nightDate of [todayLocal, addLocalDays(todayLocal, 1)]) {
+      const wakeClock =
+        plans.get(nightDate)?.recommendedWakeTime ?? user.currentWakeTime ?? "06:00";
+      const morningDate = addLocalDays(nightDate, 1);
+      const { instant } = instantFromLocal(morningDate, wakeClock, tz);
+
+      const lead = instant.getTime() - now.getTime();
+      if (lead < MIN_LEAD_MS) continue;
+      if (lead > MAX_LOOKAHEAD_MS) break;
+
+      try {
+        const outcome = await scheduleMorning({
+          user,
+          nightDate,
+          wakeInstant: instant,
+          // Asked because nothing is known yet at schedule time. A BED reply
+          // tonight re-schedules without the question; an athlete who logs in
+          // the app answers it there.
+          askForBedtime: true,
+          replaceExisting: false,
+          plans,
+        });
+        switch (outcome?.status) {
+          case "scheduled":
+          case "sent":
+            tally.scheduled++;
+            break;
+          case "held":
+            tally.held++;
+            break;
+          case "dry_run":
+            tally.dryRun++;
+            break;
+          case "duplicate":
+            tally.duplicate++;
+            break;
+          case "blocked":
+            tally.blocked++;
+            break;
+          case "no_channel":
+            tally.noChannel++;
+            break;
+          case undefined:
+            break;
+          default:
+            tally.failed++;
+        }
+      } catch (e) {
+        console.error(`[messaging] morning schedule failed for user=${user.id}:`, e);
+        tally.failed++;
       }
       handled = true;
       break;

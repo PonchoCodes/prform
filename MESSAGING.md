@@ -532,7 +532,7 @@ cannot rely on being able to text STOP.
 | Type | When | Once per day? |
 |---|---|---|
 | `EVENING_WAKE_QUESTION` | 90 min before computed bedtime | **Yes** — cron-owned |
-| `MORNING_VERDICT` | At the declared wake time | **Yes** — cron-owned |
+| `MORNING_VERDICT` | At the wake time: the plan's, pre-scheduled by the cron for every reachable athlete, or the declared one when a reply re-schedules it | **Yes** — cron-owned |
 | `LIGHTS_OUT` | Reply to a wake time | No |
 | `BED_ACK` | Reply to BED | No |
 | `CLARIFICATION` | Nothing parsed | No |

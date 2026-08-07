@@ -331,12 +331,17 @@ exists**, which is why the routing below fails toward push rather than toward no
   `sendMessage` returns `held` — and `lib/messaging/pushFlush.ts` delivers it when due, or
   abandons it if it is more than two hours overdue. **A scheduled text survives this app being
   down; a scheduled push does not.**
-- **`/api/cron/push-flush` needs a five-minute trigger and is deliberately NOT in
-  `vercel.json`.** Hobby allows two crons, once a day, and both slots are taken — a third entry
-  fails the deploy. On Pro, add `{ "path": "/api/cron/push-flush", "schedule": "*/5 * * * *" }`.
-  Until then an external pinger with the same `Bearer CRON_SECRET` works, and
-  `/api/cron/messaging` calls the flush opportunistically so the queue degrades rather than
-  silently accumulating.
+- **`/api/cron/push-flush` runs every five minutes via `vercel.json`** (the project is on
+  Vercel Pro as of 2026-08-07). If the plan ever drops to Hobby the entry must come out —
+  Hobby allows two once-a-day crons and a third fails the deploy — and an external pinger
+  with the same `Bearer CRON_SECRET` takes over. `/api/cron/messaging` also calls the flush
+  opportunistically so the queue degrades rather than silently accumulating.
+- **The morning verdict is pre-scheduled by the daily cron for every reachable athlete** at
+  the plan's recommended wake time, via `scheduleMorning` in `lib/messaging/morning.ts` with
+  `replaceExisting: false`. This is what makes the morning message exist on push and email,
+  which have no reply path. An SMS reply still wins: the inbound handler calls the same
+  function with `replaceExisting: true`, cancelling the pre-scheduled row and re-queueing at
+  the declared wake time.
 - **There are three channels: SMS, PUSH and EMAIL.** `lib/messaging/email.ts` is the only file
   allowed to build message emails, and it is the **only channel besides SMS that can schedule** —
   Resend accepts a `scheduledAt`, so an athlete on EMAIL gets working scheduled reminders with
@@ -388,8 +393,10 @@ not in individual pages. Two constants (`SUBSCRIPTION_PRICE_USD`, `TRIAL_DAYS`) 
 - `app/opengraph-image.tsx` renders the 1200×630 social card and doubles as the Twitter image.
   It **must** stay on `runtime = "edge"` — next/og's node build resolves its bundled fallback
   font through `fileURLToPath` on a path that is malformed on Windows, crashing both the build
-  and the route at request time. `app/icon.tsx` and `app/apple-icon.tsx` dodge the same bug via
-  `force-dynamic`.
+  and the route at request time. `app/icon.tsx` dodges the same bug via `force-dynamic`.
+  `app/apple-icon.png` is deliberately a static file, not a route: iOS fetches it exactly once,
+  at Add to Home Screen, and a fetch that fails then leaves a screenshot tile forever. It is
+  written by `scripts/buildIcons.mjs` from the wordmark artwork.
 - `lib/structuredData.ts` builds the landing page's Organization + WebSite + SoftwareApplication
   JSON-LD. Everything asserted there has to be true on the page — no invented ratings.
 - Canonical URLs are set **per page**, never on the root layout: metadata cascades, so a

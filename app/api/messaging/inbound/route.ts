@@ -4,7 +4,8 @@ import { prisma } from "@/lib/prisma";
 import { parseMessage, type ParseContext, type ParsedMessage } from "@/lib/messageParser";
 import { getProvider } from "@/lib/messaging/twilio";
 import { inboundWebhookUrl } from "@/lib/messaging/config";
-import { cancelAllScheduled, cancelScheduled, sendMessage } from "@/lib/messaging/send";
+import { cancelAllScheduled, sendMessage } from "@/lib/messaging/send";
+import { scheduleMorning } from "@/lib/messaging/morning";
 import { planIndexFor, PLAN_USER_SELECT, type PlanUser } from "@/lib/messaging/plan";
 import {
   nightDateFor,
@@ -14,7 +15,6 @@ import {
   recordUp,
 } from "@/lib/messaging/night";
 import {
-  addLocalDays,
   isValidTimeZone,
   localClockOf,
   localDateOf,
@@ -26,12 +26,7 @@ import {
   friendlyTime,
   helpReply,
   lightsOut,
-  morningMessage,
-  verdictHeadline,
 } from "@/lib/messaging/copy";
-import { computeCheckInStreak, streakSentence } from "@/lib/streak";
-import { verdictForUser, VERDICT_USER_SELECT } from "@/lib/messaging/verdictFor";
-import type { DailySleepPlan } from "@/lib/sleepAlgorithm";
 
 // Inbound provider webhook.
 //
@@ -247,6 +242,7 @@ export async function POST(req: NextRequest) {
           nightDate,
           wakeInstant: row.declaredWakeAt,
           askForBedtime: false,
+          replaceExisting: true,
           plans: await planIndexFor(user, {
             localDate: nightDate,
             clock: localClockOf(row.declaredWakeAt, tz),
@@ -296,6 +292,7 @@ export async function POST(req: NextRequest) {
         nightDate,
         wakeInstant,
         askForBedtime: true,
+        replaceExisting: true,
         plans,
       });
       return twiml();
@@ -313,85 +310,3 @@ export async function POST(req: NextRequest) {
   }
 }
 
-/**
- * Queues (or re-queues) the morning message for the declared wake time.
- *
- * Always cancels first. A wake time revised at 22:00 and a BED reply at 21:30
- * both invalidate text already sitting in the provider's schedule, and both
- * route through the same cancellation the STOP path uses.
- */
-async function scheduleMorning(input: {
-  user: InboundUser;
-  nightDate: LocalDate;
-  wakeInstant: Date;
-  askForBedtime: boolean;
-  /** Reuses the caller's plan when it already built one. */
-  plans?: Map<string, DailySleepPlan>;
-}) {
-  const morningDate = addLocalDays(input.nightDate, 1);
-  await cancelScheduled({
-    userId: input.user.id,
-    localDate: morningDate,
-    messageType: "MORNING_VERDICT",
-  });
-
-  const plans = input.plans ?? (await planIndexFor(input.user));
-  const todayPlan = plans.get(input.nightDate);
-  if (!todayPlan) {
-    console.error(
-      `[messaging] no plan day for ${input.nightDate}; morning message not scheduled for user=${input.user.id}`,
-    );
-    return;
-  }
-
-  const verdictUser = await prisma.user.findUnique({
-    where: { id: input.user.id },
-    select: VERDICT_USER_SELECT,
-  });
-  if (!verdictUser) return;
-
-  const verdict = await verdictForUser(
-    verdictUser,
-    todayPlan,
-    plans.get(addLocalDays(input.nightDate, 1)),
-  );
-
-  // Dates only — the streak is a habit measure and must not see a duration.
-  // Computed as of the morning the message lands, not tonight, because that is
-  // when the athlete reads it and what the number has to be true of.
-  const [loggedDates, holds] = await Promise.all([
-    prisma.sleepLog.findMany({
-      where: { userId: input.user.id },
-      select: { date: true },
-      orderBy: { date: "desc" },
-      take: 400,
-    }),
-    prisma.streakHold.findMany({
-      where: { userId: input.user.id },
-      select: { startsOn: true, endsOn: true },
-    }),
-  ]);
-  const streak = computeCheckInStreak({
-    loggedDates: loggedDates.map((l) => l.date.toISOString().slice(0, 10)),
-    today: morningDate,
-    holds: holds.map((h) => ({
-      startsOn: h.startsOn.toISOString().slice(0, 10),
-      endsOn: h.endsOn.toISOString().slice(0, 10),
-    })),
-  });
-
-  await sendMessage({
-    userId: input.user.id,
-    messageType: "MORNING_VERDICT",
-    body: morningMessage({
-      headline: verdictHeadline(verdict),
-      askForBedtime: input.askForBedtime,
-      streak: streakSentence(streak),
-    }),
-    localDate: morningDate,
-    sendAt: input.wakeInstant,
-    // Not pinned: this is a scheduled message, not a reply, so it goes by
-    // whichever channel the athlete is actually set up on.
-    options: { tag: "MORNING_VERDICT" },
-  });
-}

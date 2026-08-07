@@ -7,6 +7,10 @@
     {
       "path": "/api/cron/messaging",
       "schedule": "0 3 * * *"
+    },
+    {
+      "path": "/api/cron/push-flush",
+      "schedule": "*/5 * * * *"
     }
   ]
 }

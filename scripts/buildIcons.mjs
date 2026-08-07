@@ -288,3 +288,16 @@ for (const [name, image] of files) {
   writeFileSync(join(OUT_DIR, name), buffer);
   console.log(`wrote public/icons/${name} (${image.width}x${image.height}, ${buffer.length} bytes)`);
 }
+
+// The iOS home-screen icon, as a static file rather than a generated route.
+// Safari fetches this exactly once, at the moment the athlete taps Add to Home
+// Screen, and a fetch that fails then leaves a screenshot tile forever — so
+// the least failure-prone thing that can serve it is a PNG on the CDN. Next
+// picks the file up by its conventional name and emits the apple-touch-icon
+// link. iOS ignores any transparency, so the artwork's own field fills the
+// canvas edge to edge.
+const APPLE_OUT = join(dirname(fileURLToPath(import.meta.url)), "..", "app", "apple-icon.png");
+const apple = render(source, 180, 0.92);
+const appleBuffer = encodePng(apple);
+writeFileSync(APPLE_OUT, appleBuffer);
+console.log(`wrote app/apple-icon.png (180x180, ${appleBuffer.length} bytes)`);

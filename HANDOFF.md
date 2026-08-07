@@ -109,21 +109,30 @@ to a functioning re-engagement loop during the month without SMS.
 
 ---
 
+## Resolved since (2026-08-07, third sitting)
+
+- **The push-flush trigger.** The user upgraded to Vercel Pro; `vercel.json` now
+  carries `{ "path": "/api/cron/push-flush", "schedule": "*/5 * * * *" }`. If
+  the plan ever drops to Hobby that entry must come out or deploys fail.
+- **The morning verdict now exists on push and email.** It was only ever created
+  by an SMS wake-time reply, which push and email athletes cannot send. The
+  daily cron now pre-schedules it for every reachable athlete at the plan's
+  recommended wake time via `lib/messaging/morning.ts` (`replaceExisting:
+  false`); an SMS reply still cancels and re-queues at the declared wake time.
+- **The iOS home-screen icon is a static `app/apple-icon.png`** built from the
+  wordmark by `scripts/buildIcons.mjs`, replacing the generated "PRf" tile
+  route. iOS captures the icon exactly once, at Add to Home Screen — anyone who
+  installed while it was broken must remove and re-add the app.
+
 ## Still open, in priority order
 
-1. **A five-minute trigger for `/api/cron/push-flush`.** Without it, scheduled
-   PUSH messages are never delivered. Three ways out: Vercel Pro ($20/mo) plus a
-   `*/5 * * * *` entry in `vercel.json`; a free external pinger (cron-job.org)
-   sending `Authorization: Bearer $CRON_SECRET`; or route athletes to EMAIL,
-   which needs no trigger. **Do not add a third cron to `vercel.json` on Hobby —
-   it fails the deploy.**
-2. **iOS Safari and Android Chrome device testing.** Never done; needs HTTPS and
+1. **iOS Safari and Android Chrome device testing.** Never done; needs HTTPS and
    real phones. Per device: install, open from the home screen, enable
    notifications, press "Send a test" on `/profile`. On iOS push does not exist
-   until the app is installed, so testing in a Safari tab proves nothing.
-3. **Vercel plan.** Hobby is for non-commercial projects and PRform has live
-   Stripe keys. While `EARLY_ACCESS=true` and everyone is grandfathered free that
-   is arguably fine. The first paid card means Pro. See `COSTS.md`.
+   until the app is installed, so testing in a Safari tab proves nothing. The
+   first live end-to-end check: tonight's cron (03:00 UTC) should queue an
+   evening question and a morning verdict for the user's own account, and the
+   five-minute flush should deliver both on time.
 
 ## Working agreements established this session
 
