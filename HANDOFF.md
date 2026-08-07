@@ -9,27 +9,29 @@ everything works; this file explains what state it is in right now.
 
 ---
 
-## The one thing that will bite you
+## Committed and deployed (2026-08-07, second sitting)
 
-**Five migrations are applied to the production Neon database but are not
-committed to git.**
+The entire session above is now **committed (`7a6e47a` on master, pushed to
+GitHub) and live on prform.app**. The six migrations
+(`add_planned_session_duration` through `add_email_channel`) are in git and
+were already applied to production via `db execute` + `migrate resolve`, so
+`prisma migrate deploy` during the build was a no-op, as intended. Do not
+regenerate or rename them.
 
-```
-20260806193000_add_planned_session_duration   (from a prior session)
-20260806220000_add_web_push
-20260807000000_rename_coach_to_owner
-20260807030000_add_streak_hold
-20260807040000_add_onboarding_completed_at
-20260807050000_add_email_channel
-```
+Deploying shipped the VAPID keys into a live build, so **web push is now on**
+for immediate sends; only the scheduled-push flush trigger is still missing.
 
-`npx prisma migrate status` reports "up to date" because they were applied with
-`db execute` + `migrate resolve`, per the house rule (`migrate dev` offers to
-drop the Neon database). Do not regenerate or rename them. If you clone fresh
-and see them missing, they are in the working tree, uncommitted, not lost.
-
-Everything in the working tree is unreviewed and uncommitted: ~65 modified
-files, ~44 new. Nothing has been deployed.
+**Found and fixed during the deploy:** `vercel --prod` had been uploading local
+`.env` inside the bundle, where Next.js loads it at runtime. Vercel-defined
+vars won, but anything undefined there fell through to the local value — which
+is how production ran with `NEXTAUTH_URL=http://localhost:3000` baked in
+(NextAuth survived because the credentials+JWT flow barely reads it, but its
+generated URLs said localhost and cookies were non-secure). `.vercelignore` now
+excludes env files (`69112c3`), the domain serves the clean git-integration
+build, NextAuth auto-detects `https://prform.app`, and cookies got the
+`__Secure-` prefix — which renamed the session cookie and signed everyone out
+once. Prefer letting the GitHub push trigger the production build; if using
+`vercel --prod`, the ignore file now keeps `.env` out either way.
 
 ## Verification state
 
@@ -115,14 +117,11 @@ to a functioning re-engagement loop during the month without SMS.
    sending `Authorization: Bearer $CRON_SECRET`; or route athletes to EMAIL,
    which needs no trigger. **Do not add a third cron to `vercel.json` on Hobby —
    it fails the deploy.**
-2. **Redeploy.** VAPID keys are set in production but environment variables only
-   take effect on a new build, so push is off until then. Deploying also ships
-   this entire uncommitted session, so it is the user's call.
-3. **iOS Safari and Android Chrome device testing.** Never done; needs HTTPS and
+2. **iOS Safari and Android Chrome device testing.** Never done; needs HTTPS and
    real phones. Per device: install, open from the home screen, enable
    notifications, press "Send a test" on `/profile`. On iOS push does not exist
    until the app is installed, so testing in a Safari tab proves nothing.
-4. **Vercel plan.** Hobby is for non-commercial projects and PRform has live
+3. **Vercel plan.** Hobby is for non-commercial projects and PRform has live
    Stripe keys. While `EARLY_ACCESS=true` and everyone is grandfathered free that
    is arguably fine. The first paid card means Pro. See `COSTS.md`.
 
