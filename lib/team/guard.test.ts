@@ -72,7 +72,31 @@ describe("every /api/teams route enforces authorization", () => {
         expect(source).toMatch(/assertCoachOf\s*\(/);
         expect(source).toMatch(/status:\s*403/);
       });
+
+      it(`${rel} guards every exported handler, not just one of them`, () => {
+        // A file-level "does assertCoachOf appear anywhere" check passes a
+        // three-handler route that guards two of them. Counting is crude but
+        // it closes that gap: a new verb added without a guard fails here.
+        const handlers = source.match(/export\s+async\s+function\s+(GET|POST|PUT|PATCH|DELETE)\b/g) ?? [];
+        const guards = source.match(/assertCoachOf\s*\(/g) ?? [];
+        expect(handlers.length).toBeGreaterThan(0);
+        expect(
+          guards.length,
+          `${handlers.length} exported handler(s) but only ${guards.length} assertCoachOf call(s)`,
+        ).toBeGreaterThanOrEqual(handlers.length);
+      });
     }
+
+    it(`${rel} scopes any teamId read from the body by the session user`, () => {
+      // The check above keys on the file PATH, so a route that takes a team id
+      // from the request body instead of the URL is exempt from it entirely.
+      // Such a route must narrow by the session user's id — as leave/route.ts
+      // does, with userId in the updateMany filter — or it is acting on a team
+      // on nothing but the caller's say-so.
+      if (/body\.teamId/.test(source)) {
+        expect(source, "reads body.teamId without scoping the query by userId").toMatch(/userId/);
+      }
+    });
 
     it(`${rel} never takes a user identity from the request body`, () => {
       // The session is the only identity. Any of these appearing in a team

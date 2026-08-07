@@ -9,6 +9,9 @@
     "lint": "next lint",
     "test": "vitest run",
     "test:watch": "vitest",
+    "test:integration": "vitest run --config vitest.integration.config.ts",
+    "test:db:setup": "node scripts/createTestDb.mjs",
+    "test:db:push": "node scripts/pushTestDb.mjs",
     "seed": "npx ts-node --project tsconfig.seed.json prisma/seed.ts",
     "seed:analysis": "npx ts-node --project tsconfig.seed.json scripts/seedAnalysis.ts",
     "postinstall": "prisma generate"

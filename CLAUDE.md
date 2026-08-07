@@ -8,8 +8,11 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 npm run dev          # Start dev server at http://localhost:3000
 npm run build        # Production build (runs `prisma migrate deploy` first — see warning below)
 npm run lint         # ESLint via Next.js
-npm run test         # Vitest unit tests (lib/**/*.test.ts)
+npm run test         # Vitest unit tests (lib/**/*.test.ts) — fast, no database, no network
 npm run test:watch   # Vitest in watch mode
+npm run test:integration  # Route-level tests against a real Postgres (see below)
+npm run test:db:setup     # One-off: create the prform_test database on Neon
+npm run test:db:push      # Apply migrations to prform_test (re-run after a schema change)
 npm run seed         # Seed demo user (demo@prform.com / demo1234)
 
 npx prisma migrate dev --name <name>   # Create and apply a migration
@@ -20,8 +23,27 @@ npx prisma migrate deploy              # Apply pending migrations to production 
 vercel --prod        # Deploy to production (linked to ponchocodes-projects/prform-o3m8)
 ```
 
-Unit tests cover the VDOT/pace model (`lib/vdot.test.ts`, `lib/paceSource.test.ts`) and run
-under Vitest. The rest of the app has no test coverage.
+Unit tests cover the VDOT/pace model (`lib/vdot.test.ts`, `lib/paceSource.test.ts`) and the
+pure logic in `lib/`, and run under Vitest with no database.
+
+**Integration tests (`tests/integration/`) are the exception**: they run route handlers
+against a real Postgres database, and they are the only tests that prove cross-team
+authorization actually holds. They are excluded from `npm test` — it must stay fast and
+offline — and run with `npm run test:integration` (~3 minutes; every query is a Neon round
+trip).
+
+- The database is `prform_test`, a sibling of production on the same Neon project, addressed
+  by `TEST_DATABASE_URL`. Create it once with `npm run test:db:setup`, then `npm run test:db:push`.
+  **Re-run `test:db:push` after every schema change** or the tests run against a stale schema.
+- `tests/integration/setup.ts` points `DATABASE_URL` at the test database before any route
+  module is imported (`lib/prisma.ts` reads it at import time) and **refuses to run unless the
+  database name contains "test"** — these tests truncate tables.
+- The only production code substituted is `getServerSession`, mocked per test file. Everything
+  below it — the guard, Prisma, the real rows, the serialized response — is the real path.
+  So these tests prove things about handlers, not about NextAuth or middleware.
+- `lib/team/guard.test.ts` (the source scan) stays. It is weaker but cheap, and it catches a
+  brand new route that forgets the guard entirely — which the integration tests, being a fixed
+  list of routes, would not notice.
 
 **`npm run build` runs `prisma migrate deploy` against whatever `DATABASE_URL` points at.**
 To compile without touching the database, run `npx next build` directly.
