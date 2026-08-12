@@ -416,25 +416,36 @@ export function calculateVDOT(
 
   const paceComplianceRate = last30.length > 0 ? Math.round((onTargetCount / Math.min(last30.length, 10)) * 100) : 0;
 
-  let diagnosis: string;
-  if (vdot < 35) {
-    diagnosis = `VDOT ${vdot}: Building base fitness. Focus on consistent easy mileage.`;
-  } else if (vdot < 50) {
-    diagnosis = `VDOT ${vdot}: Recreational competitive fitness. Threshold work will drive improvement.`;
-  } else if (vdot < 60) {
-    diagnosis = `VDOT ${vdot}: Strong competitive fitness. Structured intervals and race-specific work.`;
-  } else {
-    diagnosis = `VDOT ${vdot}: Elite-level fitness. Optimize periodization and recovery.`;
-  }
-
   return {
     vdot,
     paces,
     recentRunAnalysis,
     paceComplianceRate,
-    diagnosis,
+    diagnosis: vdotBandDiagnosis(vdot),
     qualifyingEfforts: qualifying.length,
   };
+}
+
+/**
+ * The fitness band and the training advice that goes with it, for a given VDOT.
+ *
+ * Pass whichever VDOT the athlete is actually being shown. The page shows the
+ * resolved (blended) one, so it must band on the resolved one too: banding on
+ * the observed-only figure printed a second, lower VDOT directly beneath the
+ * headline number and called it something else, which read as the app
+ * disagreeing with itself rather than as two signals being combined.
+ */
+export function vdotBandDiagnosis(vdot: number): string {
+  if (vdot < 35) {
+    return `VDOT ${vdot}: Building base fitness. Focus on consistent easy mileage.`;
+  }
+  if (vdot < 50) {
+    return `VDOT ${vdot}: Recreational competitive fitness. Threshold work will drive improvement.`;
+  }
+  if (vdot < 60) {
+    return `VDOT ${vdot}: Strong competitive fitness. Structured intervals and race-specific work.`;
+  }
+  return `VDOT ${vdot}: Elite-level fitness. Optimize periodization and recovery.`;
 }
 
 // ── ALGORITHM 4: Aerobic Decoupling ──────────────────────────────────────────
@@ -691,6 +702,12 @@ export interface PerformanceReport {
    * observed fitness, plus where they came from.
    */
   resolved: ResolvedPaces;
+  /**
+   * The fitness band for `resolved.vdot` — the number the athlete is shown.
+   * Null when there is no resolved VDOT at all, where the page shows
+   * `resolved.source.detail` instead.
+   */
+  resolvedDiagnosis: string | null;
   decoupling: DecouplingResult;
   sleepPerf: SleepPerfResult;
   activityCount: number;
@@ -723,6 +740,7 @@ export function analyzePerformance(
     polarized: calculatePolarizedDistribution(windowActivities, user, thresholdPaceMs, Math.min(windowDays, 30)),
     vdot: vdotResult,
     resolved,
+    resolvedDiagnosis: resolved.vdot == null ? null : vdotBandDiagnosis(resolved.vdot),
     decoupling: calculateDecoupling(windowActivities, Math.min(windowDays, 30)),
     sleepPerf: calculateSleepPerformanceCorrelation(activities, user, thresholdPaceMs, sleepLogs),
     activityCount: windowActivities.length,

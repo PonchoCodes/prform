@@ -5,19 +5,25 @@ import { usePathname } from "next/navigation";
 import { useSession } from "next-auth/react";
 
 /**
- * Primary navigation under 768px. The top bar's six links plus two controls
+ * Primary navigation under 768px. The top bar's links plus two controls
  * overflowed into a horizontal scroll strip with no affordance, so the last
  * items were effectively invisible.
  *
- * Five items is the ceiling before targets drop under 44px on a 320px screen —
- * Meets folds into Schedule, which already owns the calendar.
+ * Six items at 320px is 53px each, still clear of the 44px target minimum, but
+ * only if the labels fit — "SCHEDULE" and "ANALYSIS" at the old size ran past
+ * their cell. The three long ones are shortened here and here only; the top bar
+ * keeps the full words, where there is room for them.
+ *
+ * Meets is deliberately not a tab. It folds into Schedule, which already owns
+ * the calendar, and the dashboard's next-meet card links straight into it.
  */
 const TABS = [
   { href: "/dashboard", label: "Today" },
   { href: "/sleep", label: "Sleep" },
-  { href: "/schedule", label: "Schedule" },
-  { href: "/analysis", label: "Analysis" },
-  { href: "/profile", label: "Profile" },
+  { href: "/schedule", label: "Plan" },
+  { href: "/team", label: "Team" },
+  { href: "/analysis", label: "Data" },
+  { href: "/profile", label: "You" },
 ];
 
 export function BottomTabBar() {
@@ -43,15 +49,17 @@ export function BottomTabBar() {
         <ul className="flex">
           {TABS.map((tab) => {
             // /meets folds into Schedule, so it should light Schedule up.
+            // /schedule/history belongs to it too.
             const active =
               pathname === tab.href ||
-              (tab.href === "/schedule" && pathname.startsWith("/meets"));
+              (tab.href === "/schedule" &&
+                (pathname.startsWith("/meets") || pathname.startsWith("/schedule/")));
             return (
               <li key={tab.href} className="flex-1">
                 <Link
                   href={tab.href}
                   aria-current={active ? "page" : undefined}
-                  className={`flex items-center justify-center min-h-[52px] px-1 text-[10px] font-black uppercase tracking-wider border-t-2 -mt-px transition-colors ${
+                  className={`flex items-center justify-center min-h-[52px] px-0.5 text-[10px] font-black uppercase tracking-wider whitespace-nowrap border-t-2 -mt-px transition-colors ${
                     active
                       ? "border-[#0A0A0A] dark:border-[#E8FF00] text-[#0A0A0A] dark:text-[#E8FF00]"
                       : "border-transparent text-[#6B6B6B] dark:text-[#A0A0A0]"

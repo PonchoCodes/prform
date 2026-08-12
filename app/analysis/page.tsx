@@ -16,12 +16,15 @@ import type { UnitPreference } from "@/lib/unitUtils";
 
 type WindowDays = 30 | 60 | 90;
 
+// Three of these sit in a fixed three-column grid, so at 320px each one gets
+// about 60px of content box. A flat text-5xl overflowed its cell and the
+// letter-spaced label wrapped mid-word — both scale down instead.
 function Stat({ label, value, sub }: { label: string; value: string | number; sub?: string }) {
   return (
-    <div>
-      <p className="text-xs font-bold uppercase tracking-[0.3em] text-[#6B6B6B] mb-1">{label}</p>
-      <p className="font-mono font-black text-5xl leading-none">{value}</p>
-      {sub && <p className="text-xs text-[#6B6B6B] mt-2">{sub}</p>}
+    <div className="min-w-0">
+      <p className="text-[10px] md:text-xs font-bold uppercase tracking-[0.15em] md:tracking-[0.3em] text-[#6B6B6B] mb-1">{label}</p>
+      <p className="font-mono font-black text-2xl sm:text-4xl md:text-5xl leading-none tabular-nums">{value}</p>
+      {sub && <p className="text-[10px] md:text-xs text-[#6B6B6B] mt-2 leading-snug">{sub}</p>}
     </div>
   );
 }
@@ -190,14 +193,14 @@ export default function AnalysisPage() {
                   </FadeUp>
 
                   <FadeUp delay={120}>
-                    <div className="grid grid-cols-3 gap-px bg-[#E5E5E5]">
-                      <div className="bg-white dark:bg-[#242424] p-6">
+                    <div className="grid grid-cols-3 gap-px bg-[#E5E5E5] dark:bg-[#333]">
+                      <div className="bg-white dark:bg-[#242424] p-3 md:p-6">
                         <Stat label="CTL" value={report.pmc.currentCTL} sub="Chronic Training Load (fitness)" />
                       </div>
-                      <div className="bg-white dark:bg-[#242424] p-6">
+                      <div className="bg-white dark:bg-[#242424] p-3 md:p-6">
                         <Stat label="ATL" value={report.pmc.currentATL} sub="Acute Training Load (fatigue)" />
                       </div>
-                      <div className="bg-white dark:bg-[#242424] p-6">
+                      <div className="bg-white dark:bg-[#242424] p-3 md:p-6">
                         <Stat
                           label="TSB"
                           value={(report.pmc.currentTSB > 0 ? "+" : "") + report.pmc.currentTSB}
@@ -221,21 +224,24 @@ export default function AnalysisPage() {
               </FadeUp>
 
               <FadeUp delay={60}>
+                {/* Same fixed three-column grid as the PMC stats: the numbers
+                    and the letter-spaced labels both have to shrink to survive
+                    a 320px screen. */}
                 <div className="grid grid-cols-3 gap-px bg-[#E5E5E5] dark:bg-[#333] mb-6">
-                  <div className="bg-white dark:bg-[#242424] p-6">
-                    <p className="text-xs font-bold uppercase tracking-[0.3em] text-[#6B6B6B] mb-1">Zone 1</p>
-                    <p className="font-mono font-black text-5xl leading-none">{report.polarized.zone1Pct}<span className="text-2xl">%</span></p>
-                    <p className="text-xs text-[#6B6B6B] mt-1 font-mono">{report.polarized.zone1Min} min</p>
+                  <div className="bg-white dark:bg-[#242424] p-3 md:p-6 min-w-0">
+                    <p className="text-[10px] md:text-xs font-bold uppercase tracking-[0.15em] md:tracking-[0.3em] text-[#6B6B6B] mb-1">Zone 1</p>
+                    <p className="font-mono font-black text-2xl sm:text-4xl md:text-5xl leading-none tabular-nums">{report.polarized.zone1Pct}<span className="text-base sm:text-xl md:text-2xl">%</span></p>
+                    <p className="text-[10px] md:text-xs text-[#6B6B6B] mt-1 font-mono">{report.polarized.zone1Min} min</p>
                   </div>
-                  <div className="bg-white dark:bg-[#242424] p-6">
-                    <p className="text-xs font-bold uppercase tracking-[0.3em] text-[#6B6B6B] mb-1">Zone 2</p>
-                    <p className="font-mono font-black text-5xl leading-none">{report.polarized.zone2Pct}<span className="text-2xl">%</span></p>
-                    <p className="text-xs text-[#6B6B6B] mt-1 font-mono">{report.polarized.zone2Min} min</p>
+                  <div className="bg-white dark:bg-[#242424] p-3 md:p-6 min-w-0">
+                    <p className="text-[10px] md:text-xs font-bold uppercase tracking-[0.15em] md:tracking-[0.3em] text-[#6B6B6B] mb-1">Zone 2</p>
+                    <p className="font-mono font-black text-2xl sm:text-4xl md:text-5xl leading-none tabular-nums">{report.polarized.zone2Pct}<span className="text-base sm:text-xl md:text-2xl">%</span></p>
+                    <p className="text-[10px] md:text-xs text-[#6B6B6B] mt-1 font-mono">{report.polarized.zone2Min} min</p>
                   </div>
-                  <div className="bg-[#0A0A0A] p-6 text-white">
-                    <p className="text-xs font-bold uppercase tracking-[0.3em] text-[#6B6B6B] mb-1">Zone 3</p>
-                    <p className="font-mono font-black text-5xl leading-none text-[#E8FF00]">{report.polarized.zone3Pct}<span className="text-2xl">%</span></p>
-                    <p className="text-xs text-[#6B6B6B] mt-1 font-mono">{report.polarized.zone3Min} min</p>
+                  <div className="bg-[#0A0A0A] p-3 md:p-6 text-white min-w-0">
+                    <p className="text-[10px] md:text-xs font-bold uppercase tracking-[0.15em] md:tracking-[0.3em] text-[#6B6B6B] mb-1">Zone 3</p>
+                    <p className="font-mono font-black text-2xl sm:text-4xl md:text-5xl leading-none tabular-nums text-[#E8FF00]">{report.polarized.zone3Pct}<span className="text-base sm:text-xl md:text-2xl">%</span></p>
+                    <p className="text-[10px] md:text-xs text-[#6B6B6B] mt-1 font-mono">{report.polarized.zone3Min} min</p>
                   </div>
                 </div>
 
@@ -277,7 +283,7 @@ export default function AnalysisPage() {
                         <p className="text-xs text-[#6B6B6B] dark:text-[#A0A0A0] mt-1">{report.resolved.source.detail}</p>
                       </div>
 
-                      <Diagnosis text={report.vdot.diagnosis} />
+                      {report.resolvedDiagnosis && <Diagnosis text={report.resolvedDiagnosis} />}
 
                       <div className="mt-6 border border-[#E5E5E5] dark:border-[#333]">
                         {[
@@ -329,11 +335,6 @@ export default function AnalysisPage() {
             </div>
           </section>
 
-          <section className="px-6 py-4 border-t border-[#E5E5E5] dark:border-[#333]">
-            <div className="max-w-[1200px] mx-auto">
-              <a href="https://www.strava.com" target="_blank" rel="noopener noreferrer" className="font-mono text-[10px] text-[#6B6B6B] no-underline hover:text-[#0A0A0A]">Powered by Strava</a>
-            </div>
-          </section>
         </>
       )}
       <Footer />
