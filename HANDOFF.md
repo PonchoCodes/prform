@@ -1,13 +1,34 @@
-# Handoff — 2026-08-07
+# Handoff — 2026-08-12
 
-Written at the end of a session that shipped Steps 2 through 6 (PWA and web push,
-open team creation, the consistency leaderboard, check-in streaks, retention
-measurement) plus email as a third message channel.
+Written at the end of a session that added a triggered PWA install modal,
+sharing one component with the settings page. The modal opens from the
+dashboard with the athlete's real bedtime and reminder time in the headline.
 
 **Read this first if you are picking the work up cold.** `CLAUDE.md` explains how
 everything works; this file explains what state it is in right now.
 
 ---
+
+## Committed and deployed (2026-08-12)
+
+The PWA install prompt was added as a modal plus a shared instructions component.
+Commit `34a3d4d` on master, pushed to GitHub. Migration `20260812000000_add_pwa_prompt_state`
+applied to Neon via `db execute` + `migrate resolve`. Build Ready in 51s;
+`/api/user/pwa-prompt` live on prform.app (401 unauthenticated = route exists).
+
+**What changed:**
+
+- `lib/pwaDetect.ts` — `isStandalone`, `getPlatform`, `isInAppBrowser`, `getInstallContext`.
+- `lib/pwaPrompt.ts` — eligibility logic for the five render conditions.
+- `components/PWAInstallProvider.tsx` — captures `beforeinstallprompt` once at the root.
+- `components/PWAInstallInstructions.tsx` — the shared component (modal + settings).
+- `components/PWAInstallPrompt.tsx` — the modal, fired from the dashboard.
+- `app/api/user/pwa-prompt/route.ts` — POST to record dismissal or install.
+- Three `User` schema columns: `pwaPromptState`, `pwaPromptDismissedAt`, `pwaPromptShowCount`.
+- `lib/messaging/config.ts` exports `EVENING_LEAD_MINUTES = 90` (shared with the cron).
+- Tests: `lib/pwaDetect.test.ts` (8), `lib/pwaPrompt.test.ts` (13).
+
+npx tsc clean; npm test 496 passing; npx next build compiles.
 
 ## Committed and deployed (2026-08-07, second sitting)
 
@@ -126,13 +147,19 @@ to a functioning re-engagement loop during the month without SMS.
 
 ## Still open, in priority order
 
-1. **iOS Safari and Android Chrome device testing.** Never done; needs HTTPS and
-   real phones. Per device: install, open from the home screen, enable
-   notifications, press "Send a test" on `/profile`. On iOS push does not exist
-   until the app is installed, so testing in a Safari tab proves nothing. The
-   first live end-to-end check: tonight's cron (03:00 UTC) should queue an
-   evening question and a morning verdict for the user's own account, and the
-   five-minute flush should deliver both on time.
+1. **Device testing: PWA install + the new modal.** iOS Safari and Android Chrome,
+   real phones with HTTPS. On each: open prform.app, scroll to the plan (modal
+   should open with your real bedtime + reminder time). Tap the Share button
+   (iOS) or Install button (Android). Confirm the home screen app launches and
+   persists. The modal's other branches (in-app webview, iOS Chrome, desktop)
+   also need verification: the in-app browser should say "open in Safari," iOS
+   Chrome should say the same, desktop should link to mobile.
+
+2. **iOS Safari and Android Chrome push notifications.** Install the app, enable
+   notifications, press "Send a test" on `/profile`. On iOS this cannot be
+   tested in a Safari tab (push doesn't exist there). First full end-to-end:
+   tonight's cron (03:00 UTC) should queue evening + morning for the user's
+   account, five-minute flush should deliver both on time.
 
 ## Working agreements established this session
 
