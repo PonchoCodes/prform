@@ -31,6 +31,9 @@ export async function GET() {
         pushOptInAt: true,
         channelPreference: true,
         ianaTimezone: true,
+        pwaPromptState: true,
+        pwaPromptDismissedAt: true,
+        pwaPromptShowCount: true,
       },
     }),
     prisma.pushSubscription.count({ where: { userId, disabledAt: null } }),
@@ -58,5 +61,13 @@ export async function GET() {
     hasLoggedNight: sleepLogCount > 0,
     /** Already known, so the client can skip asking the browser for it. */
     timeZoneKnown: user.ianaTimezone !== null,
+    /**
+     * The triggered install modal's state, carried on this response rather
+     * than fetched separately so the dashboard still makes one round trip.
+     * Read by lib/pwaPrompt.ts; see PWAInstallPrompt for what opens it.
+     */
+    pwaPromptState: user.pwaPromptState,
+    pwaPromptDismissedAt: user.pwaPromptDismissedAt,
+    pwaPromptShowCount: user.pwaPromptShowCount,
   });
 }

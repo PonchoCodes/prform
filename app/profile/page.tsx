@@ -9,6 +9,7 @@ import { Footer } from "@/components/Footer";
 import { Button } from "@/components/Button";
 import { SmsEnrollment } from "@/components/SmsEnrollment";
 import { PushEnrollment } from "@/components/PushEnrollment";
+import { PWAInstallInstructions } from "@/components/PWAInstallInstructions";
 import { ChannelPreference } from "@/components/ChannelPreference";
 import { formatTime12h } from "@/lib/sleepAlgorithm";
 
@@ -237,10 +238,17 @@ export default function ProfilePage() {
               </div>
             </div>
 
-            {/* Push notifications. This is the only place an athlete who
-                dismissed the dashboard notice can get back to it — "not now"
-                has to be recoverable, or a single tap permanently removes the
-                one channel that exists during the pilot. */}
+            {/* Installing the app, and turning notifications on once it is.
+                This is the only place an athlete who dismissed either prompt
+                can get back to them — "not now" has to be recoverable, or a
+                single tap permanently removes the one channel that exists
+                during the pilot.
+
+                The instructions themselves are the same component the
+                triggered modal renders, so the two cannot drift. */}
+            <h2 className="font-black text-xl uppercase mt-10 mb-6 border-b border-[#E5E5E5] dark:border-[#333] pb-3">Home Screen</h2>
+            <PWAInstallInstructions variant="settings" />
+
             <h2 className="font-black text-xl uppercase mt-10 mb-6 border-b border-[#E5E5E5] dark:border-[#333] pb-3">App Notifications</h2>
             <PushEnrollment compact />
 

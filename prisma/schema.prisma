@@ -112,6 +112,19 @@ model User {
   /// something people learn to ignore.
   installPromptDismissedAt DateTime?
 
+  /// The triggered install modal, tracked separately from the dashboard strip
+  /// above. Null means never answered; "DISMISSED" and "INSTALLED" are the two
+  /// terminal answers. A String rather than an enum because the sequence this
+  /// records is still being tuned, and a new state should be a deploy rather
+  /// than a migration plus a client regeneration.
+  pwaPromptState       String?
+  /// When "Not now" was last tapped. The modal may return after seven days,
+  /// which is a question this column answers and a boolean cannot.
+  pwaPromptDismissedAt DateTime?
+  /// How many times the modal has actually been shown. Capped at three in
+  /// lib/pwaPrompt.ts: an athlete who has said no three times has answered.
+  pwaPromptShowCount   Int       @default(0)
+
   workouts         Workout[]
   meets            Meet[]
   sessions         Session[]

@@ -11,6 +11,7 @@ import {
   type Platform,
   type PushAvailability,
 } from "@/lib/pwa/install";
+import { usePWAInstall } from "@/components/PWAInstallProvider";
 
 // The whole notification enrolment story, in one hook: what this browser can
 // do, what the server knows, and the two actions an athlete can take.
@@ -18,12 +19,6 @@ import {
 // Shared by the onboarding step and the dashboard notice so the two cannot
 // drift — the second-worst outcome here is an athlete being told notifications
 // are on in one place and off in another.
-
-/** Chrome's install prompt, which must be captured before it can be triggered. */
-interface BeforeInstallPromptEvent extends Event {
-  prompt: () => Promise<void>;
-  userChoice: Promise<{ outcome: "accepted" | "dismissed" }>;
-}
 
 interface ServerStatus {
   publicKey: string | null;
@@ -65,7 +60,14 @@ export function usePushEnrollment(): PushEnrollment {
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [installEvent, setInstallEvent] = useState<BeforeInstallPromptEvent | null>(null);
+
+  // The install event is captured once, in PWAInstallProvider at the root of
+  // the tree. This hook used to listen for beforeinstallprompt itself, which
+  // was a race it usually lost: Chrome fires the event early, and a listener
+  // that attaches when the profile page mounts is not there to catch it. Two
+  // listeners also meant two answers to "can we install", which the dashboard
+  // and the settings page could disagree about.
+  const { canPromptNatively, installed, triggerInstall } = usePWAInstall();
 
   useEffect(() => {
     setEnvironment(readEnvironment());
@@ -74,26 +76,11 @@ export function usePushEnrollment(): PushEnrollment {
     }
   }, []);
 
-  // Chrome fires this once, early, and only when the app is installable. It has
-  // to be captured the moment it arrives or the chance to show a native install
-  // dialog is gone for the rest of the page's life.
+  // Re-read the environment when the app is installed under us, so the notice
+  // and the enrolment panel both notice they are now running standalone.
   useEffect(() => {
-    const onBeforeInstallPrompt = (e: Event) => {
-      e.preventDefault();
-      setInstallEvent(e as BeforeInstallPromptEvent);
-    };
-    window.addEventListener("beforeinstallprompt", onBeforeInstallPrompt);
-    // Once installed, the captured event is stale and the notice should go.
-    const onInstalled = () => {
-      setInstallEvent(null);
-      setEnvironment(readEnvironment());
-    };
-    window.addEventListener("appinstalled", onInstalled);
-    return () => {
-      window.removeEventListener("beforeinstallprompt", onBeforeInstallPrompt);
-      window.removeEventListener("appinstalled", onInstalled);
-    };
-  }, []);
+    if (installed) setEnvironment(readEnvironment());
+  }, [installed]);
 
   const refresh = useCallback(async () => {
     try {
@@ -192,12 +179,9 @@ export function usePushEnrollment(): PushEnrollment {
   }, [refresh]);
 
   const promptInstall = useCallback(async () => {
-    if (!installEvent) return;
-    await installEvent.prompt();
-    await installEvent.userChoice;
-    // Single-use. Chrome will not let the same event be shown twice.
-    setInstallEvent(null);
-  }, [installEvent]);
+    // The provider owns the event and its single-use lifecycle.
+    await triggerInstall();
+  }, [triggerInstall]);
 
   const dismissInstall = useCallback(async () => {
     setStatus((prev) => (prev ? { ...prev, installPromptDismissed: true } : prev));
@@ -233,7 +217,7 @@ export function usePushEnrollment(): PushEnrollment {
     loading,
     busy,
     error,
-    canPromptInstall: installEvent !== null,
+    canPromptInstall: canPromptNatively,
     instructions: installInstructions(platform),
     enable,
     promptInstall,

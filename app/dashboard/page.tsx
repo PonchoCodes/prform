@@ -21,6 +21,8 @@ import { TonightsTarget } from "@/components/TonightsTarget";
 import { NextMeetCard } from "@/components/NextMeetCard";
 import { SubscribeStrip } from "@/components/SubscribeStrip";
 import { InstallNotice } from "@/components/InstallNotice";
+import { PWAInstallPrompt } from "@/components/PWAInstallPrompt";
+import type { PwaPromptState } from "@/lib/pwaPrompt";
 import { RaceReadiness } from "@/components/RaceReadiness";
 import { computeVerdict } from "@/lib/verdict";
 import { STREAK_ANNOUNCE_FROM } from "@/lib/streak";
@@ -721,6 +723,10 @@ export default function DashboardPage() {
   const [perfLoading, setPerfLoading] = useState(false);
 
   const [streakData, setStreakData] = useState<any>(null);
+  /** Feeds the install modal. Null until /api/push/status answers. */
+  const [pwaStatus, setPwaStatus] = useState<PwaPromptState | null>(null);
+  /** Latched on when the install modal opens; never off again this page load. */
+  const [installPromptShown, setInstallPromptShown] = useState(false);
   const [morningCardDismissed, setMorningCardDismissed] = useState(false);
   const [interventionDismissed, setInterventionDismissed] = useState(false);
 
@@ -768,6 +774,17 @@ export default function DashboardPage() {
     if (status !== "authenticated") return;
     fetchJson("/api/trend?days=60").then((d) => {
       if (d) setTrend(d);
+    });
+  }, [status]);
+
+  // Likewise separate, and for a stronger reason: the install modal quotes
+  // tonight's bedtime, so it cannot open until the plan has resolved anyway.
+  // Putting this in the blocking Promise.all above would delay the verdict for
+  // a prompt that is not allowed to appear yet.
+  useEffect(() => {
+    if (status !== "authenticated") return;
+    fetchJson("/api/push/status").then((d) => {
+      if (d) setPwaStatus(d);
     });
   }, [status]);
 
@@ -1055,9 +1072,25 @@ export default function DashboardPage() {
           itself only when it has something to ask for — not in the installed
           app, not once a device is subscribed, not after it has been
           dismissed, and not before the athlete has logged a night. */}
-      <div className="px-6 pt-6 max-w-[1200px] mx-auto">
-        <InstallNotice />
-      </div>
+      {/* Suppressed once the modal below has spoken. The strip is the passive
+          fallback for everyone the modal is not allowed to interrupt: desktop,
+          three refusals in, or still inside the seven-day cooldown. */}
+      {!installPromptShown && (
+        <div className="px-6 pt-6 max-w-[1200px] mx-auto">
+          <InstallNotice />
+        </div>
+      )}
+
+      {/* The triggered version of the same ask. It opens with tonight's real
+          bedtime in the headline, which is why it is mounted here, below a
+          resolved plan, and not on the login screen. It gates nothing: the
+          dashboard above is complete and usable whether or not it appears. */}
+      <PWAInstallPrompt
+        bedtime={today?.recommendedBedtime}
+        onboardingDone={data.user?.onboardingDone ?? true}
+        promptState={pwaStatus}
+        onShown={() => setInstallPromptShown(true)}
+      />
 
       {prPromptOpen && (
         <div className="px-6 pt-6 max-w-[1200px] mx-auto">

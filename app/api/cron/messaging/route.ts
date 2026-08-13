@@ -7,6 +7,7 @@ import { scheduleMorning } from "@/lib/messaging/morning";
 import { closeUnresolvedNights } from "@/lib/messaging/night";
 import { flushDuePushMessages } from "@/lib/messaging/pushFlush";
 import { eveningWakeQuestion } from "@/lib/messaging/copy";
+import { EVENING_LEAD_MINUTES } from "@/lib/messaging/config";
 import type { DailySleepPlan } from "@/lib/sleepAlgorithm";
 import {
   addLocalDays,
@@ -39,9 +40,6 @@ import {
 // returned, so a fire-and-forget promise is a message that never leaves.
 
 export const dynamic = "force-dynamic";
-
-/** How long before lights-out to ask what time they're up. */
-const EVENING_LEAD_MINUTES = 90;
 
 /**
  * Don't queue anything further out than this. Comfortably more than a day, so

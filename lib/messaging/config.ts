@@ -64,6 +64,16 @@ export function dailySendCap(): number {
   return envInt("SMS_MAX_PER_USER_PER_DAY", 5);
 }
 
+/**
+ * How long before lights-out the evening check-in goes out.
+ *
+ * Lives here rather than in the cron route that schedules with it because the
+ * install prompt quotes this time back to the athlete ("install PRform to get
+ * reminded at 9:17 PM"), and a promise made on the dashboard that the scheduler
+ * does not keep is worse than making no promise at all.
+ */
+export const EVENING_LEAD_MINUTES = 90;
+
 export interface TwilioConfig {
   accountSid: string;
   authToken: string;
