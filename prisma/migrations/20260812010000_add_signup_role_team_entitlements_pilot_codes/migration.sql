@@ -1,6 +1,7 @@
 -- AlterTable
 ALTER TABLE "Team" ADD COLUMN     "entitlementExpiresAt" TIMESTAMP(3),
 ADD COLUMN     "entitlementSource" TEXT NOT NULL DEFAULT 'FREE',
+ADD COLUMN     "priceLockedCents" INTEGER,
 ADD COLUMN     "seatLimit" INTEGER NOT NULL DEFAULT 8,
 ADD COLUMN     "stripeCustomerId" TEXT,
 ADD COLUMN     "stripeSubscriptionId" TEXT,
