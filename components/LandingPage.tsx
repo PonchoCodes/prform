@@ -37,8 +37,10 @@ const features = [
   },
 ];
 
-export function LandingPage({ earlyAccess }: { earlyAccess: boolean }) {
-  const ctaHref = earlyAccess ? "/request-access" : "/signup";
+export function LandingPage() {
+  // Registration is open. There is no waitlist, no request form, and no state
+  // where this button points anywhere but at the signup page.
+  const ctaHref = "/signup";
   const videoRef = useRef<HTMLVideoElement>(null);
 
   useEffect(() => {
@@ -62,7 +64,7 @@ export function LandingPage({ earlyAccess }: { earlyAccess: boolean }) {
               href={ctaHref}
               className="bg-[#0A0A0A] text-white px-4 py-2 text-xs font-bold uppercase tracking-wider hover:bg-[#E8FF00] hover:text-[#0A0A0A] transition-colors"
             >
-              {earlyAccess ? "Request Access" : "Sign Up"}
+              Sign Up
             </Link>
           </div>
         </div>
@@ -102,7 +104,7 @@ export function LandingPage({ earlyAccess }: { earlyAccess: boolean }) {
           <div className="flex flex-col sm:flex-row gap-4 items-start">
             <Link href={ctaHref}>
               <Button size="lg" variant="primary">
-                {earlyAccess ? "Request Access →" : "Get Started Free →"}
+                Get Started Free →
               </Button>
             </Link>
             <Link href="/login">
@@ -120,7 +122,6 @@ export function LandingPage({ earlyAccess }: { earlyAccess: boolean }) {
       <section className="py-24 px-6 dark:bg-[#1a1a1a]">
         <div className="max-w-[1200px] mx-auto">
           <FadeUp>
-            <p className="text-xs font-bold uppercase tracking-[0.3em] text-[#6B6B6B] dark:text-[#A0A0A0] mb-3">How It Works</p>
             <h2 className="font-black text-4xl md:text-5xl uppercase mb-16 dark:text-[#F5F5F5]">Built on Sleep Science</h2>
           </FadeUp>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-px bg-[#E5E5E5] dark:bg-[#333]">
@@ -148,7 +149,7 @@ export function LandingPage({ earlyAccess }: { earlyAccess: boolean }) {
             </p>
             <Link href={ctaHref}>
               <Button size="lg" variant="primary">
-                {earlyAccess ? "Request Early Access" : "Create Free Account"}
+                Create Free Account
               </Button>
             </Link>
           </FadeUp>

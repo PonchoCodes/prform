@@ -24,6 +24,7 @@ export const VERDICT_USER_SELECT = {
   id: true,
   unitPreference: true,
   stravaConnected: true,
+  stravaEligible: true,
   userMaxHR: true,
   userThresholdHR: true,
   prDistanceId: true,
@@ -36,6 +37,7 @@ export type VerdictUser = {
   id: string;
   unitPreference: string;
   stravaConnected: boolean;
+  stravaEligible: boolean;
   userMaxHR: number | null;
   userThresholdHR: number | null;
   prDistanceId: string | null;
@@ -114,6 +116,7 @@ export async function verdictForUser(
     paceSourceKind: resolved.source.kind,
     unit: (user.unitPreference ?? "imperial") as UnitPreference,
     stravaConnected: user.stravaConnected,
+    stravaEligible: user.stravaEligible,
     totalSleepHours: todayPlan.totalSleepHours,
     sleepShortfallMinutes: todayPlan.sleepShortfallMinutes,
     achievableSleepHours: todayPlan.achievableSleepHours,

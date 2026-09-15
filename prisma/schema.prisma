@@ -67,7 +67,29 @@ model User {
   trialEndsAt            DateTime?
 
   approved          Boolean @default(false)
+  /// Kept for the accounts that carry it. Nothing gates on it any more:
+  /// registration is open, and no athlete feature is behind a subscription.
   earlyAccessUser   Boolean @default(false)
+
+  /// "ATHLETE" | "COACH", chosen at signup. Routing only, and never a gate:
+  /// it decides which screen comes after the account exists, and a coach who
+  /// runs too has the same access to everything an athlete does.
+  signupRole     String?
+  /// The "I am 13 or older" box, and when it was ticked. Required at signup.
+  /// A boolean alone cannot answer "what did they confirm and when", which is
+  /// the only form the answer is worth anything in.
+  ageConfirmed   Boolean   @default(false)
+  ageConfirmedAt DateTime?
+
+  /// Strava sync is assigned by hand, one athlete at a time, because the
+  /// Strava tier caps connected athletes. False renders NO Strava UI at all -
+  /// not a disabled button and not a queue, both of which are ways of showing
+  /// someone a door they cannot open.
+  stravaEligible Boolean @default(false)
+  /// They asked to be told when it is available. A flag, not a position in a
+  /// line: there is no line, and saying there is would be a promise about
+  /// timing nobody can keep.
+  stravaInterest Boolean @default(false)
 
   // Strava connection follow-up: when the user was approved off the waitlist,
   // and when each of the two connect-Strava reminder emails was sent.
@@ -590,14 +612,64 @@ model Team {
   joinCode          String   @unique
   joinCodeExpiresAt DateTime
 
+  // ── Entitlements ───────────────────────────────────────────────────────────
+  // Read through lib/entitlements.ts and nowhere else. A route that reads
+  // entitlementSource directly gets the stored string rather than the resolved
+  // state, and the two differ exactly when it matters: an expired pilot and a
+  // lapsed subscription both still say PILOT and PAID here.
+  //
+  /// "FREE" | "PILOT" | "PAID". A String and not an enum on purpose: a new
+  /// state should be a deploy, not a migration plus a client regeneration.
+  entitlementSource    String    @default("FREE")
+  /// When a PILOT ends. Null for FREE and PAID, whose expiry is Stripe's to
+  /// say.
+  entitlementExpiresAt DateTime?
+  /// Enforced at join time only. A team that lapses keeps every member it
+  /// already has: an athlete never loses their account, their data or their
+  /// history because a coach did not renew.
+  seatLimit            Int       @default(8)
+
+  /// Billing lives on the Team, not on the coach. One coach may run two teams,
+  /// and a subscription id on the User would let a single purchase cover both.
+  stripeCustomerId     String?
+  stripeSubscriptionId String?
+  subscriptionStatus   String?
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   owner           User             @relation("OwnedTeams", fields: [ownerId], references: [id], onDelete: Cascade)
   memberships     TeamMembership[]
   plannedSessions PlannedSession[]
+  pilotCode       PilotCode?
 
   @@index([ownerId])
+}
+
+/// A code that puts one team on the pilot terms: every feature, 40 seats, and
+/// a renewal price locked at 9900 cents. Handed out by name, one per team.
+///
+/// Redemption is a conditional UPDATE inside a transaction (see
+/// /api/teams/[teamId]/redeem-pilot), never a read followed by a write: two
+/// coaches racing the same code must not both come away with a pilot.
+model PilotCode {
+  id    String  @id @default(cuid())
+  code  String  @unique
+  /// Who it was cut for, e.g. "Andover XC, Coach Smith". Ours, never shown to
+  /// the coach.
+  label String?
+
+  /// Unique: a code redeems exactly once, and the constraint is what makes
+  /// that true when the application logic is wrong.
+  redeemedByTeamId String?   @unique
+  redeemedByUserId String?
+  redeemedAt       DateTime?
+
+  /// Every pilot ends on the same date, the end of the 2026-27 school year.
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  redeemedByTeam Team? @relation(fields: [redeemedByTeamId], references: [id], onDelete: SetNull)
 }
 
 model TeamMembership {

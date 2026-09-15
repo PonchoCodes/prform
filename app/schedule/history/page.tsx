@@ -94,7 +94,6 @@ export default function HistoryPage() {
 
       <section className="bg-[#0A0A0A] text-white px-6 py-10 border-b border-[#222]">
         <div className="max-w-[1200px] mx-auto">
-          <p className="text-xs font-bold uppercase tracking-[0.3em] text-[#6B6B6B] mb-2">Sleep Log</p>
           <h1 className="font-black text-4xl md:text-5xl uppercase leading-none mb-4">History</h1>
           <div className="flex gap-px">
             {([["month", "This Month"], ["3months", "Last 3 Months"], ["all", "All Time"]] as [Filter, string][]).map(([f, label]) => (

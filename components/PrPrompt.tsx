@@ -67,9 +67,6 @@ export function PrPrompt({ onResolved }: Props) {
     <div className="border-2 border-[#0A0A0A] dark:border-[#F5F5F5] bg-white dark:bg-[#242424] p-6">
       <div className="flex items-start justify-between gap-4 mb-3">
         <div>
-          <p className="text-xs font-bold uppercase tracking-[0.3em] text-[#6B6B6B] dark:text-[#A0A0A0] mb-2">
-            Sharpen your paces
-          </p>
           <h3 className="font-black text-xl uppercase">Add a race PR</h3>
         </div>
         <button

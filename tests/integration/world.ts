@@ -18,8 +18,17 @@ import { prisma } from "@/lib/prisma";
 import { TEAM_CONSENT_TEXT } from "@/lib/team/consent";
 import { joinCodeExpiry } from "@/lib/team/joinCode";
 
+
 /** Tables these tests write. Truncated between cases, CASCADE for the rest. */
-const SEEDED_TABLES = ["SleepLog", "PlannedSession", "TeamMembership", "Team", "User"];
+const SEEDED_TABLES = ["SleepLog", "PlannedSession", "PilotCode", "TeamMembership", "Team", "User"];
+
+/**
+ * When the seeded teams stop being entitled. Deliberately relative rather than
+ * the real 2027-07-31 pilot date: a fixed date turns the whole suite into a
+ * test that starts failing on a particular morning for no reason anyone will
+ * remember.
+ */
+export const ENTITLEMENT_FUTURE = new Date(Date.now() + 365 * 24 * 60 * 60 * 1000);
 
 export async function resetDatabase() {
   await prisma.$executeRawUnsafe(
@@ -85,6 +94,11 @@ export async function seedWorld(): Promise<World> {
       season: "Cross Country 2026",
       ownerId: ownerA.id,
       joinCode: "AAAAAA",
+      // Entitled, so these tests exercise the guard rather than the paywall.
+      // The free-tier behaviour has its own file (teams.entitlements.test.ts).
+      entitlementSource: "PILOT",
+      entitlementExpiresAt: ENTITLEMENT_FUTURE,
+      seatLimit: 40,
       joinCodeExpiresAt: joinCodeExpiry(),
     },
     select: { id: true, name: true, joinCode: true },
@@ -97,6 +111,11 @@ export async function seedWorld(): Promise<World> {
       season: "Cross Country 2026",
       ownerId: ownerB.id,
       joinCode: "BBBBBB",
+      // Entitled, so these tests exercise the guard rather than the paywall.
+      // The free-tier behaviour has its own file (teams.entitlements.test.ts).
+      entitlementSource: "PILOT",
+      entitlementExpiresAt: ENTITLEMENT_FUTURE,
+      seatLimit: 40,
       joinCodeExpiresAt: joinCodeExpiry(),
     },
     select: { id: true, name: true, joinCode: true },
@@ -111,6 +130,11 @@ export async function seedWorld(): Promise<World> {
       season: "Outdoor 2027",
       ownerId: captain.id,
       joinCode: "CCCCCC",
+      // Entitled, so these tests exercise the guard rather than the paywall.
+      // The free-tier behaviour has its own file (teams.entitlements.test.ts).
+      entitlementSource: "PILOT",
+      entitlementExpiresAt: ENTITLEMENT_FUTURE,
+      seatLimit: 40,
       joinCodeExpiresAt: joinCodeExpiry(),
     },
     select: { id: true, name: true, joinCode: true },

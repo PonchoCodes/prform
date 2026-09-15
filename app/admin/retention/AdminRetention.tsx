@@ -98,9 +98,6 @@ export function AdminRetention() {
     <div className="min-h-screen bg-white dark:bg-[#1a1a1a] text-[#0A0A0A] dark:text-[#F5F5F5]">
       <section className="bg-[#0A0A0A] px-6 py-10">
         <div className="max-w-[1200px] mx-auto">
-          <p className="text-xs font-bold uppercase tracking-[0.3em] text-[#6B6B6B] mb-2">
-            Internal
-          </p>
           <h1 className="font-black text-4xl uppercase text-white">Retention</h1>
           <p className="text-[#6B6B6B] text-xs font-mono mt-2">
             {data.totals.users} accounts · {data.totals.everLogged} have logged a night ·{" "}

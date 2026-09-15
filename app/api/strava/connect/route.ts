@@ -3,11 +3,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { createHmac } from "crypto";
 import { prisma } from "@/lib/prisma";
-import {
-  isEarlyAccessEnabled,
-  connectedStravaAthleteCount,
-  STRAVA_ATHLETE_CAP,
-} from "@/lib/earlyAccess";
+import { connectedStravaAthleteCount, STRAVA_ATHLETE_CAP } from "@/lib/stravaAccess";
 
 export async function GET(req: NextRequest) {
   const session = await getServerSession(authOptions);
@@ -19,23 +15,25 @@ export async function GET(req: NextRequest) {
 
   const user = await prisma.user.findUnique({
     where: { id: userId },
-    select: { approved: true, stravaConnected: true },
+    select: { stravaEligible: true, stravaConnected: true },
   });
   if (!user) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  // Early-access gate: unapproved users must never reach Strava OAuth.
-  if (isEarlyAccessEnabled() && !user.approved) {
-    return NextResponse.redirect(new URL("/request-access?status=waitlist", req.url));
+  // Not eligible means this route does not exist for them. No error page, no
+  // explanation of a queue they are not in: the UI never renders a link here,
+  // and a hand-typed URL lands on the dashboard.
+  if (!user.stravaEligible && !user.stravaConnected) {
+    return NextResponse.redirect(new URL("/dashboard", req.url));
   }
 
-  // Strava Standard tier allows 10 connected athletes. This cap is enforced
-  // independently of EARLY_ACCESS — flipping the flag off must not bypass it.
+  // Strava Standard tier allows 10 connected athletes. Eligibility is assigned
+  // by hand, but this cap is Strava's and holds regardless.
   if (!user.stravaConnected) {
     const connectedCount = await connectedStravaAthleteCount();
     if (connectedCount >= STRAVA_ATHLETE_CAP) {
-      return NextResponse.redirect(new URL("/strava?error=athlete_cap", req.url));
+      return NextResponse.redirect(new URL("/strava?error=unavailable", req.url));
     }
   }
 

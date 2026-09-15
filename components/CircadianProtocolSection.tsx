@@ -8,7 +8,6 @@ export function CircadianProtocolSection({ circadian }: { circadian: CircadianPl
     <section className="border-b border-[#E5E5E5] dark:border-[#333] px-6 py-10">
       <div className="max-w-[1200px] mx-auto">
         <FadeUp>
-          <p className="text-xs font-bold uppercase tracking-[0.3em] text-[#6B6B6B] dark:text-[#A0A0A0] mb-2">Phase Response Curve</p>
           <h2 className="font-black text-2xl uppercase mb-1">Circadian Protocol</h2>
           <p className="text-xs text-[#6B6B6B] dark:text-[#A0A0A0] font-mono mb-8 max-w-xl">{circadian.mechanismNote}</p>
         </FadeUp>

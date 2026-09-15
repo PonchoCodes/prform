@@ -35,11 +35,12 @@ export const SITE_KEYWORDS = [
   "VDOT training paces",
 ];
 
-/** Monthly subscription price, mirrored from /subscribe. Keep the two in sync. */
-export const SUBSCRIPTION_PRICE_USD = "5.00";
-
-/** Free trial length in days, mirrored from /subscribe. */
-export const TRIAL_DAYS = 30;
+/**
+ * What an athlete account costs. Zero, and asserted publicly in JSON-LD, so it
+ * has to stay true: nothing an athlete does in this app is behind a payment.
+ * Teams are what get billed, and a team plan is not what this markup describes.
+ */
+export const ATHLETE_PRICE_USD = "0";
 
 /** Absolute URL builder for canonicals, sitemap entries, and JSON-LD @ids. */
 export function absoluteUrl(path: string): string {

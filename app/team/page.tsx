@@ -187,22 +187,14 @@ export default function TeamPage() {
       <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.3 }}>
         <section className="bg-[#0A0A0A] px-6 py-10">
           <div className="max-w-[1200px] mx-auto">
-            <p className="text-xs font-bold uppercase tracking-[0.3em] text-[#6B6B6B] mb-2">Roster</p>
             <h1 className="font-black text-4xl uppercase text-white">Team</h1>
-            <p className="text-[#6B6B6B] text-xs font-mono mt-2">
-              Athletes join themselves with a code.
-            </p>
           </div>
         </section>
 
         <div className="max-w-[1200px] mx-auto px-6 py-10 space-y-14">
           {/* ── Athlete side ─────────────────────────────────────────────── */}
           <section>
-            <p className="text-xs font-bold uppercase tracking-[0.3em] text-[#6B6B6B] mb-1">Athlete</p>
-            <h2 className="font-black text-2xl uppercase mb-2">Your Teams</h2>
-            <p className="text-xs font-mono text-[#6B6B6B] dark:text-[#A0A0A0] mb-6 max-w-2xl">
-              You can be on more than one. Cross country and track are separate rosters.
-            </p>
+            <h2 className="font-black text-2xl uppercase mb-6">Your Teams</h2>
 
             {memberships.length > 0 && (
               <div className="space-y-8 mb-8">
@@ -239,10 +231,7 @@ export default function TeamPage() {
 
             {!showConsent ? (
               <div className="border border-[#E5E5E5] dark:border-[#333] p-6 max-w-lg">
-                <h3 className="font-black text-sm uppercase tracking-wider mb-1">Join a Team</h3>
-                <p className="text-xs font-mono text-[#6B6B6B] dark:text-[#A0A0A0] mb-4">
-                  Whoever runs the team gives you a 6-character code. Only you can add yourself.
-                </p>
+                <h3 className="font-black text-sm uppercase tracking-wider mb-4">Join a Team</h3>
                 <div className="flex gap-3">
                   <input
                     type="text"
@@ -298,7 +287,6 @@ export default function TeamPage() {
 
           {/* ── Owner side ───────────────────────────────────────────────── */}
           <section>
-            <p className="text-xs font-bold uppercase tracking-[0.3em] text-[#6B6B6B] mb-1">Owner</p>
             <div className="flex items-center justify-between mb-2">
               <h2 className="font-black text-2xl uppercase">Teams You Run</h2>
               <Button variant="secondary" size="sm" onClick={() => setShowCreate(!showCreate)}>
@@ -463,6 +451,7 @@ function ConsistencyBoard({ teamId }: { teamId: string }) {
 
 function OwnedTeamPanel({ team, onCodeRotated }: { team: OwnedTeam; onCodeRotated: () => Promise<void> }) {
   const [exceptions, setExceptions] = useState<ExceptionsPayload | null>(null);
+  const [needsPlan, setNeedsPlan] = useState(false);
   const [sessions, setSessions] = useState<PlannedSessionRow[]>([]);
   const [rotating, setRotating] = useState(false);
   // durationMinutes starts empty, not at a default. Prefilling it would put a
@@ -481,7 +470,14 @@ function OwnedTeamPanel({ team, onCodeRotated }: { team: OwnedTeam; onCodeRotate
       fetch(`/api/teams/${team.id}/exceptions`),
       fetch(`/api/teams/${team.id}/sessions`),
     ]);
-    if (excRes.ok) setExceptions(await excRes.json());
+    if (excRes.ok) {
+      setExceptions(await excRes.json());
+      setNeedsPlan(false);
+    } else if (excRes.status === 402) {
+      // Per-athlete status is the paid half. The roster, the join code and the
+      // leaderboard are all still here; only this panel is behind the plan.
+      setNeedsPlan(true);
+    }
     if (sesRes.ok) setSessions((await sesRes.json()).sessions ?? []);
   }, [team.id]);
 
@@ -565,7 +561,18 @@ function OwnedTeamPanel({ team, onCodeRotated }: { team: OwnedTeam; onCodeRotate
       {/* Exception list */}
       <div className="p-6 border-b border-[#E5E5E5] dark:border-[#333]">
         <p className="text-xs font-bold uppercase tracking-[0.3em] text-[#6B6B6B] mb-3">Needs Attention</p>
-        {!exceptions ? (
+        {needsPlan ? (
+          <p className="text-sm text-[#6B6B6B] dark:text-[#A0A0A0]">
+            Readiness for each athlete comes with the team plan.{" "}
+            <a
+              href={`/team/billing?team=${team.id}`}
+              className="font-bold text-[#0A0A0A] dark:text-[#F5F5F5] border-b border-[#E8FF00]"
+            >
+              See what it costs
+            </a>
+            . Your roster, join code and check-in board stay free.
+          </p>
+        ) : !exceptions ? (
           <p className="text-xs font-mono text-[#6B6B6B] dark:text-[#A0A0A0]">Loading…</p>
         ) : exceptions.rosterSize === 0 ? (
           <p className="text-sm text-[#6B6B6B] dark:text-[#A0A0A0]">

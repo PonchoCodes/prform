@@ -178,16 +178,15 @@ export default function OnboardingPage() {
         : {}),
     };
 
-    const res = await fetch("/api/user/onboarding", {
+    await fetch("/api/user/onboarding", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(payload),
     });
-    const data = await res.json().catch(() => ({}));
 
-    // Early-access users are grandfathered into free access — never route
-    // them to Stripe.
-    router.push(data.earlyAccessUser ? "/dashboard" : "/subscribe");
+    // Straight to the plan they just built. Nothing an athlete does is behind
+    // a payment, so there is nothing to route them through on the way.
+    router.push("/dashboard");
   };
 
   const TOTAL_STEPS = 5;
@@ -225,10 +224,7 @@ export default function OnboardingPage() {
             {step === 1 && (
               <div>
                 <p className="text-xs font-bold uppercase tracking-[0.3em] text-[#6B6B6B] dark:text-[#A0A0A0] mb-2">Step 1 of {TOTAL_STEPS}</p>
-                <h1 className="font-black text-3xl uppercase mb-2">The Essentials</h1>
-                <p className="text-sm text-[#6B6B6B] dark:text-[#A0A0A0] font-mono mb-8">
-                  Four things and we can calculate your first bedtime tonight.
-                </p>
+                <h1 className="font-black text-3xl uppercase mb-8">The Essentials</h1>
                 <div className="space-y-6">
                   <div>
                     <label className="block text-xs font-bold uppercase tracking-wider mb-2">Age</label>
@@ -286,11 +282,7 @@ export default function OnboardingPage() {
             {step === 2 && (
               <div>
                 <p className="text-xs font-bold uppercase tracking-[0.3em] text-[#6B6B6B] dark:text-[#A0A0A0] mb-2">Step 2 of {TOTAL_STEPS}</p>
-                <h1 className="font-black text-3xl uppercase mb-2">Current Fitness</h1>
-                <p className="text-sm text-[#6B6B6B] dark:text-[#A0A0A0] font-mono mb-8">
-                  One recent race result and PRform can prescribe every training pace today,
-                  no waiting for weeks of data.
-                </p>
+                <h1 className="font-black text-3xl uppercase mb-8">Current Fitness</h1>
 
                 <div className="space-y-8">
                   <PrForm
@@ -362,10 +354,7 @@ export default function OnboardingPage() {
             {step === 3 && (
               <div>
                 <p className="text-xs font-bold uppercase tracking-[0.3em] text-[#6B6B6B] dark:text-[#A0A0A0] mb-2">Step 3 of {TOTAL_STEPS}</p>
-                <h1 className="font-black text-3xl uppercase mb-2">Your Next Race</h1>
-                <p className="text-sm text-[#6B6B6B] dark:text-[#A0A0A0] font-mono mb-8">
-                  When is it? We&apos;ll build your sleep plan backward from race day.
-                </p>
+                <h1 className="font-black text-3xl uppercase mb-8">Your Next Race</h1>
 
                 <div className="space-y-4">
                   <div className="border border-[#E5E5E5] dark:border-[#333] p-4">
@@ -474,7 +463,6 @@ export default function OnboardingPage() {
                 <p className="text-xs font-bold uppercase tracking-[0.3em] text-[#6B6B6B] dark:text-[#A0A0A0] mb-2">Step 4 of {TOTAL_STEPS}</p>
                 <h1 className="font-black text-3xl uppercase mb-2">Your Training Week</h1>
                 <p className="text-sm text-[#6B6B6B] dark:text-[#A0A0A0] mb-8">
-                  Sketch a typical week. Sleep targets move with your training load.
                   You can adjust any day later, or log workouts as they happen.
                 </p>
 
@@ -507,8 +495,8 @@ export default function OnboardingPage() {
                 </div>
 
                 <p className="text-[10px] font-mono text-[#6B6B6B] dark:text-[#A0A0A0] mt-4">
-                  Use Strava? You can connect it any time from your dashboard,
-                  synced runs then take over from this schedule automatically.
+                  This is your normal week. Log what you actually do as you go,
+                  and anything you log takes over from this schedule for that day.
                 </p>
               </div>
             )}

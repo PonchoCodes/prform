@@ -153,12 +153,28 @@ describe("computeVerdict — degraded states", () => {
     expect(v.confidence).toBe("low");
   });
 
-  it("names both missing inputs when Strava is not connected either", () => {
+  it("names both missing inputs when an eligible athlete has not connected Strava", () => {
     const v = computeVerdict(
-      baseInput({ paces: null, paceSourceKind: "none", stravaConnected: false, nightsLogged: 0 }),
+      baseInput({
+        paces: null,
+        paceSourceKind: "none",
+        stravaConnected: false,
+        stravaEligible: true,
+        nightsLogged: 0,
+      }),
     );
     expect(v.kind).toBe("needs_pr");
     expect(v.reason).toMatch(/connect strava/i);
+    expect(v.action?.target).toBe("pr");
+  });
+
+  it("never mentions Strava to an athlete it is not available to", () => {
+    // The default: stravaEligible is absent, which means no. Naming a second
+    // missing input they cannot supply turns one ask into a dead end.
+    const v = computeVerdict(
+      baseInput({ paces: null, paceSourceKind: "none", stravaConnected: false, nightsLogged: 0 }),
+    );
+    expect(v.reason).not.toMatch(/strava/i);
     expect(v.action?.target).toBe("pr");
   });
 
@@ -179,9 +195,16 @@ describe("computeVerdict — degraded states", () => {
     expect(v.action).toEqual({ label: "Log last night's sleep", target: "log_sleep" });
   });
 
-  it("asks for Strava once sleep is being logged but there is no training history", () => {
-    const v = computeVerdict(baseInput({ stravaConnected: false, nightsLogged: 6, tsb: null }));
+  it("asks an eligible athlete for Strava once sleep is logged but training history is empty", () => {
+    const v = computeVerdict(
+      baseInput({ stravaConnected: false, stravaEligible: true, nightsLogged: 6, tsb: null }),
+    );
     expect(v.action).toEqual({ label: "Connect Strava", target: "strava" });
+  });
+
+  it("asks an ineligible athlete for nothing rather than for Strava", () => {
+    const v = computeVerdict(baseInput({ stravaConnected: false, nightsLogged: 6, tsb: null }));
+    expect(v.action).toBeUndefined();
   });
 
   it("does not claim fatigue it cannot see", () => {

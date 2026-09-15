@@ -1,17 +1,14 @@
-import { getServerSession } from "next-auth";
 import { redirect } from "next/navigation";
-import { authOptions } from "@/lib/auth";
-import { AdminWaitlist } from "./AdminWaitlist";
+import { isAdminSession } from "@/lib/admin";
+import { AdminConsole } from "./AdminConsole";
 
 export const dynamic = "force-dynamic";
 
+// The page guard is the second lock, not the only one: both admin APIs this
+// page calls refuse a non-admin independently, because a page guard protects
+// a page and not the data behind it.
 export default async function AdminPage() {
-  const session = await getServerSession(authOptions);
-  const adminEmail = process.env.ADMIN_EMAIL;
+  if (!(await isAdminSession())) redirect("/");
 
-  if (!adminEmail || session?.user?.email !== adminEmail) {
-    redirect("/");
-  }
-
-  return <AdminWaitlist />;
+  return <AdminConsole />;
 }

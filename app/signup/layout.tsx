@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { pageOpenGraph } from "@/lib/seo";
 
 const description =
-  "Start your PRform account and get a nightly sleep target built around your race calendar. 30 days free.";
+  "Create a free PRform account and get a nightly sleep target built around your race calendar.";
 
 // The page itself is a client component, so its metadata lives here.
 export const metadata: Metadata = {

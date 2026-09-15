@@ -47,6 +47,7 @@ export default function ProfilePage() {
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   const [stravaStatus, setStravaStatus] = useState<any>(null);
+  const [stravaInterest, setStravaInterest] = useState(false);
   const [disconnecting, setDisconnecting] = useState(false);
   const [onboardingAgg, setOnboardingAgg] = useState<number>(85); // original value from onboarding
 
@@ -63,6 +64,7 @@ export default function ProfilePage() {
       setProfile(profileData);
       setOnboardingAgg(profileData.planAggressiveness ?? 85);
       setStravaStatus(stravaData);
+      setStravaInterest(Boolean(stravaData?.interest));
       setLoading(false);
     });
   }, [status]);
@@ -80,6 +82,13 @@ export default function ProfilePage() {
   };
 
   const update = (key: string, val: any) => setProfile((p: any) => ({ ...p, [key]: val }));
+
+  // One tap, one line of text in its place. No modal, no confirmation screen,
+  // and nothing that says where they stand in a line that does not exist.
+  const handleStravaInterest = async () => {
+    setStravaInterest(true);
+    await fetch("/api/user/strava-interest", { method: "POST" });
+  };
 
   const handleDisconnectStrava = async () => {
     setDisconnecting(true);
@@ -110,7 +119,6 @@ export default function ProfilePage() {
       <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.3 }}>
         <section className="bg-[#0A0A0A] px-6 py-10">
           <div className="max-w-[1200px] mx-auto">
-            <p className="text-xs font-bold uppercase tracking-[0.3em] text-[#6B6B6B] mb-2">Settings</p>
             <h1 className="font-black text-4xl uppercase text-white">Profile</h1>
           </div>
         </section>
@@ -359,6 +367,28 @@ export default function ProfilePage() {
         <div className="max-w-[1200px] mx-auto px-6 pb-10">
           <FadeUp delay={160}>
             <h2 className="font-black text-xl uppercase mb-6 border-b border-[#E5E5E5] dark:border-[#333] pb-3">Data Source</h2>
+            {!stravaStatus?.eligible ? (
+              // For everyone Strava sync is not available to, this is the whole
+              // Strava surface: one line, once, with no button to press twice
+              // and nothing about a queue or a position in it.
+              <div className="border border-[#E5E5E5] dark:border-[#333] p-6">
+                <p className="text-sm dark:text-[#F5F5F5]">
+                  PRform uses your weekly template and the workouts you log.
+                </p>
+                {stravaInterest ? (
+                  <p className="mt-3 font-mono text-xs text-[#6B6B6B] dark:text-[#A0A0A0]">
+                    We will email you when Strava sync is available.
+                  </p>
+                ) : (
+                  <button
+                    onClick={handleStravaInterest}
+                    className="mt-3 font-mono text-xs text-[#6B6B6B] dark:text-[#A0A0A0] underline hover:text-[#0A0A0A] dark:hover:text-[#F5F5F5] transition-colors"
+                  >
+                    Notify me when Strava sync is available
+                  </button>
+                )}
+              </div>
+            ) : (
             <div className="border border-[#E5E5E5] dark:border-[#333] p-6">
               <div className="flex items-center justify-between flex-wrap gap-4">
                 <div className="flex items-center gap-4">
@@ -403,10 +433,11 @@ export default function ProfilePage() {
               </div>
               {!stravaStatus?.connected && (
                 <p className="mt-4 text-xs text-[#6B6B6B] dark:text-[#A0A0A0] font-mono bg-[#F5F5F5] dark:bg-[#2a2a2a] px-3 py-2">
-                  Without Strava, PRform uses your weekly template + manually logged workouts. Connect Strava to unlock automatic activity sync and performance analysis.
+                  Without Strava, PRform uses your weekly template and manually logged workouts. Connect Strava to unlock automatic activity sync and performance analysis.
                 </p>
               )}
             </div>
+            )}
           </FadeUp>
         </div>
 

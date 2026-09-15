@@ -167,7 +167,6 @@ export function PWAInstallInstructions({ variant, onInstalled }: PWAInstallInstr
     const targetBrowser = context.platform === "android" ? "Chrome" : "Safari";
     return (
       <div className={container}>
-        <p className={`${LABEL} mb-2`}>One step first</p>
         <h3 className="font-black text-lg uppercase mb-2">
           Open in {targetBrowser} first
         </h3>
@@ -185,7 +184,6 @@ export function PWAInstallInstructions({ variant, onInstalled }: PWAInstallInstr
   if (context.platform === "ios") {
     return (
       <div className={container}>
-        <p className={`${LABEL} mb-2`}>Add to home screen</p>
         {!settings && (
           <h3 className="font-black text-lg uppercase mb-3">Three taps</h3>
         )}

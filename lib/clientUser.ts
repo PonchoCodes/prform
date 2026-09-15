@@ -14,9 +14,6 @@
 export interface ClientUser {
   prDistanceId: string | null;
   prPromptDismissedAt: Date | null;
-  subscriptionStatus: string | null;
-  trialEndsAt: Date | null;
-  earlyAccessUser: boolean;
   unitPreference: string;
 }
 
@@ -24,9 +21,6 @@ export interface ClientUser {
 export const CLIENT_USER_FIELDS = [
   "prDistanceId",
   "prPromptDismissedAt",
-  "subscriptionStatus",
-  "trialEndsAt",
-  "earlyAccessUser",
   "unitPreference",
 ] as const;
 
@@ -34,9 +28,6 @@ export const CLIENT_USER_FIELDS = [
 export const CLIENT_USER_SELECT = {
   prDistanceId: true,
   prPromptDismissedAt: true,
-  subscriptionStatus: true,
-  trialEndsAt: true,
-  earlyAccessUser: true,
   unitPreference: true,
 } as const;
 
@@ -47,17 +38,11 @@ export const CLIENT_USER_SELECT = {
 export function toClientUser(user: {
   prDistanceId?: string | null;
   prPromptDismissedAt?: Date | null;
-  subscriptionStatus?: string | null;
-  trialEndsAt?: Date | null;
-  earlyAccessUser?: boolean | null;
   unitPreference?: string | null;
 }): ClientUser {
   return {
     prDistanceId: user.prDistanceId ?? null,
     prPromptDismissedAt: user.prPromptDismissedAt ?? null,
-    subscriptionStatus: user.subscriptionStatus ?? null,
-    trialEndsAt: user.trialEndsAt ?? null,
-    earlyAccessUser: user.earlyAccessUser ?? false,
     unitPreference: user.unitPreference ?? "imperial",
   };
 }

@@ -105,7 +105,6 @@ export default function AnalysisPage() {
       {/* Header */}
       <section className="bg-[#0A0A0A] text-white px-6 py-10 border-b border-[#222]">
         <div className="max-w-[1200px] mx-auto">
-          <p className="text-xs font-bold uppercase tracking-[0.3em] text-[#6B6B6B] mb-2">Performance Engine</p>
           <h1 className="font-black text-4xl md:text-5xl uppercase leading-none mb-6">Analysis</h1>
           <div className="flex gap-px mb-3">
             {([30, 60, 90] as WindowDays[]).map((d) => (
@@ -139,14 +138,12 @@ export default function AnalysisPage() {
       {error && !loading && (
         <div className="max-w-[1200px] mx-auto px-6 py-20 text-center">
           <p className="text-sm text-[#6B6B6B] mb-4">{error}</p>
-          {error.includes("Strava") && (
-            <a
-              href="/strava"
-              className="inline-block bg-[#E8FF00] text-[#0A0A0A] font-black text-xs uppercase tracking-widest px-8 py-3"
-            >
-              Connect Strava →
-            </a>
-          )}
+          <a
+            href="/schedule"
+            className="inline-block bg-[#E8FF00] text-[#0A0A0A] font-black text-xs uppercase tracking-widest px-8 py-3"
+          >
+            Log A Workout →
+          </a>
         </div>
       )}
 
@@ -160,7 +157,6 @@ export default function AnalysisPage() {
           <section className="px-6 py-10 border-b border-[#E5E5E5] dark:border-[#333]">
             <div className="max-w-[1200px] mx-auto">
               <FadeUp>
-                <p className="text-xs font-bold uppercase tracking-[0.3em] text-[#6B6B6B] mb-2">Banister Impulse-Response</p>
                 <h2 className="font-black text-2xl uppercase mb-6">Performance Management Chart</h2>
               </FadeUp>
 
@@ -219,7 +215,6 @@ export default function AnalysisPage() {
           <section className="px-6 py-10 border-b border-[#E5E5E5] dark:border-[#333]">
             <div className="max-w-[1200px] mx-auto">
               <FadeUp>
-                <p className="text-xs font-bold uppercase tracking-[0.3em] text-[#6B6B6B] mb-2">Seiler Polarized Model</p>
                 <h2 className="font-black text-2xl uppercase mb-6">Training Intensity Distribution</h2>
               </FadeUp>
 
@@ -263,7 +258,6 @@ export default function AnalysisPage() {
           <section className="px-6 py-10 border-b border-[#E5E5E5] dark:border-[#333]">
             <div className="max-w-[1200px] mx-auto">
               <FadeUp>
-                <p className="text-xs font-bold uppercase tracking-[0.3em] text-[#6B6B6B] mb-2">Daniels Running Formula</p>
                 <h2 className="font-black text-2xl uppercase mb-6">VDOT &amp; Pace Zones</h2>
               </FadeUp>
 
@@ -320,7 +314,6 @@ export default function AnalysisPage() {
           <section className="px-6 py-10">
             <div className="max-w-[1200px] mx-auto">
               <FadeUp>
-                <p className="text-xs font-bold uppercase tracking-[0.3em] text-[#6B6B6B] mb-2">PRform Core Insight</p>
                 <h2 className="font-black text-2xl uppercase mb-6">Does Sleep Change Your Pace?</h2>
               </FadeUp>
 

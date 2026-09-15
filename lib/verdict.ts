@@ -67,6 +67,13 @@ export interface VerdictInput {
   stravaConnected: boolean;
 
   /**
+   * Whether Strava sync exists for this athlete at all. Optional, and absent
+   * means no: an athlete who is not eligible must never be told to connect
+   * something they cannot connect, on the dashboard or in a morning message.
+   */
+  stravaEligible?: boolean;
+
+  /**
    * From today's DailySleepPlan. Bedtime and wake time are deliberately absent:
    * they belong to Tonight's Target, which renders them once. The verdict only
    * needs the hours, and only for the state where no pace exists.
@@ -272,7 +279,7 @@ function actionFor(input: VerdictInput): VerdictAction | undefined {
   if (input.nightsLogged === 0) {
     return { label: "Log last night's sleep", target: "log_sleep" };
   }
-  if (!input.stravaConnected) {
+  if (input.stravaEligible && !input.stravaConnected) {
     return { label: "Connect Strava", target: "strava" };
   }
   return undefined;
@@ -345,9 +352,10 @@ export function computeVerdict(input: VerdictInput): Verdict {
     return {
       kind: "needs_pr",
       verdict: `Sleep ${totalSleepHours}h tonight.`,
-      reason: input.stravaConnected
-        ? "Add a race PR and this becomes a pace for today's run, not just a sleep target."
-        : "Add a race PR or connect Strava to get today's prescribed paces.",
+      reason:
+        input.stravaEligible && !input.stravaConnected
+          ? "Add a race PR or connect Strava to get today's prescribed paces."
+          : "Add a race PR and this becomes a pace for today's run, not just a sleep target.",
       nowrap: [`${totalSleepHours}h`],
       confidence,
       action,

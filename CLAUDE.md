@@ -60,8 +60,13 @@ STRAVA_CLIENT_ID      # Strava API app ID
 STRAVA_CLIENT_SECRET  # Strava API app secret
 STRAVA_REDIRECT_URI   # http://localhost:3000/api/strava/callback for local dev
 STRAVA_WEBHOOK_VERIFY_TOKEN
-EARLY_ACCESS          # "true" = invite-only gate active (see EARLY ACCESS TOGGLE below)
-ADMIN_EMAIL           # Email allowed into /admin (waitlist approval UI)
+ADMIN_EMAIL           # The one email allowed into /admin and the admin APIs
+STRIPE_SECRET_KEY     # Team plans. See MONETIZATION below
+STRIPE_WEBHOOK_SECRET
+STRIPE_PRICE_TEAM_LIST      # $149/yr
+STRIPE_PRICE_TEAM_LOCKED    # $99/yr, pilot-locked
+STRIPE_PRICE_PROGRAM_LIST   # $299/yr
+STRIPE_PRICE_PROGRAM_LOCKED # $199/yr, pilot-locked
 VAPID_PUBLIC_KEY      # Web push. Generate with `npm run push:keys`
 VAPID_PRIVATE_KEY     # Rotating the pair unsubscribes every device
 VAPID_SUBJECT         # mailto: or https:// — how a push service contacts you
@@ -385,11 +390,12 @@ exists**, which is why the routing below fails toward push rather than toward no
 ### SEO
 
 `lib/seo.ts` holds the canonical host, title, description, and keywords — change copy there,
-not in individual pages. Two constants (`SUBSCRIPTION_PRICE_USD`, `TRIAL_DAYS`) mirror
-`/subscribe` and must be kept in sync with it, because they are asserted publicly in JSON-LD.
+not in individual pages. `ATHLETE_PRICE_USD` is `"0"` and is asserted publicly in JSON-LD, so
+it stays true: no athlete feature is behind a payment. Team plans are priced in
+`lib/teamBilling.ts` and are not part of that markup.
 
-- `app/robots.ts` and `app/sitemap.ts` generate /robots.txt and /sitemap.xml. The sitemap is
-  `force-dynamic` so it lists `/request-access` or `/signup` depending on `EARLY_ACCESS`.
+- `app/robots.ts` and `app/sitemap.ts` generate /robots.txt and /sitemap.xml. The sitemap
+  lists `/signup`, which is the only signup route there is.
 - `app/opengraph-image.tsx` renders the 1200×630 social card and doubles as the Twitter image.
   It **must** stay on `runtime = "edge"` — next/og's node build resolves its bundled fallback
   font through `fileURLToPath` on a path that is malformed on Windows, crashing both the build
@@ -414,15 +420,91 @@ Defined in `tailwind.config.ts`:
 - Toggle buttons: selected = `bg-[#0A0A0A] text-white border-[#0A0A0A]`, unselected = `border-[#E5E5E5] hover:border-[#0A0A0A]`
 - Dark mode via `dark:` variants — background `#1a1a1a`, cards `#242424`
 
-## Early Access Toggle
+## Monetization
 
-The `EARLY_ACCESS` env var controls an invite-only beta gate (`lib/earlyAccess.ts`):
+Registration is open and **athletes pay nothing**. There is no waitlist, no approval, no
+admin gate on signing up, and no subscription check anywhere in an athlete path. The
+`earlyAccessUser`, `approved`, `stripeCustomerId`, `stripeSubscriptionId`,
+`subscriptionStatus` and `trialEndsAt` columns are still on User and are deliberately
+unread and unwritten: do not resurrect them as a gate. `Waitlist` and `WaitlistRole`
+remain in the schema, unlinked from registration; nothing writes to them.
 
-- **`EARLY_ACCESS=true`** — allowlist gate active. Registration (`/api/auth/register`) and Strava OAuth (`/api/strava/connect`) require an APPROVED `Waitlist` entry for the email. The landing page CTA becomes "Request Access" → `/request-access`, which feeds `POST /api/waitlist`. Approvals happen at `/admin` (restricted to `ADMIN_EMAIL`) and are capped at `EARLY_ACCESS_APPROVAL_CAP` (currently 25). This is intentionally higher than the Strava athlete cap (10) — members past 10 use the app with manual/template workouts until the Strava tier is raised.
-- **`EARLY_ACCESS=false`** — gate disabled, open registration. New users go through the existing Stripe flow (card required, 30-day trial, then $5/month).
+Signup asks two required questions, and **neither is a gate**: `signupRole`
+("ATHLETE" | "COACH", which decides only where they land next) and the 13-or-older box
+(`ageConfirmed` / `ageConfirmedAt`, refused server-side as well as in the form). A coach
+goes to `/team/new`, then is offered personal onboarding and can skip it; a coach who
+skips reaches the team page with nothing withheld.
 
-**Grandfathering**: approving a waitlist entry sets `earlyAccessUser=true` (and `approved=true`) on the User — at approval time if the account exists, otherwise when they register with the approved email. The payment bypass is tied to `earlyAccessUser` on the User, NOT to the `EARLY_ACCESS` flag: flipping the flag to false must never route early-access users to Stripe, charge them, or start a trial. Their accounts, data, and Strava connections are untouched by the flip.
+### Entitlements
 
-**Strava cap**: the Strava Standard tier allows 10 connected athletes. `/api/strava/connect` enforces this cap (`STRAVA_ATHLETE_CAP`) independently of `EARLY_ACCESS` — setting the flag to false does NOT lift it.
+**`lib/entitlements.ts` is the single source of truth. No route reads
+`Team.entitlementSource` directly**: what is stored and what is true differ exactly when
+it matters, because an expired pilot still says PILOT and a lapsed subscription still says
+PAID. `resolveEntitlement` is pure and tested; `resolveTeamEntitlement` is the wrapper.
 
-**Pausing the beta**: keep `EARLY_ACCESS=true` and simply stop approving waitlist entries.
+- **FREE**: 8 seats, leaderboard and team aggregate only.
+- **PILOT**: 40 seats, everything, while `entitlementExpiresAt` is in the future.
+- **PAID**: everything while `subscriptionStatus` is `active` or `trialing`; 40 seats on
+  Team, 100 on Program.
+- An expired pilot or a lapsed subscription resolves to **free features at 8 seats**.
+
+**seatLimit is enforced at join time and nowhere else.** A team that lapses keeps every
+member it has: a 30-athlete team drops to free features and cannot take a 31st, and not
+one of the 30 is removed, hidden or degraded. Athletes never lose their account, their
+data or their history because a coach did not renew, and
+`tests/integration/teams.entitlements.test.ts` holds that shut.
+
+`assertCoachAccess` composes `assertOwnerOf` + `features.perAthleteStats` + the consent
+filter, and returns the filtered athlete list rather than a boolean. It counts as an
+owner-strength guard in `lib/team/guard.test.ts`. `assertOwnerOf` and `assertMemberOf` are
+unchanged, and team creation, renaming, inviting and the leaderboard all stay free.
+
+### Pilot codes
+
+8 characters, uppercase, no O/0/I/1 (`lib/pilotCodes.ts`), cut by hand at `/admin`, expiring
+2027-07-31. **Redemption is a conditional UPDATE inside a transaction**
+(`WHERE redeemedByTeamId IS NULL`), and zero affected rows is a 409: never read-then-write,
+or two coaches with one code both win. Redeeming sets PILOT and 40 seats, then hands the coach to Stripe for a card; the locked
+price is `TIERS.TEAM.lockedCents` in `lib/teamBilling.ts`, the one source for it. A pilot with no card
+stays a pilot and shows as **card-missing** in the admin list.
+
+### Stripe
+
+Two products, annual, USD: Team (40 athletes, $149 list / $99 locked) and Program (100
+athletes, $299 list / $199 locked). Price ids live in env vars.
+
+**Checkout is created against the Team, and the subscription id lives on Team**, so one
+purchase can never cover two teams. One Stripe customer per coach is fine. **The webhook
+looks subscriptions up by subscription id, never by customer id**, for the same reason.
+
+- PILOT path: `subscription_data.trial_end` fixed at 2027-07-31, locked price,
+  `payment_method_collection: "always"` (the default, set explicitly so it cannot drift).
+- PAID path: `subscription_data.billing_cycle_anchor` at the next July 31, list price,
+  Stripe's default `create_prorations` for the stub period. Stripe requires the anchor to
+  fall **within the first billing period**, so on an annual price it can never be more than
+  a year out: `paidBillingCycleAnchor` clamps and reports it.
+- Trials and a billing cycle anchor are mutually exclusive in Checkout, which is why each
+  path uses exactly one of them.
+
+### Auto-renewal disclosure
+
+Required in California and several other states, and it is also the email that saves the
+renewal. `renewalDisclosure()` in `lib/teamBilling.ts` is the single wording: it states the
+exact date, the exact amount, and that it renews until cancelled. It renders above the
+submit button on `/team/billing` in body text (never a tooltip, never collapsed) and is
+passed to Stripe as `custom_text.submit.message` so it survives the handoff.
+`/api/cron/renewal-notices` runs daily, does nothing except on July 1 and July 24, and
+emails every team with an upcoming charge.
+
+## Strava access
+
+Strava sync is **per user and assigned by hand** (`User.stravaEligible`, toggled at
+`/admin`). If it is false, **no Strava UI renders at all**: not a disabled button, not a
+blocked state, not a queue. There is no waitlist and no "slots full" copy anywhere, because
+a door somebody cannot open is worse than no door. `/api/strava/status` reports `eligible`
+first and returns early; `/api/strava/connect` redirects an ineligible caller to the
+dashboard; `computeVerdict` takes `stravaEligible` and will not name Strava without it.
+
+Settings carries one low-key link that sets `stravaInterest`: no modal, no position in
+line. The Strava Standard tier's 10-connected-athlete cap (`lib/stravaAccess.ts`) is
+separate, is Strava's rather than ours, and still holds.

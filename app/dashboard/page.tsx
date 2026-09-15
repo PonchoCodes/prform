@@ -19,7 +19,6 @@ import { PrPrompt } from "@/components/PrPrompt";
 import { VerdictCard } from "@/components/VerdictCard";
 import { TonightsTarget } from "@/components/TonightsTarget";
 import { NextMeetCard } from "@/components/NextMeetCard";
-import { SubscribeStrip } from "@/components/SubscribeStrip";
 import { InstallNotice } from "@/components/InstallNotice";
 import { PWAInstallPrompt } from "@/components/PWAInstallPrompt";
 import type { PwaPromptState } from "@/lib/pwaPrompt";
@@ -146,7 +145,6 @@ function MorningConfirmationCard({ yesterdayPlan, onDismiss }: MorningCardProps)
             {phase === "done" ? (
               <div className="flex items-center gap-3">
                 <span className="text-[#0A0A0A] dark:text-[#E8FF00] font-bold text-sm uppercase tracking-widest">✓ Logged</span>
-                <span className="text-[#6B6B6B] font-mono text-xs">Sleep confirmed for last night.</span>
               </div>
             ) : (
               <>
@@ -324,7 +322,6 @@ function InterventionCard({
               </>
             ) : (
               <>
-                <p className="text-xs font-bold uppercase tracking-[0.3em] text-[#6B6B6B] dark:text-[#E8FF00] mb-2">Sleep Pattern Detected</p>
                 <h2 className="font-black text-2xl uppercase mb-3">
                   You&apos;ve Missed Your Target {consecutiveMisses} Night{consecutiveMisses !== 1 ? "s" : ""} in a Row
                 </h2>
@@ -718,7 +715,7 @@ export default function DashboardPage() {
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState(false);
   const [activeTab, setActiveTab] = useState<"Sleep" | "Performance">("Sleep");
-  const [stravaStatus, setStravaStatus] = useState<{ connected: boolean; recentActivities?: { name: string; startDate: string; distance: number; averageSpeed: number; averageHeartrate?: number | null }[] } | null>(null);
+  const [stravaStatus, setStravaStatus] = useState<{ eligible?: boolean; connected: boolean; recentActivities?: { name: string; startDate: string; distance: number; averageSpeed: number; averageHeartrate?: number | null }[] } | null>(null);
   const [perfReport, setPerfReport] = useState<PerformanceReport | null>(null);
   const [perfLoading, setPerfLoading] = useState(false);
 
@@ -867,6 +864,7 @@ export default function DashboardPage() {
       paceSourceKind: data.resolved?.source?.kind ?? "none",
       unit: (data.user?.unitPreference ?? "imperial") as UnitPreference,
       stravaConnected: Boolean(data.fitness?.stravaConnected),
+      stravaEligible: Boolean(data.fitness?.stravaEligible),
       totalSleepHours: todayPlan.totalSleepHours,
       // Only meaningful once a wake time has been declared; the plan reports a
       // zero shortfall on an ordinary night, which no branch acts on.
@@ -898,9 +896,6 @@ export default function DashboardPage() {
         <Navbar />
         <section className="px-6 py-20">
           <div className="max-w-[1200px] mx-auto">
-            <p className="text-xs font-bold uppercase tracking-[0.3em] text-[#6B6B6B] dark:text-[#A0A0A0] mb-4">
-              Today
-            </p>
             <h1 className="font-black uppercase leading-[1.05] max-w-[16ch] text-[clamp(24px,7vw,30px)] md:text-[clamp(30px,3.2vw,44px)]">
               Couldn&apos;t load your plan.
             </h1>
@@ -945,21 +940,15 @@ export default function DashboardPage() {
 
   const nextMeetPred: PerformancePrediction | null = nextMeet ? (meetPredictions[nextMeet.id] ?? null) : null;
 
-  const subscriptionStatus = data?.user?.subscriptionStatus as string | null | undefined;
-  const isEarlyAccessUser = Boolean(data?.user?.earlyAccessUser);
-  const trialEndsAt = data?.user?.trialEndsAt ? new Date(data.user.trialEndsAt) : null;
-  const trialDaysLeft = trialEndsAt
-    ? Math.max(0, Math.ceil((trialEndsAt.getTime() - Date.now()) / (1000 * 60 * 60 * 24)))
-    : null;
-
   return (
     <div className="min-h-screen bg-white dark:bg-[#1a1a1a]">
       <Navbar />
 
-      {/* Connect-Strava banner — shown until the user completes Strava OAuth.
-          Training load drives the sleep plan, so this is the highest-priority
-          nudge and sits above the subscription banner. */}
-      {stravaStatus && !stravaStatus.connected && (
+      {/* Connect-Strava banner. Only ever rendered for an athlete Strava sync
+          is actually available to: /api/strava/status reports `eligible`, and
+          for everyone else there is no banner, no disabled button and no queue.
+          A door you cannot open is worse than no door. */}
+      {stravaStatus?.eligible && !stravaStatus.connected && (
         <div className="bg-[#0A0A0A] px-6 py-3 flex items-center justify-between gap-4">
           <p className="font-black text-xs uppercase tracking-widest text-[#E8FF00]">
             Connect Strava to personalize tonight&apos;s plan
@@ -969,18 +958,6 @@ export default function DashboardPage() {
             className="bg-[#E8FF00] text-[#0A0A0A] font-black text-[10px] uppercase tracking-widest px-4 py-2 hover:bg-[#d4e800] transition-colors shrink-0"
           >
             Connect Strava →
-          </a>
-        </div>
-      )}
-
-      {/* Trial countdown — already a thin strip, and factual rather than a pitch */}
-      {subscriptionStatus === "trialing" && trialDaysLeft !== null && (
-        <div className="border-b border-[#E5E5E5] dark:border-[#333] px-6 py-2 flex items-center justify-between max-w-full">
-          <p className="font-mono text-xs text-[#6B6B6B] dark:text-[#A0A0A0]">
-            <span className="font-black text-[#0A0A0A] dark:text-[#F5F5F5]">{trialDaysLeft}d</span> left in your free trial
-          </p>
-          <a href="/subscribe" className="text-[10px] font-mono text-[#6B6B6B] dark:text-[#A0A0A0] hover:text-[#0A0A0A] dark:hover:text-[#F5F5F5] underline transition-colors">
-            Manage billing →
           </a>
         </div>
       )}
@@ -1063,9 +1040,6 @@ export default function DashboardPage() {
         </div>
       </div>
 
-      {!isEarlyAccessUser && subscriptionStatus !== "trialing" && subscriptionStatus !== "active" && (
-        <SubscribeStrip />
-      )}
 
       {/* Install notice for accounts that predate the app being installable.
           New accounts meet this as a step in onboarding instead. It shows
@@ -1190,9 +1164,6 @@ export default function DashboardPage() {
             <section className="border-b border-[#E5E5E5] dark:border-[#333] px-6 py-10">
               <div className="max-w-[1200px] mx-auto">
                 <FadeUp>
-                  <p className="text-xs font-bold uppercase tracking-[0.3em] text-[#6B6B6B] dark:text-[#A0A0A0] mb-2">
-                    Sleep × Pace
-                  </p>
                   <h2 className="font-black text-2xl uppercase mb-6">
                     Does Sleeping More Make You Faster?
                   </h2>
@@ -1213,7 +1184,6 @@ export default function DashboardPage() {
           <section className="border-b border-[#E5E5E5] dark:border-[#333] px-6 py-10">
             <div className="max-w-[1200px] mx-auto">
               <FadeUp>
-                <p className="text-xs font-bold uppercase tracking-[0.3em] text-[#6B6B6B] dark:text-[#A0A0A0] mb-2">Tonight&apos;s Wind-Down</p>
                 <h2 className="font-black text-2xl uppercase mb-6">Wind-Down Protocol</h2>
               </FadeUp>
               <FadeUp delay={80}>

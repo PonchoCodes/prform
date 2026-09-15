@@ -21,6 +21,8 @@ import {
   POST as sessionsPOST,
   DELETE as sessionsDELETE,
 } from "@/app/api/teams/[teamId]/sessions/route";
+import { POST as redeemPilotPOST } from "@/app/api/teams/[teamId]/redeem-pilot/route";
+import { POST as checkoutPOST } from "@/app/api/teams/[teamId]/checkout/route";
 import { GET as teamsGET, POST as teamsPOST } from "@/app/api/teams/route";
 import { POST as leavePOST } from "@/app/api/teams/leave/route";
 import { POST as joinPOST } from "@/app/api/teams/join/route";
@@ -76,6 +78,17 @@ const TEAM_SCOPED_ROUTES: Array<{ name: string; call: (teamId: string) => Promis
   {
     name: "DELETE /api/teams/[teamId]/sessions",
     call: (teamId) => invoke(sessionsDELETE, { teamId, method: "DELETE", body: { id: "anything" } }),
+  },
+  {
+    // Billing is owner-only for a reason that is not money: redeeming a code
+    // against somebody else's team would let a stranger set that team's plan,
+    // seat limit and locked price.
+    name: "POST /api/teams/[teamId]/redeem-pilot",
+    call: (teamId) => invoke(redeemPilotPOST, { teamId, body: { code: "ABCDEFGH" } }),
+  },
+  {
+    name: "POST /api/teams/[teamId]/checkout",
+    call: (teamId) => invoke(checkoutPOST, { teamId, body: { tier: "TEAM" } }),
   },
 ];
 

@@ -62,13 +62,10 @@ export function InstallNotice() {
     <FadeUp>
       <div className="border border-[#0A0A0A] dark:border-[#F5F5F5] p-4 mb-6 flex flex-col sm:flex-row sm:items-center gap-4 justify-between">
         <div className="min-w-0">
-          <p className="text-xs font-bold uppercase tracking-[0.3em] text-[#6B6B6B] dark:text-[#A0A0A0] mb-1">
-            Put PRform on your phone
-          </p>
           <p className="text-sm leading-6">
             {push.platform === "ios"
-              ? "Add PRform to your home screen and it can send your evening check-in and morning verdict, so you don't have to remember to open it."
-              : "Install PRform and turn on notifications for your evening check-in and morning verdict, so you don't have to remember to open it."}
+              ? "Add PRform to your home screen and it can send your evening check-in and morning verdict."
+              : "Install PRform and turn on notifications for your evening check-in and morning verdict."}
           </p>
         </div>
         <div className="flex items-center gap-3 shrink-0">

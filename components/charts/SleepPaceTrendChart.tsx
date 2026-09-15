@@ -72,11 +72,11 @@ export function SleepPaceTrendChart({ trend, onAddPr, hasPaces = true, windowDay
         <p className="font-black uppercase leading-tight text-[clamp(18px,5vw,24px)] max-w-[22ch]">
           {trendCountdownCopy(trend)}
         </p>
-        <p className="mt-3 text-xs font-mono text-[#6B6B6B] dark:text-[#A0A0A0] leading-relaxed max-w-[52ch]">
-          {hasPaces
-            ? "Then you'll see whether sleeping more actually moves your paces."
-            : "Pace compliance needs a pace to measure against."}
-        </p>
+        {!hasPaces && (
+          <p className="mt-3 text-xs font-mono text-[#6B6B6B] dark:text-[#A0A0A0] leading-relaxed max-w-[52ch]">
+            Pace compliance needs a pace to measure against.
+          </p>
+        )}
         {!hasPaces && onAddPr && (
           <button
             onClick={onAddPr}

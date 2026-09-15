@@ -6,10 +6,11 @@
 //    checks every route actually follows it.
 //
 // 2. A source scan of every route under app/api/teams: any file handling a
-//    [teamId] segment must call assertOwnerOf or assertMemberOf, must contain a
-//    403 response, and no route may ever read a userId out of a request body —
-//    the session is the only identity, which is precisely what makes "an owner
-//    cannot enrol someone else" true at the API rather than the UI.
+//    [teamId] segment must call an owner-strength guard or assertMemberOf, must
+//    contain a 403 response, and no route may ever read a userId out of a
+//    request body. The session is the only identity, which is precisely what
+//    makes "an owner cannot enrol someone else" true at the API rather than
+//    the UI.
 //
 //    The two guards are not interchangeable and the scan does not treat them
 //    as such: a route may use the weaker member check only by naming itself in
@@ -62,10 +63,25 @@ function routeFiles(dir: string): string[] {
 }
 
 /**
+ * The guards that carry owner strength.
+ *
+ * assertCoachAccess (lib/entitlements.ts) is here because it *composes*
+ * assertOwnerOf: same ownership test, same indistinguishable refusal, plus the
+ * entitlement check and the consent filter. Treating it as weaker would push
+ * routes back onto the bare owner check to satisfy a scan, which is the
+ * opposite of what this file is for.
+ *
+ * Nothing else belongs in this list. A new name here has to be a guard that
+ * refuses everyone but the owner, and adding one is a review decision.
+ */
+const OWNER_GUARDS = ["assertOwnerOf", "assertCoachAccess"];
+const OWNER_GUARD_SOURCE = `(?:${OWNER_GUARDS.join("|")})\\s*\\(`;
+
+/**
  * Routes allowed to use the weaker member check instead of owner-only.
  *
  * Paths are relative and use forward slashes. A file appears here only when
- * every ACTIVE member of the team is genuinely entitled to what it returns —
+ * every ACTIVE member of the team is genuinely entitled to what it returns:
  * the consistency leaderboard, where the whole point is that the squad sees
  * each other's check-in rates. Anything that changes state, or that exposes
  * one athlete's sleep to another, stays owner-only and stays off this list.
@@ -100,9 +116,13 @@ describe("every /api/teams route enforces authorization", () => {
     const source = readFileSync(file, "utf8");
     const isTeamScoped = /\[teamId\]/.test(rel);
     const memberScoped = MEMBER_SCOPED_ROUTES.has(posixRel);
-    const guardName = memberScoped ? "assertMemberOf" : "assertOwnerOf";
-    const guardPattern = memberScoped ? /assertMemberOf\s*\(/ : /assertOwnerOf\s*\(/;
-    const guardPatternGlobal = memberScoped ? /assertMemberOf\s*\(/g : /assertOwnerOf\s*\(/g;
+    const guardName = memberScoped ? "assertMemberOf" : OWNER_GUARDS.join(" or ");
+    const guardPattern = memberScoped
+      ? /assertMemberOf\s*\(/
+      : new RegExp(OWNER_GUARD_SOURCE);
+    const guardPatternGlobal = memberScoped
+      ? /assertMemberOf\s*\(/g
+      : new RegExp(OWNER_GUARD_SOURCE, "g");
 
     if (isTeamScoped) {
       it(`${rel} calls ${guardName} and returns 403 on refusal`, () => {

@@ -37,6 +37,12 @@ export default function StravaPage() {
     if (status === "unauthenticated") router.push("/login");
   }, [status, router]);
 
+  // The page does not exist for an athlete Strava sync is not available to.
+  // Not an explanation, not a disabled state: they are sent back to the app.
+  useEffect(() => {
+    if (statusData && statusData.eligible === false) router.replace("/dashboard");
+  }, [statusData, router]);
+
   const loadStatus = () => {
     if (status !== "authenticated") return;
     fetch("/api/strava/status")
@@ -97,9 +103,7 @@ export default function StravaPage() {
 
       <section className="bg-[#0A0A0A] text-white px-6 py-10 border-b border-[#222]">
         <div className="max-w-[1200px] mx-auto">
-          <p className="text-xs font-bold uppercase tracking-[0.3em] text-[#6B6B6B] mb-2">Integrations</p>
           <h1 className="font-black text-4xl md:text-5xl uppercase leading-none">Strava Connection</h1>
-          <p className="text-[#6B6B6B] text-sm mt-3 font-mono">Sync your runs to unlock performance analysis.</p>
         </div>
       </section>
 
@@ -114,8 +118,8 @@ export default function StravaPage() {
       {connectionError && (
         <div className="bg-[#0A0A0A] px-6 py-3">
           <p className="max-w-[1200px] mx-auto text-xs font-bold uppercase tracking-wider text-white">
-            {connectionError === "athlete_cap"
-              ? "Strava sync is full right now. You're set up without it, and we'll connect you as soon as a slot opens."
+            {connectionError === "unavailable"
+              ? "Strava sync is not available on this account right now."
               : "The Strava connection didn't complete. Please try again."}
           </p>
         </div>
@@ -125,10 +129,7 @@ export default function StravaPage() {
         {!connected ? (
           <FadeUp>
             <div className="border border-[#E5E5E5] dark:border-[#333] p-10 flex flex-col items-center text-center max-w-lg mx-auto">
-              <h2 className="font-black text-2xl uppercase mb-3">Connect Strava</h2>
-              <p className="text-sm text-[#6B6B6B] dark:text-[#A0A0A0] mb-8">
-                Link your Strava account to sync your runs and unlock the performance analysis engine.
-              </p>
+              <h2 className="font-black text-2xl uppercase mb-8">Connect Strava</h2>
               <a href="/api/strava/connect">
                 <img
                   src="/strava/btn_strava_connect.png"

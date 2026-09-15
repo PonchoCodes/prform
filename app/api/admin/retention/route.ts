@@ -1,7 +1,6 @@
 import { NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { requireAdmin } from "@/lib/admin";
 import { todayKey } from "@/lib/dateKeys";
 import {
   buildCohorts,
@@ -13,7 +12,7 @@ import {
 
 // Retention, computed here and nowhere else.
 //
-// Same admin gate as /api/admin/waitlist: the ADMIN_EMAIL on the session, and
+// The shared admin gate (lib/admin.ts): the ADMIN_EMAIL on the session, and
 // nothing else gets in. This endpoint returns behavioural data about every
 // account on the platform, most of them minors', so it is the single most
 // sensitive route in the app and the guard is the first thing in the handler.
@@ -34,15 +33,6 @@ export const dynamic = "force-dynamic";
 
 /** How many weeks of the active series to return. */
 const ACTIVE_WEEKS = 12;
-
-async function requireAdmin(): Promise<NextResponse | null> {
-  const session = await getServerSession(authOptions);
-  const adminEmail = process.env.ADMIN_EMAIL;
-  if (!adminEmail || session?.user?.email !== adminEmail) {
-    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-  }
-  return null;
-}
 
 export async function GET() {
   const forbidden = await requireAdmin();

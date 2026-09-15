@@ -3,7 +3,7 @@ import {
   SITE_NAME,
   SITE_TAGLINE,
   SITE_URL,
-  SUBSCRIPTION_PRICE_USD,
+  ATHLETE_PRICE_USD,
   absoluteUrl,
 } from "@/lib/seo";
 
@@ -11,9 +11,9 @@ import {
  * JSON-LD for the landing page: Organization + WebSite + SoftwareApplication
  * in one @graph so the three nodes reference each other by @id.
  *
- * Everything asserted here has to be true on the page. The price and trial
- * length mirror /subscribe; there is no aggregateRating because there are no
- * published reviews to back one.
+ * Everything asserted here has to be true on the page. An athlete account is
+ * free, which is what the offer below says; there is no aggregateRating because
+ * there are no published reviews to back one.
  */
 export function homePageJsonLd() {
   return {
@@ -24,9 +24,28 @@ export function homePageJsonLd() {
         "@id": `${SITE_URL}/#organization`,
         name: SITE_NAME,
         url: SITE_URL,
+        // Profiles that verifiably belong to this project. A sameAs pointing at
+        // a page that doesn't exist is a false assertion about identity, which
+        // is the one thing entity resolution can't recover from: so a profile
+        // goes in here only once it's live and public.
+        sameAs: ["https://github.com/PonchoCodes/prform"],
         logo: absoluteUrl("/apple-icon"),
         slogan: SITE_TAGLINE,
         description: SITE_DESCRIPTION,
+        founder: { "@id": `${SITE_URL}/#founder` },
+      },
+      {
+        // The founder's own profiles, deliberately not folded into the
+        // Organization's sameAs above: that array identifies the project, this
+        // one identifies a person, and merging them would assert to a crawler
+        // that the human and the software are the same entity.
+        "@type": "Person",
+        "@id": `${SITE_URL}/#founder`,
+        name: "Alfonso Gonzalez-Cano",
+        sameAs: [
+          "https://www.linkedin.com/in/alfonso-gonzalez-cano-0755832a1/",
+          "https://github.com/PonchoCodes",
+        ],
       },
       {
         "@type": "WebSite",
@@ -57,23 +76,14 @@ export function homePageJsonLd() {
           "Time-stamped 3-hour wind-down countdown",
           "Per-race taper curves for A, B, and C priority meets",
           "VDOT-based training paces and sleep-pace correlation tracking",
-          "Strava auto-sync",
+          "Team rosters with a weekly check-in leaderboard",
         ],
         offers: {
           "@type": "Offer",
-          price: SUBSCRIPTION_PRICE_USD,
+          price: ATHLETE_PRICE_USD,
           priceCurrency: "USD",
-          category: "subscription",
-          priceSpecification: {
-            "@type": "UnitPriceSpecification",
-            price: SUBSCRIPTION_PRICE_USD,
-            priceCurrency: "USD",
-            referenceQuantity: {
-              "@type": "QuantitativeValue",
-              value: 1,
-              unitCode: "MON",
-            },
-          },
+          category: "free",
+          availability: "https://schema.org/InStock",
         },
       },
     ],

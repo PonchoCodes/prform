@@ -25,7 +25,7 @@ export default function robots(): MetadataRoute.Robots {
           "/schedule",
           "/sleep",
           "/strava",
-          "/subscribe",
+          "/team",
         ],
       },
     ],

@@ -48,6 +48,7 @@ export async function GET() {
       userMaxHR: true,
       userThresholdHR: true,
       stravaConnected: true,
+      stravaEligible: true,
       prTimeSeconds: true,
       prRecency: true,
       prSetOn: true,
@@ -286,6 +287,9 @@ export async function GET() {
       sleepDebtMinutes,
       nightsLogged: debtLogs.length,
       stravaConnected: user.stravaConnected,
+      // Whether any Strava affordance renders at all, on the dashboard and in
+      // the verdict. See lib/stravaAccess.ts.
+      stravaEligible: user.stravaEligible,
     },
   });
 }

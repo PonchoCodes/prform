@@ -22,7 +22,7 @@ export async function POST(req: Request) {
   // bad PR would silently poison every prescribed pace.
   const declaredPr = buildDeclaredPrUpdate(prDistanceId, prTimeSeconds, prRecency);
 
-  const updatedUser = await prisma.user.update({
+  await prisma.user.update({
     where: { id: userId },
     data: {
       age,
@@ -42,7 +42,6 @@ export async function POST(req: Request) {
       ...(goalRaceDistanceId && prDistanceById(goalRaceDistanceId) ? { goalRaceDistanceId } : {}),
       ...declaredPr,
     },
-    select: { earlyAccessUser: true },
   });
 
   await prisma.workout.deleteMany({ where: { userId, isTemplate: true } });
@@ -76,5 +75,5 @@ export async function POST(req: Request) {
     });
   }
 
-  return NextResponse.json({ ok: true, earlyAccessUser: updatedUser.earlyAccessUser });
+  return NextResponse.json({ ok: true });
 }

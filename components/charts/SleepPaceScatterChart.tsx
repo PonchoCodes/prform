@@ -65,15 +65,11 @@ export function SleepPaceScatterChart({ data, correlation, unit = "imperial" }: 
 
   return (
     <div>
-      {/* HOW THIS WORKS explainer */}
+      {/* Axis legend. A scatter plot cannot label its own dots. */}
       <div className="border border-[#E5E5E5] dark:border-[#333] p-4 mb-6 bg-[#FAFAFA] dark:bg-[#1a1a1a]">
-        <p className="text-[10px] font-bold uppercase tracking-[0.3em] text-[#6B6B6B] mb-2">How This Works</p>
         <p className="text-xs font-mono text-[#6B6B6B] leading-relaxed">
-          PRform calculates a target bedtime each day based on your training load and sleep need.
-          Each dot is one of your runs. The X axis shows how far your estimated bedtime was from
-          that day&apos;s PRform target. Left is late, right is early.
-          The Y axis is your pace score (z-score vs. your average).
-          The yellow line is the trend.{" "}
+          X axis: bedtime against target. Left is late, right is early. Y axis: pace score
+          (z-score vs. your average). The yellow line is the trend.{" "}
           {confirmedCount > 0 && (
             <>Solid dots use your confirmed sleep times from your log ({confirmedCount} nights). Open dots use an estimate.</>
           )}

@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { assertOwnerOf } from "@/lib/team/guard";
+import { assertCoachAccess } from "@/lib/entitlements";
 import { deriveAthleteStatus } from "@/lib/team/status";
 
 // The team dashboard's data: an exception list, not a roster table.
@@ -13,6 +13,11 @@ import { deriveAthleteStatus } from "@/lib/team/status";
 // die here. No bedtime, wake time, hours value, pace, or message can appear
 // in the response shape, and there is no sort order or score to compare
 // athletes against each other.
+//
+// The guard is assertCoachAccess, which composes assertOwnerOf with the
+// entitlement resolver and the consent filter. Per-athlete status is the paid
+// half of the team product, so a free team gets 402 here and keeps its
+// leaderboard; a lapsed team gets the same answer and keeps every member.
 
 const STATUS_WINDOW_DAYS = 7;
 
@@ -21,21 +26,26 @@ export async function GET(_req: Request, { params }: { params: { teamId: string 
   if (!session?.user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   const userId = (session.user as any).id as string;
 
-  const team = await assertOwnerOf(params.teamId, userId);
-  if (!team) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-
   // An owner who also joined their own team appears here like anyone else.
   // That is their own readiness in their own list — no new disclosure — and
   // omitting it would give a captain a roster count that never matches the
   // number of people actually on the team.
-  const memberships = await prisma.teamMembership.findMany({
-    where: { teamId: team.id, status: "ACTIVE" },
-    select: {
-      userId: true,
-      user: { select: { name: true } },
-    },
-    orderBy: { joinedAt: "asc" },
-  });
+  const access = await assertCoachAccess(params.teamId, userId);
+  if (!access.ok && access.reason === "not_owner") {
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  }
+  if (!access.ok) {
+    return NextResponse.json(
+      {
+        error: "Per-athlete status is part of the team plan.",
+        code: "UPGRADE_REQUIRED",
+        source: access.entitlement.source,
+      },
+      { status: 402 },
+    );
+  }
+
+  const { team, athletes: memberships } = access;
 
   const windowStart = new Date();
   windowStart.setHours(0, 0, 0, 0);
@@ -85,7 +95,7 @@ export async function GET(_req: Request, { params }: { params: { teamId: string 
       continue;
     }
     exceptions.push({
-      name: member.user.name ?? "Unnamed athlete",
+      name: member.name,
       color: status.color as "amber" | "red",
       trend: status.trend,
       recommendation: status.recommendation,

@@ -3,6 +3,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { generateJoinCode, joinCodeExpiry } from "@/lib/team/joinCode";
+import { resolveEntitlement } from "@/lib/entitlements";
 
 // Teams: create one (becoming its owner), and list where you stand.
 //
@@ -36,6 +37,14 @@ export async function GET() {
         season: true,
         joinCode: true,
         joinCodeExpiresAt: true,
+        // Resolved below with the pure resolver rather than reported raw. What
+        // is stored on the row and what the team is actually entitled to are
+        // different questions (lib/entitlements.ts), and only the second one
+        // may reach a screen.
+        entitlementSource: true,
+        entitlementExpiresAt: true,
+        seatLimit: true,
+        subscriptionStatus: true,
         _count: { select: { memberships: { where: { status: "ACTIVE" } } } },
       },
       orderBy: { createdAt: "asc" },
@@ -67,6 +76,16 @@ export async function GET() {
       joinCode: t.joinCode,
       joinCodeExpiresAt: t.joinCodeExpiresAt,
       athleteCount: t._count.memberships,
+      entitlement: (() => {
+        const e = resolveEntitlement(t);
+        return {
+          source: e.source,
+          active: e.active,
+          seatLimit: e.seatLimit,
+          expiresAt: e.expiresAt,
+          features: e.features,
+        };
+      })(),
     })),
     memberships: memberships.map((m) => ({
       id: m.id,

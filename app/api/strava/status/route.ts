@@ -16,9 +16,26 @@ export async function GET() {
       stravaConnected: true,
       stravaAthleteId: true,
       lastStravaSyncAt: true,
+      stravaEligible: true,
+      stravaInterest: true,
       name: true,
     },
   });
+
+  // Eligibility is the first thing every Strava surface asks about, and the
+  // answer for most accounts is no. Return it before doing any of the work
+  // below: an athlete who cannot connect has nothing to show and no reason to
+  // cost three queries and a webhook check on every dashboard load.
+  const eligible = (user?.stravaEligible ?? false) || (user?.stravaConnected ?? false);
+  if (!eligible) {
+    return NextResponse.json({
+      eligible: false,
+      connected: false,
+      interest: user?.stravaInterest ?? false,
+      totalRuns: 0,
+      recentActivities: [],
+    });
+  }
 
   const totalRuns = await prisma.stravaActivity.count({ where: { userId } });
 
@@ -51,6 +68,8 @@ export async function GET() {
   });
 
   return NextResponse.json({
+    eligible: true,
+    interest: user?.stravaInterest ?? false,
     connected: user?.stravaConnected ?? false,
     athleteName: user?.name ?? null,
     totalRuns,

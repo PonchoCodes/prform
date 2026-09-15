@@ -106,7 +106,7 @@ export function WindDownTimeline({ windDown }: WindDownTimelineProps) {
                       : "text-[#6B6B6B] dark:text-[#A0A0A0]"
                   }`}
                 >
-                  {status === "now" ? "● NOW" : status === "done" ? "✓ DONE" : "UPCOMING"}
+                  {status === "now" ? "● NOW" : status === "done" ? "✓ DONE" : ""}
                 </span>
                 <span
                   className={`font-mono text-sm font-bold ${

@@ -70,9 +70,6 @@ export function PushEnrollment({ compact = false }: { compact?: boolean }) {
   if (push.availability.state === "needs_install") {
     return (
       <div className="border-2 border-[#0A0A0A] dark:border-[#F5F5F5] p-5">
-        <p className="text-xs font-bold uppercase tracking-[0.3em] text-[#6B6B6B] dark:text-[#A0A0A0] mb-2">
-          One step first
-        </p>
         <h3 className="font-black text-lg uppercase mb-2">
           {push.instructions?.headline ?? "Add PRform to your home screen"}
         </h3>
@@ -126,9 +123,6 @@ export function PushEnrollment({ compact = false }: { compact?: boolean }) {
   // ── Ready to ask ──────────────────────────────────────────────────────────
   return (
     <div className="border border-[#E5E5E5] dark:border-[#333] p-5">
-      <p className="text-xs font-bold uppercase tracking-[0.3em] text-[#6B6B6B] dark:text-[#A0A0A0] mb-2">
-        Notifications
-      </p>
       {!compact && (
         <h3 className="font-black text-lg uppercase mb-2">Two taps a day, no tabs</h3>
       )}

@@ -93,11 +93,8 @@ export function ChannelPreference() {
 
   return (
     <div className="border border-[#E5E5E5] dark:border-[#333] p-5">
-      <p className="text-xs font-bold uppercase tracking-[0.3em] text-[#6B6B6B] dark:text-[#A0A0A0] mb-2">
-        How PRform reaches you
-      </p>
       <p className="text-sm font-mono text-[#6B6B6B] dark:text-[#A0A0A0] mb-5">
-        Your evening check-in and morning verdict. Automatic picks whichever you have set up.
+        Automatic picks whichever you have set up.
       </p>
 
       <div className="grid grid-cols-2 gap-px bg-[#E5E5E5] dark:bg-[#333] border border-[#E5E5E5] dark:border-[#333]">

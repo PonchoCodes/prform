@@ -328,7 +328,6 @@ export default function MeetsPage() {
         <section className="bg-[#0A0A0A] px-6 py-10">
           <div className="max-w-[1200px] mx-auto flex items-end justify-between">
             <div>
-              <p className="text-xs font-bold uppercase tracking-[0.3em] text-[#6B6B6B] mb-2">Race Calendar</p>
               <h1 className="font-black text-4xl uppercase text-white">Meets</h1>
             </div>
             <Button variant="primary" size="sm" onClick={openAdd}>+ Add Meet</Button>

@@ -246,11 +246,7 @@ export default function SchedulePage() {
       <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.3 }}>
         <section className="bg-[#0A0A0A] px-6 py-10">
           <div className="max-w-[1200px] mx-auto">
-            <p className="text-xs font-bold uppercase tracking-[0.3em] text-[#6B6B6B] mb-2">Training</p>
             <h1 className="font-black text-4xl uppercase text-white">Schedule</h1>
-            <p className="text-[#6B6B6B] text-xs font-mono mt-2">
-              Strava syncs automatically · Add planned workouts to optimize your sleep targets
-            </p>
           </div>
         </section>
 
@@ -508,9 +504,7 @@ export default function SchedulePage() {
 
               {pastWorkouts.length === 0 ? (
                 <p className="text-[#6B6B6B] dark:text-[#A0A0A0] text-sm py-8 text-center border border-dashed border-[#E5E5E5] dark:border-[#333]">
-                  No past activities found. Log one above{" "}
-                  <span className="text-[#6B6B6B] dark:text-[#A0A0A0]">or</span>{" "}
-                  <a href="/strava" className="font-bold text-[#0A0A0A] dark:text-[#F5F5F5]">sync Strava →</a>
+                  No past activities found. Log one above.
                 </p>
               ) : (
                 <div className="space-y-px bg-[#E5E5E5] dark:bg-[#333]">

@@ -70,19 +70,8 @@ function para(text: string): string {
 
 const CTA_LABEL = "Connect Strava";
 
-export function approvalEmail(name?: string | null): { subject: string; html: string } {
-  const href = stravaDeepLink();
-  const greeting = name ? `${name}, you` : "You";
-  const html = layout(
-    heading("You're in") +
-      para(`${greeting}'re approved for PRform early access.`) +
-      para(
-        `Connect Strava so your training load drives your sleep plan tonight. Without it your plan stays generic. With it, every hard session shifts your bedtime automatically.`
-      ) +
-      ctaButton(href, CTA_LABEL)
-  );
-  return { subject: "You're in. Connect Strava to start", html };
-}
+// The approval email is gone with the approval flow. Nobody is approved for
+// anything: an account works the moment it is created.
 
 export function reminder1Email(name?: string | null): { subject: string; html: string } {
   const href = stravaDeepLink();

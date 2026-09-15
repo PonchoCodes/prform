@@ -3,10 +3,15 @@ import { prisma } from "@/lib/prisma";
 import { sendEmail } from "@/lib/email";
 import { reminder1Email, reminder2Email } from "@/lib/emailTemplates";
 
-// Daily cron (see vercel.json) that nudges approved users who never connected
-// Strava. Two reminders max, ever:
+// Daily cron (see vercel.json) that nudges athletes who CAN connect Strava and
+// have not. Two reminders max, ever:
 //   Reminder 1 — approvedAt older than 48h, reminder 1 not yet sent
 //   Reminder 2 — approvedAt older than 5 days, reminder 1 sent, reminder 2 not
+//
+// stravaEligible is in the candidate filter and is not optional. Eligibility is
+// assigned by hand, most accounts do not have it, and an email telling somebody
+// to connect something the app does not show them is the exact experience
+// Strava was de-emphasized to avoid.
 //
 // IMPORTANT: every email send is awaited before the handler returns. Vercel
 // serverless functions are killed once the response is sent, so any
@@ -37,6 +42,7 @@ export async function GET(req: NextRequest) {
   const candidates = await prisma.user.findMany({
     where: {
       approvedAt: { not: null },
+      stravaEligible: true,
       stravaConnected: false,
       stravaAccessToken: null,
       OR: [

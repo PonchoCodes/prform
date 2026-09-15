@@ -67,7 +67,6 @@ function LoginForm() {
           transition={{ duration: 0.4 }}
           className="w-full max-w-md mx-auto px-6 py-16"
         >
-          <p className="text-xs font-bold uppercase tracking-[0.3em] text-[#6B6B6B] dark:text-[#A0A0A0] mb-3">Welcome Back</p>
           <h1 className="font-black text-4xl uppercase mb-8 dark:text-[#F5F5F5]">Log In</h1>
 
           <div className="border border-[#E5E5E5] dark:border-[#333] p-4 mb-6 bg-[#F5F5F5] dark:bg-[#242424]">

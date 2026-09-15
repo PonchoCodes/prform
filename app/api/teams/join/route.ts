@@ -4,6 +4,7 @@ import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { cleanJoinCode, isWellFormedJoinCode } from "@/lib/team/joinCode";
 import { TEAM_CONSENT_TEXT } from "@/lib/team/consent";
+import { hasSeatForJoin, resolveTeamEntitlement } from "@/lib/entitlements";
 
 // The one and only way onto a roster: the athlete, on their own session,
 // with a valid code, past the consent screen.
@@ -60,6 +61,32 @@ export async function POST(req: Request) {
   // who is also a member has their readiness derived like anyone else's, and
   // the record of them agreeing to that should look identical to everyone
   // else's rather than being a special case nobody can audit.
+
+  // Seats are checked here and nowhere else. This is the ONLY moment a plan is
+  // allowed to say no to anybody: a team that outgrew its plan keeps everyone
+  // it already has, and an athlete on it is never removed, hidden or degraded
+  // because the coach's pilot ran out. See lib/entitlements.ts.
+  //
+  // Someone already ACTIVE is re-consenting, not joining, and is never counted
+  // against the limit their own row is part of.
+  const [entitlement, existing, activeCount] = await Promise.all([
+    resolveTeamEntitlement(team.id),
+    prisma.teamMembership.findUnique({
+      where: { teamId_userId: { teamId: team.id, userId } },
+      select: { status: true },
+    }),
+    prisma.teamMembership.count({ where: { teamId: team.id, status: "ACTIVE" } }),
+  ]);
+
+  if (!hasSeatForJoin(activeCount, entitlement.seatLimit, existing?.status === "ACTIVE")) {
+    return NextResponse.json(
+      {
+        error: "This team is full. Ask the person who runs it to make room.",
+        code: "TEAM_FULL",
+      },
+      { status: 409 },
+    );
+  }
 
   const now = new Date();
   const membership = await prisma.teamMembership.upsert({

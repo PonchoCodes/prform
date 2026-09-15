@@ -118,20 +118,27 @@ describe("toClientUser", () => {
     }
   });
 
-  it("keeps the six fields the dashboard actually reads", () => {
+  it("keeps the three fields the dashboard actually reads", () => {
     const result = toClientUser(FULL_USER_ROW);
     expect(result.prDistanceId).toBe("5k");
     expect(result.prPromptDismissedAt).toBeNull();
-    expect(result.subscriptionStatus).toBe("trialing");
-    expect(result.trialEndsAt).toEqual(FULL_USER_ROW.trialEndsAt);
-    expect(result.earlyAccessUser).toBe(true);
     expect(result.unitPreference).toBe("metric");
+  });
+
+  it("drops the athlete billing fields nothing gates on any more", () => {
+    // The columns still exist on User and are deliberately unused. Shipping
+    // them to the browser would invite a client-side check that reads like a
+    // paywall on a product that no longer has one for athletes.
+    const result = toClientUser(FULL_USER_ROW) as unknown as Record<string, unknown>;
+    for (const key of ["subscriptionStatus", "trialEndsAt", "earlyAccessUser"]) {
+      expect(result[key]).toBeUndefined();
+    }
   });
 
   it("defaults sensibly for a sparse row", () => {
     const result = toClientUser({});
     expect(result.prDistanceId).toBeNull();
-    expect(result.earlyAccessUser).toBe(false);
+    expect(result.prPromptDismissedAt).toBeNull();
     expect(result.unitPreference).toBe("imperial");
   });
 
