@@ -7,6 +7,11 @@ import { getWorkoutsForDateRange } from "@/lib/workoutDataSource";
 // GET /api/workouts/planned
 // Returns the 14-day normalized workout window (past + future) with source metadata.
 // Used by the Schedule page PLANNED tab and any UI that needs the unified workout feed.
+//
+// The "assumed" filler that getWorkoutsForDateRange pads future days with is
+// dropped here. It exists so the sleep algorithm has a load to plan against,
+// but on the Schedule page it reads as a workout the athlete never added and
+// hides the empty state that should be asking them to add one.
 export async function GET() {
   const session = await getServerSession(authOptions);
   if (!session?.user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -23,7 +28,10 @@ export async function GET() {
 
   const { workouts, conflicts } = await getWorkoutsForDateRange(userId, startDate, endDate);
 
-  return NextResponse.json({ workouts, conflicts });
+  return NextResponse.json({
+    workouts: workouts.filter((w) => w.source !== "assumed"),
+    conflicts,
+  });
 }
 
 // POST /api/workouts/planned — add a planned future workout

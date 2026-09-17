@@ -151,22 +151,21 @@ export function PWAInstallPrompt({
           className="bg-white dark:bg-[#242424] border border-[#E5E5E5] dark:border-[#333] max-w-[480px] w-full sm:mx-4 max-h-[90vh] overflow-y-auto"
           onClick={(e) => e.stopPropagation()}
         >
-          <div className="flex justify-end px-6 py-4 border-b border-[#E5E5E5] dark:border-[#333]">
-            <button
-              type="button"
-              onClick={close}
-              aria-label="Close"
-              className="w-8 h-8 shrink-0 flex items-center justify-center border border-[#E5E5E5] dark:border-[#333] text-[#6B6B6B] dark:text-[#A0A0A0] hover:border-[#0A0A0A] dark:hover:border-[#F5F5F5] transition-colors font-bold focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#E8FF00]"
-            >
-              ×
-            </button>
-          </div>
-
           <div className="px-6 py-5 border-b border-[#E5E5E5] dark:border-[#333]">
-            <h3 id="pwa-prompt-title" className="font-black text-xl uppercase leading-tight mb-3">
-              Your bedtime tonight is{" "}
-              <span className="font-mono">{formatTime12h(bedtime)}</span>
-            </h3>
+            <div className="flex items-start justify-between gap-4 mb-3">
+              <h3 id="pwa-prompt-title" className="font-black text-xl uppercase leading-tight">
+                Your bedtime tonight is{" "}
+                <span className="font-mono">{formatTime12h(bedtime)}</span>
+              </h3>
+              <button
+                type="button"
+                onClick={close}
+                aria-label="Close"
+                className="w-8 h-8 shrink-0 flex items-center justify-center border border-[#E5E5E5] dark:border-[#333] text-[#6B6B6B] dark:text-[#A0A0A0] hover:border-[#0A0A0A] dark:hover:border-[#F5F5F5] transition-colors font-bold focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#E8FF00]"
+              >
+                ×
+              </button>
+            </div>
             <p className="text-sm leading-6 text-[#6B6B6B] dark:text-[#A0A0A0]">
               {reminder
                 ? `Add PRform to your home screen and it will remind you at ${formatTime12h(reminder)}.`

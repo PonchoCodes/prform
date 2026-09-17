@@ -9,7 +9,9 @@ import { Button } from "@/components/Button";
 import { Footer } from "@/components/Footer";
 
 type WorkoutType = "easy" | "moderate" | "tempo" | "long_run" | "track" | "race" | "rest" | "cross_train";
-type WorkoutSource = "strava" | "manual" | "team" | "assumed";
+// "assumed" (the load-estimated filler) is filtered out by /api/workouts/planned
+// and never reaches this page.
+type WorkoutSource = "strava" | "manual" | "team";
 
 type WorkoutQuality = "NAILED_IT" | "FINE" | "ROUGH";
 
@@ -74,7 +76,6 @@ function SourceDot({ source }: { source: WorkoutSource }) {
     strava: "bg-[#FC4C02]",
     manual: "bg-[#0A0A0A]",
     team: "bg-[#E8FF00]",
-    assumed: "bg-[#E5E5E5]",
   };
   return <span className={`inline-block w-2 h-2 mr-1.5 ${colors[source]}`} />;
 }
@@ -355,9 +356,14 @@ export default function SchedulePage() {
               )}
 
               {plannedWorkouts.length === 0 ? (
-                <p className="text-[#6B6B6B] dark:text-[#A0A0A0] text-sm py-8 text-center border border-dashed border-[#E5E5E5] dark:border-[#333]">
-                  No planned workouts yet. Add one above or connect Strava to sync upcoming runs.
-                </p>
+                !showAddForm && (
+                  <div className="text-center py-16 border border-dashed border-[#E5E5E5] dark:border-[#333]">
+                    <p className="text-[#6B6B6B] dark:text-[#A0A0A0] text-sm mb-4">No planned workouts yet.</p>
+                    <Button variant="secondary" size="sm" onClick={() => setShowAddForm(true)}>
+                      Add Your First Workout
+                    </Button>
+                  </div>
+                )
               ) : (
                 <div className="space-y-px bg-[#E5E5E5] dark:bg-[#333]">
                   {plannedWorkouts.map((w, i) => (
@@ -401,7 +407,7 @@ export default function SchedulePage() {
                             <div className="flex items-center gap-3">
                               <SourceDot source={w.source} />
                               <span className="text-[10px] font-mono uppercase text-[#6B6B6B]">
-                                {w.isTentative && w.source === "assumed" ? "est. from load" : w.source === "team" ? "team plan" : w.isTentative ? "planned" : w.source}
+                                {w.source === "team" ? "team plan" : w.isTentative ? "planned" : w.source}
                               </span>
                               {w.id && w.source === "manual" && (
                                 <button
@@ -585,7 +591,7 @@ export default function SchedulePage() {
               {/* Legend */}
               <div className="mt-6 flex items-center gap-6">
                 <p className="text-xs text-[#6B6B6B] dark:text-[#A0A0A0] uppercase tracking-wider">Source:</p>
-                {(["strava", "manual", "team", "assumed"] as WorkoutSource[]).map((s) => (
+                {(["strava", "manual", "team"] as WorkoutSource[]).map((s) => (
                   <div key={s} className="flex items-center gap-1.5">
                     <SourceDot source={s} />
                     <span className="text-xs font-mono text-[#6B6B6B] capitalize">{s}</span>
