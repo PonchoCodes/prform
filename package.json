@@ -15,6 +15,7 @@
     "push:keys": "node scripts/generateVapidKeys.mjs",
     "seed": "npx ts-node --project tsconfig.seed.json prisma/seed.ts",
     "seed:analysis": "npx ts-node --project tsconfig.seed.json scripts/seedAnalysis.ts",
+    "seed:teams": "npx ts-node --project tsconfig.seed.json scripts/seedTeams.ts",
     "postinstall": "prisma generate"
   },
   "prisma": {
