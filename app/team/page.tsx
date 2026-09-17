@@ -10,6 +10,7 @@ import { Button } from "@/components/Button";
 import { TEAM_CONSENT_TEXT } from "@/lib/team/consent";
 import { TeamMeetsPanel } from "@/components/team/TeamMeetsPanel";
 import { TeamTrendPanel } from "@/components/team/TeamTrendPanel";
+import { DigestSettings } from "@/components/team/DigestSettings";
 import { SessionForecastLine, type SessionForecastRow } from "@/components/team/SessionForecastLine";
 import { NudgeButton, NudgeAllButton, useNudges } from "@/components/team/Nudge";
 import { INPUT, REMOVE_BUTTON, formatDate } from "@/components/team/ui";
@@ -48,6 +49,8 @@ interface OwnedTeam {
   joinCode: string;
   joinCodeExpiresAt: string;
   athleteCount: number;
+  digestEnabled: boolean;
+  timezone: string;
 }
 
 interface Membership {
@@ -709,6 +712,13 @@ function OwnedTeamPanel({ team, onCodeRotated }: { team: OwnedTeam; onCodeRotate
       </div>
 
       <TeamTrendPanel teamId={team.id} needsPlan={needsPlan} />
+
+      <DigestSettings
+        teamId={team.id}
+        digestEnabled={team.digestEnabled}
+        timezone={team.timezone}
+        onSaved={onCodeRotated}
+      />
     </div>
   );
 }

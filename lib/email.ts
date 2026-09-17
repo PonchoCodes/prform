@@ -35,6 +35,12 @@ export interface SendEmailOptions {
    * 30 days ahead.
    */
   scheduledAt?: string;
+  /**
+   * Plain-text alternative. Clients that strip HTML show this instead of a
+   * blank message, and a multipart send reads as less like a campaign to
+   * spam filters than HTML alone.
+   */
+  text?: string;
 }
 
 export async function sendEmail(
@@ -59,6 +65,7 @@ export async function sendEmail(
       to,
       subject,
       html,
+      ...(opts?.text ? { text: opts.text } : {}),
       ...(opts?.scheduledAt ? { scheduledAt: opts.scheduledAt } : {}),
     });
     if (error) {

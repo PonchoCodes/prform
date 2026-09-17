@@ -42,6 +42,17 @@ export function isNudgeDryRun(): boolean {
 }
 
 /**
+ * The Monday coach digest: log the rendered email instead of handing it to
+ * Resend. Defaults to ON. Same shape as the two above; a third flag rather
+ * than a shared one because the digest is a weekly email to an adult and a
+ * nudge is a same-day text to a teenager, and the person turning one on
+ * should not have to turn the other on with it.
+ */
+export function isDigestDryRun(): boolean {
+  return envFlag("DIGEST_DRY_RUN", true);
+}
+
+/**
  * The global brake. When set, nothing goes out at all — not replies, not
  * verification codes, not the mandatory auto-replies.
  *

@@ -60,12 +60,47 @@ function layout(bodyHtml: string): string {
   </div>`;
 }
 
-function heading(text: string): string {
+export function heading(text: string): string {
   return `<h1 style="font-size:26px;font-weight:900;text-transform:uppercase;letter-spacing:-0.01em;margin:0 0 16px;color:${INK};">${text}</h1>`;
 }
 
-function para(text: string): string {
+export function para(text: string): string {
   return `<p style="font-size:15px;line-height:1.6;color:${INK};margin:0 0 16px;">${text}</p>`;
+}
+
+/** A section label, the email's version of the dashboard's eyebrow. */
+export function sectionLabel(text: string): string {
+  return `<p style="font-size:11px;font-weight:700;letter-spacing:0.3em;text-transform:uppercase;color:${GRAY};margin:28px 0 8px;">${text}</p>`;
+}
+
+export function escapeHtml(text: string): string {
+  return text
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;");
+}
+
+/**
+ * The frame without the Strava deep link: wordmark, body, one button, the
+ * footer line. For emails that are about something other than connecting
+ * Strava — the coach digest is the first.
+ */
+export function emailFrame(bodyHtml: string, cta?: { href: string; label: string }): string {
+  return `
+  <div style="background:#ffffff;padding:0;margin:0;font-family:Arial,Helvetica,sans-serif;color:${INK};">
+    <div style="max-width:520px;margin:0 auto;padding:40px 32px;">
+      <div style="font-size:22px;font-weight:900;letter-spacing:-0.02em;text-transform:uppercase;margin-bottom:32px;">
+        PR<span style="background:${INK};color:${ACCENT};padding:0 4px;">form</span>
+      </div>
+      ${bodyHtml}
+      ${cta ? ctaButton(cta.href, cta.label) : ""}
+      <hr style="border:none;border-top:1px solid #E5E5E5;margin:32px 0 16px;">
+      <p style="font-size:11px;color:${GRAY};letter-spacing:0.1em;text-transform:uppercase;">
+        PRform · Sleep optimization for competitive runners
+      </p>
+    </div>
+  </div>`;
 }
 
 const CTA_LABEL = "Connect Strava";

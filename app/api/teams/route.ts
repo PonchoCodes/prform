@@ -45,6 +45,8 @@ export async function GET() {
         entitlementExpiresAt: true,
         seatLimit: true,
         subscriptionStatus: true,
+        digestEnabled: true,
+        timezone: true,
         _count: { select: { memberships: { where: { status: "ACTIVE" } } } },
       },
       orderBy: { createdAt: "asc" },
@@ -76,6 +78,8 @@ export async function GET() {
       joinCode: t.joinCode,
       joinCodeExpiresAt: t.joinCodeExpiresAt,
       athleteCount: t._count.memberships,
+      digestEnabled: t.digestEnabled,
+      timezone: t.timezone,
       entitlement: (() => {
         const e = resolveEntitlement(t);
         return {

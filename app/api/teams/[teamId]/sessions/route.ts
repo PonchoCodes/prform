@@ -3,19 +3,13 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { assertOwnerOf } from "@/lib/team/guard";
-import { deriveAthleteStatus } from "@/lib/team/status";
-import { computeSleepDebtMinutes } from "@/lib/verdict";
-import { forecastSessions, type AthleteForForecast } from "@/lib/sessionForecast";
-import { addDays, toKey, toUtc, todayKey } from "@/lib/dateKeys";
+import { loadSessionForecasts } from "@/lib/team/coachView";
 
 // Planned sessions for a team. Owner only, every verb — athletes receive
 // these through the workout merge layer on their own plan, never from here.
 //
-// GET also returns a forecast per upcoming session (see forecastsFor below),
-// which is the one thing the table gives back to the person who filled it in.
-
-/** The trailing week the exception list scores; the forecast reads the same one. */
-const STATUS_WINDOW_DAYS = 7;
+// GET also returns a forecast per upcoming session, which is the one thing
+// the table gives back to the person who filled it in.
 
 const SESSION_TYPES = new Set([
   "easy",
@@ -59,85 +53,19 @@ export async function GET(_req: Request, { params }: { params: { teamId: string 
     },
   });
 
-  return NextResponse.json({ sessions, forecasts: await forecastsFor(team.id, sessions) });
-}
-
-/**
- * The forecast for each upcoming session: counts of athletes ready, marginal
- * and not ready, from the same week of sleep the exception list reads. Rows
- * are read here and die here; what leaves is the output of forecastSessions,
- * which lib/sessionForecast.test.ts holds to the coach copy guard. Counts
- * only, no names — a team aggregate, which is why it is on the free tier
- * behind assertOwnerOf rather than the paid per-athlete guard.
- */
-async function forecastsFor(
-  teamId: string,
-  sessions: { id: string; date: Date; sessionType: string }[],
-) {
-  const today = todayKey();
-  const todayStart = toUtc(today);
-  const weekStart = toUtc(addDays(today, -STATUS_WINDOW_DAYS));
-
-  const [members, meet] = await Promise.all([
-    prisma.teamMembership.findMany({
-      where: { teamId, status: "ACTIVE" },
-      select: { userId: true, consentAt: true },
-    }),
-    prisma.teamMeet.findFirst({
-      where: { teamId, date: { gte: todayStart } },
-      orderBy: { date: "asc" },
-      select: { date: true },
-    }),
-  ]);
-  // The consent rule, applied at the point of use as everywhere else.
-  const userIds = members.filter((m) => m.consentAt != null).map((m) => m.userId);
-
-  const logs = await prisma.sleepLog.findMany({
-    where: { userId: { in: userIds }, date: { gte: weekStart, lt: todayStart } },
-    select: {
-      userId: true,
-      date: true,
-      actualSleepHours: true,
-      targetSleepHours: true,
-      hitTarget: true,
-      recommendedBedtime: true,
-      actualBedtime: true,
-      needsReview: true,
-    },
-    orderBy: { date: "asc" },
+  // The one thing the table gives back. Counts only, no names: a team
+  // aggregate, which is why it stays on the free tier behind assertOwnerOf
+  // rather than the paid per-athlete guard. The roster read here applies the
+  // consent rule at the point of use, as everywhere else.
+  const members = await prisma.teamMembership.findMany({
+    where: { teamId: team.id, status: "ACTIVE" },
+    select: { id: true, userId: true, joinedAt: true, consentAt: true, user: { select: { name: true } } },
   });
+  const roster = members
+    .filter((m) => m.consentAt != null)
+    .map((m) => ({ userId: m.userId, membershipId: m.id, name: m.user.name ?? "", joinedAt: m.joinedAt }));
 
-  const byUser = new Map<string, typeof logs>();
-  for (const log of logs) {
-    const list = byUser.get(log.userId);
-    if (list) list.push(log);
-    else byUser.set(log.userId, [log]);
-  }
-
-  const athletes: AthleteForForecast[] = userIds.map((userId) => {
-    const rows = byUser.get(userId) ?? [];
-    const nights = rows.map((l) => ({
-      date: toKey(l.date),
-      actualSleepHours: l.actualSleepHours,
-      targetSleepHours: l.targetSleepHours,
-      needsReview: l.needsReview,
-    }));
-    return {
-      name: userId,
-      color: deriveAthleteStatus(nights, STATUS_WINDOW_DAYS).color,
-      // Same exclusion the verdict applies: a flagged night has no duration
-      // that can be trusted, and debt subtracts durations.
-      sleepDebtMinutes: computeSleepDebtMinutes(rows.filter((l) => !l.needsReview)),
-      nightsLogged: nights.filter((n) => !n.needsReview && n.actualSleepHours != null).length,
-    };
-  });
-
-  const forSessions = sessions.map((s) => ({ id: s.id, date: toKey(s.date), sessionType: s.sessionType }));
-  return forecastSessions(forSessions, athletes, {
-    today,
-    sessions: forSessions,
-    meetDate: meet ? toKey(meet.date) : null,
-  });
+  return NextResponse.json({ sessions, forecasts: await loadSessionForecasts(team.id, roster, sessions) });
 }
 
 export async function POST(req: Request, { params }: { params: { teamId: string } }) {

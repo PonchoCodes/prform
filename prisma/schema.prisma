@@ -638,6 +638,17 @@ model Team {
   stripeSubscriptionId String?
   subscriptionStatus   String?
 
+  // ── The Monday digest ──────────────────────────────────────────────────────
+  /// IANA zone the team keeps time in. The digest goes out at 06:00 Monday
+  /// here, not in UTC: a coach reads it on the way to Monday practice, and a
+  /// Sunday-night arrival is a different email.
+  timezone      String  @default("America/New_York")
+  digestEnabled Boolean @default(true)
+  /// The local Monday ("YYYY-MM-DD") the last digest was sent for. The cron
+  /// runs hourly and checks this so a team gets one digest a week whatever
+  /// the cron's jitter does.
+  digestLastSentOn String?
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 

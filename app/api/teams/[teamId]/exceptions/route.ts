@@ -1,25 +1,22 @@
 import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
-import { prisma } from "@/lib/prisma";
 import { assertCoachAccess } from "@/lib/entitlements";
-import { deriveAthleteStatus } from "@/lib/team/status";
+import { loadAttention } from "@/lib/team/coachView";
 
 // The team dashboard's data: an exception list, not a roster table.
 //
 // What leaves this endpoint per athlete is a name, a color, a counts-based
 // trend sentence, and a recommendation — the exact set the consent screen
-// promises, derived in lib/team/status.ts. Raw sleep rows are read here and
-// die here. No bedtime, wake time, hours value, pace, or message can appear
-// in the response shape, and there is no sort order or score to compare
-// athletes against each other.
+// promises, derived in lib/team/status.ts. Raw sleep rows are read inside
+// lib/team/coachView.ts and die there. No bedtime, wake time, hours value,
+// pace, or message can appear in the response shape, and there is no sort
+// order or score to compare athletes against each other.
 //
 // The guard is assertCoachAccess, which composes assertOwnerOf with the
 // entitlement resolver and the consent filter. Per-athlete status is the paid
 // half of the team product, so a free team gets 402 here and keeps its
 // leaderboard; a lapsed team gets the same answer and keeps every member.
-
-const STATUS_WINDOW_DAYS = 7;
 
 export async function GET(_req: Request, { params }: { params: { teamId: string } }) {
   const session = await getServerSession(authOptions);
@@ -45,78 +42,22 @@ export async function GET(_req: Request, { params }: { params: { teamId: string 
     );
   }
 
-  const { team, athletes: memberships } = access;
-
-  const windowStart = new Date();
-  windowStart.setHours(0, 0, 0, 0);
-  windowStart.setDate(windowStart.getDate() - STATUS_WINDOW_DAYS);
-
-  const logs = await prisma.sleepLog.findMany({
-    where: {
-      userId: { in: memberships.map((m) => m.userId) },
-      date: { gte: windowStart },
-    },
-    select: {
-      userId: true,
-      date: true,
-      actualSleepHours: true,
-      targetSleepHours: true,
-      needsReview: true,
-    },
-    orderBy: { date: "asc" },
-  });
-
-  const logsByUser = new Map<string, typeof logs>();
-  for (const log of logs) {
-    const list = logsByUser.get(log.userId);
-    if (list) list.push(log);
-    else logsByUser.set(log.userId, [log]);
-  }
-
-  let green = 0;
-  const exceptions: Array<{
-    /**
-     * The handle a Nudge request carries back. A membership id rather than
-     * the athlete's user id: it is scoped to this team by construction, and
-     * the nudge route resolves it against the roster again before acting.
-     */
-    membershipId: string;
-    name: string;
-    color: "amber" | "red";
-    trend: string;
-    recommendation: string;
-  }> = [];
-
-  for (const member of memberships) {
-    const nights = (logsByUser.get(member.userId) ?? []).map((l) => ({
-      date: new Date(l.date).toISOString().slice(0, 10),
-      actualSleepHours: l.actualSleepHours,
-      targetSleepHours: l.targetSleepHours,
-      needsReview: l.needsReview,
-    }));
-    const status = deriveAthleteStatus(nights, STATUS_WINDOW_DAYS);
-
-    if (!status.flagged) {
-      green++;
-      continue;
-    }
-    exceptions.push({
-      membershipId: member.membershipId,
-      name: member.name,
-      color: status.color as "amber" | "red",
-      trend: status.trend,
-      recommendation: status.recommendation,
-    });
-  }
-
-  // Red before amber so the top of the list is the athlete to talk to first.
-  // Within a color, roster (join) order — deliberately nothing performance-ish.
-  exceptions.sort((a, b) => (a.color === b.color ? 0 : a.color === "red" ? -1 : 1));
+  const attention = await loadAttention(access.athletes);
 
   return NextResponse.json({
-    teamName: team.name,
-    rosterSize: memberships.length,
-    onTrack: green,
-    exceptions,
+    teamName: access.team.name,
+    rosterSize: attention.rosterSize,
+    onTrack: attention.onTrack,
+    // Red before amber so the top of the list is the athlete to talk to
+    // first. The membership id is the handle a Nudge carries back: scoped to
+    // this team by construction, and resolved against the roster again
+    // before the nudge route acts on it.
+    exceptions: attention.exceptions.map((e) => ({
+      membershipId: e.membershipId,
+      name: e.name,
+      color: e.color as "amber" | "red",
+      trend: e.trend,
+      recommendation: e.recommendation,
+    })),
   });
 }
