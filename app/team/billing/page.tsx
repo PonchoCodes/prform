@@ -258,8 +258,8 @@ function BillingInner() {
             Pilot Code
           </p>
           <p className="text-sm text-[#6B6B6B] dark:text-[#A0A0A0] mb-4">
-            If we gave you a code, enter it here. It unlocks the full team plan through July 31,
-            2027 and locks your renewal at {formatUsd(TIERS.TEAM.lockedCents)} a year.
+            A pilot code unlocks the full team plan through July 31, 2027 and locks your
+            renewal at {formatUsd(TIERS.TEAM.lockedCents)} a year.
           </p>
           <form onSubmit={redeemPilot} className="flex flex-col sm:flex-row gap-2">
             <input

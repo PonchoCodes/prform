@@ -42,7 +42,7 @@ export function InstallNotice() {
     return (
       <FadeUp>
         <div className="mb-6">
-          <PushEnrollment compact />
+          <PushEnrollment />
           <button
             type="button"
             onClick={() => {

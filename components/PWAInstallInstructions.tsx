@@ -214,10 +214,7 @@ export function PWAInstallInstructions({ variant, onInstalled }: PWAInstallInstr
   if (context.platform === "android" && canPromptNatively) {
     return (
       <div className={container}>
-        <p className={`${LABEL} mb-2`}>Add to home screen</p>
-        <p className={`${BODY} mb-4`}>
-          PRform installs like any other app and opens from your home screen.
-        </p>
+        <p className={`${LABEL} mb-4`}>Add to home screen</p>
         <Button
           variant="primary"
           size="md"
@@ -270,7 +267,7 @@ export function PWAInstallInstructions({ variant, onInstalled }: PWAInstallInstr
     <div className={container}>
       <p className={`${LABEL} mb-2`}>On your phone</p>
       <p className={BODY}>
-        PRform is built for a phone. Open{" "}
+        Open{" "}
         <a
           href="https://prform.app"
           className="underline underline-offset-2 hover:text-[#6B6B6B] dark:hover:text-[#A0A0A0]"

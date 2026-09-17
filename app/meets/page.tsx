@@ -405,7 +405,6 @@ export default function MeetsPage() {
                       onChange={(e) => setForm({ ...form, personalBest: e.target.value })}
                       className="w-full border border-[#E5E5E5] dark:border-[#444] px-4 py-3 text-sm font-mono focus:outline-none focus:border-[#0A0A0A] bg-white dark:bg-[#2a2a2a] dark:text-[#F5F5F5]"
                     />
-                    <p className="text-[10px] text-[#6B6B6B] mt-1">Your all-time best</p>
                   </div>
                   <div>
                     <label className="block text-xs font-bold uppercase tracking-[0.3em] text-[#6B6B6B] mb-1">Recent Best</label>
@@ -583,17 +582,13 @@ export default function MeetsPage() {
                                 </LineChart>
                               </ResponsiveContainer>
                             </div>
-                            <p className="text-xs text-[#6B6B6B] mt-3">
-                              Bedtime shifts earlier each phase to prime your circadian rhythm for peak output on race day.
-                            </p>
 
                             {/* Performance Prediction */}
                             {hasPrediction ? (
                               <MeetPredictionBlock prediction={prediction} />
                             ) : hasEventData && !hasRefTime ? (
                               <div className="mt-6">
-                                <p className="text-xs font-bold uppercase tracking-[0.3em] text-[#6B6B6B] mb-2">Performance Prediction</p>
-                                <p className="text-xs text-[#6B6B6B] font-mono mb-3">Add your PR or season best to unlock your prediction.</p>
+                                <p className="text-xs font-bold uppercase tracking-[0.3em] text-[#6B6B6B] mb-3">Performance Prediction</p>
                                 <button
                                   onClick={(e) => { e.stopPropagation(); openEdit(m); }}
                                   className="text-xs font-bold uppercase tracking-wider text-[#6B6B6B] hover:text-[#0A0A0A] px-3 py-2 border border-[#E5E5E5] hover:border-[#0A0A0A] transition-colors"
@@ -603,8 +598,7 @@ export default function MeetsPage() {
                               </div>
                             ) : !hasEventData ? (
                               <div className="mt-6">
-                                <p className="text-xs font-bold uppercase tracking-[0.3em] text-[#6B6B6B] mb-2">Performance Prediction</p>
-                                <p className="text-xs text-[#6B6B6B] font-mono mb-3">Add your event and PR to unlock your performance prediction.</p>
+                                <p className="text-xs font-bold uppercase tracking-[0.3em] text-[#6B6B6B] mb-3">Performance Prediction</p>
                                 <button
                                   onClick={(e) => { e.stopPropagation(); openEdit(m); }}
                                   className="text-xs font-bold uppercase tracking-wider text-[#6B6B6B] hover:text-[#0A0A0A] px-3 py-2 border border-[#E5E5E5] hover:border-[#0A0A0A] transition-colors"

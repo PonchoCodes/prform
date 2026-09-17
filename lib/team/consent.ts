@@ -67,14 +67,3 @@ export const TEAM_CONSENT_TEXT = [
   "time from the Team page, and leaving removes my status from their view",
   "and my name from the board immediately.",
 ].join("\n");
-
-/**
- * What the team-side UI shows an owner about their own visibility.
- *
- * Kept because an owner who expects a sleep dashboard and finds colours will
- * go looking for the rest. It states what they get, and stops there: the list
- * of what they cannot see belongs on the consent screen, where it is a promise
- * being made to the person it concerns, not a boast being made to someone else.
- */
-export const OWNER_VISIBILITY_NOTE =
-  "You see readiness, not sleep. Each athlete shows a color, a weekly trend count, and a recommendation.";

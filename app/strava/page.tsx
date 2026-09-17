@@ -197,7 +197,6 @@ export default function StravaPage() {
                   >
                     Sync Full History (last 12 months)
                   </button>
-                  <p className="font-mono text-[10px] text-[#6B6B6B] dark:text-[#A0A0A0] mt-2">This may take a moment.</p>
                 </div>
               </div>
             </FadeUp>

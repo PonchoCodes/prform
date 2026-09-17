@@ -313,10 +313,7 @@ export default function SchedulePage() {
           <section className="px-6 py-10">
             <div className="max-w-[1200px] mx-auto">
               <div className="flex items-center justify-between mb-6">
-                <div>
-                  <p className="text-xs font-bold uppercase tracking-[0.3em] text-[#6B6B6B] mb-1">Next 14 Days</p>
-                  <h2 className="font-black text-2xl uppercase">Planned Workouts</h2>
-                </div>
+                <h2 className="font-black text-2xl uppercase">Planned Workouts</h2>
                 <Button variant="secondary" size="sm" onClick={() => setShowAddForm(!showAddForm)}>
                   + Add Planned
                 </Button>
@@ -431,10 +428,7 @@ export default function SchedulePage() {
           <section className="px-6 py-10">
             <div className="max-w-[1200px] mx-auto">
               <div className="flex items-center justify-between mb-6">
-                <div>
-                  <p className="text-xs font-bold uppercase tracking-[0.3em] text-[#6B6B6B] mb-1">Last 7 Days</p>
-                  <h2 className="font-black text-2xl uppercase">Activity Log</h2>
-                </div>
+                <h2 className="font-black text-2xl uppercase">Activity Log</h2>
                 <Button variant="secondary" size="sm" onClick={() => setShowLogForm(!showLogForm)}>
                   + Log Workout
                 </Button>
@@ -443,10 +437,7 @@ export default function SchedulePage() {
               {showLogForm && (
                 <FadeUp>
                   <div className="border border-[#E5E5E5] dark:border-[#333] p-6 mb-6">
-                    <h3 className="font-black text-sm uppercase tracking-wider mb-1">Log a Workout</h3>
-                    <p className="text-xs font-mono text-[#6B6B6B] dark:text-[#A0A0A0] mb-4">
-                      Duration × effort feeds your training load. No watch or Strava needed.
-                    </p>
+                    <h3 className="font-black text-sm uppercase tracking-wider mb-4">Log a Workout</h3>
                     <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
                       <input
                         type="date"

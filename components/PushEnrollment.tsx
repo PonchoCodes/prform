@@ -20,7 +20,7 @@ import { IOS_PUSH_EXPLANATION } from "@/lib/pwa/install";
 const STEP_NUMBER =
   "shrink-0 w-6 h-6 border border-[#0A0A0A] dark:border-[#F5F5F5] flex items-center justify-center text-[10px] font-bold";
 
-export function PushEnrollment({ compact = false }: { compact?: boolean }) {
+export function PushEnrollment() {
   const push = usePushEnrollment();
   const [tested, setTested] = useState(false);
 
@@ -33,7 +33,7 @@ export function PushEnrollment({ compact = false }: { compact?: boolean }) {
   if (subscribed && push.permission === "granted") {
     return (
       <div className="border border-[#E5E5E5] dark:border-[#333] p-5">
-        <div className="flex items-start justify-between gap-4 mb-1">
+        <div className="flex items-start justify-between gap-4 mb-4">
           <p className="text-xs font-bold uppercase tracking-[0.3em] text-[#6B6B6B] dark:text-[#A0A0A0]">
             Notifications
           </p>
@@ -41,11 +41,11 @@ export function PushEnrollment({ compact = false }: { compact?: boolean }) {
             On
           </span>
         </div>
-        <p className="text-sm font-mono text-[#6B6B6B] dark:text-[#A0A0A0] mb-4">
-          {installed
-            ? "You'll get your check-in each evening and your verdict each morning."
-            : "On this browser. Add PRform to your home screen too and you'll get them when the browser is closed."}
-        </p>
+        {!installed && (
+          <p className="text-sm font-mono text-[#6B6B6B] dark:text-[#A0A0A0] mb-4">
+            On this browser only. Add PRform to your home screen too and notifications arrive when the browser is closed.
+          </p>
+        )}
         <div className="flex items-center gap-3">
           <Button
             variant="ghost"
@@ -123,9 +123,6 @@ export function PushEnrollment({ compact = false }: { compact?: boolean }) {
   // ── Ready to ask ──────────────────────────────────────────────────────────
   return (
     <div className="border border-[#E5E5E5] dark:border-[#333] p-5">
-      {!compact && (
-        <h3 className="font-black text-lg uppercase mb-2">Two taps a day, no tabs</h3>
-      )}
       <p className="text-sm font-mono text-[#6B6B6B] dark:text-[#A0A0A0] mb-5">
         One check-in each evening with tonight&apos;s bedtime, and one verdict each morning.
       </p>

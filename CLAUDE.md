@@ -214,7 +214,7 @@ no approval, and no billing gate — a captain organizing six people needs a ros
 salaried coach does. There is deliberately **no directory, no browse and no search**: a team is
 reachable by join code alone, which is what keeps a roster of minors from being enumerable.
 
-- **"Owner", not "coach", throughout.** `Team.ownerId`, `assertOwnerOf`, `OWNER_VISIBILITY_NOTE`.
+- **"Owner", not "coach", throughout.** `Team.ownerId`, `assertOwnerOf`.
   The permissions never depended on which of the two you were; only the word did. Renamed in
   `20260807000000_rename_coach_to_owner` with `ALTER TABLE ... RENAME COLUMN` — a generated
   drop-and-add would have detached every existing team from its owner.
@@ -419,6 +419,21 @@ Defined in `tailwind.config.ts`:
 - Section labels: `text-xs font-bold uppercase tracking-[0.3em] text-[#6B6B6B]`
 - Toggle buttons: selected = `bg-[#0A0A0A] text-white border-[#0A0A0A]`, unselected = `border-[#E5E5E5] hover:border-[#0A0A0A]`
 - Dark mode via `dark:` variants — background `#1a1a1a`, cards `#242424`
+
+### UI copy
+
+- The interface does not explain itself. Section names, navigation labels, and controls
+  should be self-evident. Do not add eyebrow labels that restate or categorize a heading,
+  subheadings that describe what a section is for, or helper sentences that explain how a
+  feature works.
+- Design decisions belong in code comments, commit messages, or docs, never in user-facing
+  text.
+- The only user-facing explanatory copy allowed is: warnings before irreversible actions,
+  constraints the user must know before submitting, error messages, and empty-state messages
+  that tell the user what to do next. Empty states name the action, not the concept ("Add
+  your first meet", not "Meets are your race calendar").
+- If you are about to write a sentence in the UI that starts with "This is", "Here you can",
+  "You can", or that describes the app in the third person, stop and delete it.
 
 ## Monetization
 

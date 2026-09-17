@@ -56,10 +56,6 @@ export function VerdictCard({ verdict, onAddPr }: Props) {
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.3 }}
     >
-      <p className="text-[10px] md:text-xs font-bold uppercase tracking-[0.3em] text-[#6B6B6B] dark:text-[#A0A0A0] mb-4">
-        Today
-      </p>
-
       {/* 1 — the verdict. Fluid within each range rather than jumping at
           breakpoints; capped at 16ch so it stays a headline on a wide monitor. */}
       <h1 className="font-black uppercase leading-[1.05] text-balance max-w-[16ch] text-[#0A0A0A] dark:text-[#F5F5F5] text-[clamp(24px,7vw,30px)] md:text-[clamp(30px,3.2vw,44px)]">

@@ -65,10 +65,8 @@ export function PrPrompt({ onResolved }: Props) {
 
   return (
     <div className="border-2 border-[#0A0A0A] dark:border-[#F5F5F5] bg-white dark:bg-[#242424] p-6">
-      <div className="flex items-start justify-between gap-4 mb-3">
-        <div>
-          <h3 className="font-black text-xl uppercase">Add a race PR</h3>
-        </div>
+      <div className="flex items-start justify-between gap-4 mb-4">
+        <h3 className="font-black text-xl uppercase">Add a race PR</h3>
         <button
           type="button"
           onClick={dismiss}
@@ -78,11 +76,6 @@ export function PrPrompt({ onResolved }: Props) {
           Dismiss ✕
         </button>
       </div>
-
-      <p className="text-sm text-[#6B6B6B] dark:text-[#A0A0A0] mb-4">
-        Your training paces are currently inferred from logged workouts. One race result anchors
-        them to a real maximal effort. Your paces will shift toward it gradually, not all at once.
-      </p>
 
       {!open ? (
         <Button variant="primary" size="lg" onClick={() => setOpen(true)}>

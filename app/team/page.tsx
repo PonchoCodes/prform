@@ -7,7 +7,7 @@ import { FadeUp } from "@/components/FadeUp";
 import { Navbar } from "@/components/Navbar";
 import { Footer } from "@/components/Footer";
 import { Button } from "@/components/Button";
-import { TEAM_CONSENT_TEXT, OWNER_VISIBILITY_NOTE } from "@/lib/team/consent";
+import { TEAM_CONSENT_TEXT } from "@/lib/team/consent";
 
 // One page, both sides of the relationship.
 //
@@ -287,13 +287,12 @@ export default function TeamPage() {
 
           {/* ── Owner side ───────────────────────────────────────────────── */}
           <section>
-            <div className="flex items-center justify-between mb-2">
+            <div className="flex items-center justify-between mb-6">
               <h2 className="font-black text-2xl uppercase">Teams You Run</h2>
               <Button variant="secondary" size="sm" onClick={() => setShowCreate(!showCreate)}>
                 + New Team
               </Button>
             </div>
-            <p className="text-xs font-mono text-[#6B6B6B] dark:text-[#A0A0A0] mb-6 max-w-2xl">{OWNER_VISIBILITY_NOTE}</p>
 
             {showCreate && (
               <FadeUp>
@@ -326,8 +325,7 @@ export default function TeamPage() {
 
             {owned.length === 0 && !showCreate ? (
               <p className="text-[#6B6B6B] dark:text-[#A0A0A0] text-sm py-8 text-center border border-dashed border-[#E5E5E5] dark:border-[#333]">
-                You don&apos;t run a team yet. Create one, hand out the code, and join it
-                yourself if you run too.
+                You don&apos;t run a team yet.
               </p>
             ) : (
               <div className="space-y-8">
@@ -601,17 +599,14 @@ function OwnedTeamPanel({ team, onCodeRotated }: { team: OwnedTeam; onCodeRotate
         )}
         {exceptions && exceptions.rosterSize > 0 && exceptions.exceptions.length > 0 && (
           <p className="text-[10px] font-mono text-[#6B6B6B] dark:text-[#A0A0A0] mt-3">
-            {exceptions.onTrack} of {exceptions.rosterSize} on track and not shown. This list is exceptions only.
+            {exceptions.onTrack} of {exceptions.rosterSize} on track and not shown.
           </p>
         )}
       </div>
 
       {/* Planned sessions */}
       <div className="p-6">
-        <p className="text-xs font-bold uppercase tracking-[0.3em] text-[#6B6B6B] mb-1">Planned Sessions</p>
-        <p className="text-xs font-mono text-[#6B6B6B] dark:text-[#A0A0A0] mb-4">
-          These land on every athlete&apos;s plan and steer their sleep targets.
-        </p>
+        <p className="text-xs font-bold uppercase tracking-[0.3em] text-[#6B6B6B] mb-4">Planned Sessions</p>
 
         <div className="grid grid-cols-1 md:grid-cols-6 gap-3 mb-4">
           <input

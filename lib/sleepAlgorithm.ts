@@ -53,7 +53,6 @@ export interface CircadianPlan {
   dailyShiftMin: number;      // minutes shifted today vs yesterday
   cumulativeShiftMin: number; // total advance applied so far vs baseline
   targetWakeTime: string;     // final target once shift is complete
-  mechanismNote: string;      // one-line science rationale
 }
 
 export interface DailySleepPlan {
@@ -420,8 +419,6 @@ function computePRCPlan(
     dailyShiftMin: Math.round(dailyShiftMin),
     cumulativeShiftMin: Math.round(cumulativeShiftMin),
     targetWakeTime,
-    mechanismNote:
-      "Light after CBTmin activates ipRGCs in the retina, signaling the SCN to advance its pacemaker. Light before CBTmin does the opposite: it delays the clock.",
   };
 }
 

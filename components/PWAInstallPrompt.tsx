@@ -151,10 +151,7 @@ export function PWAInstallPrompt({
           className="bg-white dark:bg-[#242424] border border-[#E5E5E5] dark:border-[#333] max-w-[480px] w-full sm:mx-4 max-h-[90vh] overflow-y-auto"
           onClick={(e) => e.stopPropagation()}
         >
-          <div className="flex items-start justify-between gap-4 px-6 py-4 border-b border-[#E5E5E5] dark:border-[#333]">
-            <p className="text-xs font-bold uppercase tracking-[0.3em] text-[#6B6B6B] dark:text-[#A0A0A0] pt-1">
-              Tonight
-            </p>
+          <div className="flex justify-end px-6 py-4 border-b border-[#E5E5E5] dark:border-[#333]">
             <button
               type="button"
               onClick={close}
@@ -172,8 +169,8 @@ export function PWAInstallPrompt({
             </h3>
             <p className="text-sm leading-6 text-[#6B6B6B] dark:text-[#A0A0A0]">
               {reminder
-                ? `Add PRform to your home screen and it will remind you at ${formatTime12h(reminder)}, so you don't have to remember to open it.`
-                : "Add PRform to your home screen and it will remind you before lights out, so you don't have to remember to open it."}
+                ? `Add PRform to your home screen and it will remind you at ${formatTime12h(reminder)}.`
+                : "Add PRform to your home screen and it will remind you before lights out."}
             </p>
           </div>
 

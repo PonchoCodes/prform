@@ -251,8 +251,7 @@ export function AdminRetention() {
         </section>
 
         <p className="text-[10px] font-mono text-[#6B6B6B] dark:text-[#A0A0A0]">
-          Generated {new Date(data.generatedAt).toLocaleString()} from this app&apos;s own
-          database. No third-party analytics.
+          Generated {new Date(data.generatedAt).toLocaleString()}
         </p>
       </div>
     </div>

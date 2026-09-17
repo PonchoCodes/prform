@@ -144,7 +144,7 @@ export function PrForm({
           className="text-xs font-mono text-[#6B6B6B] dark:text-[#A0A0A0] mt-2"
         >
           {previewVdot
-            ? `VDOT ${previewVdot}. We'll build your full pace table from this.`
+            ? `VDOT ${previewVdot}`
             : value.distanceId
               ? `Format: ${prTimePlaceholder(value.distanceId)}`
               : "Pick a distance first."}
@@ -168,9 +168,6 @@ export function PrForm({
             </option>
           ))}
         </select>
-        <p className="text-xs font-mono text-[#6B6B6B] dark:text-[#A0A0A0] mt-2">
-          An older PR still gets you started. We just lean on your logged training sooner.
-        </p>
       </div>
 
       {showErrors && validation.error && (

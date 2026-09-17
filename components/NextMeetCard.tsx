@@ -51,7 +51,7 @@ export function NextMeetCard({ meet, daysUntil, hasPrediction }: Props) {
           <span className="border-b border-[#0A0A0A] dark:border-[#F5F5F5] text-[#0A0A0A] dark:text-[#F5F5F5]">
             Add your next meet
           </span>{" "}
-          and the plan starts shifting your sleep toward it. →
+          →
         </button>
       </div>
     );

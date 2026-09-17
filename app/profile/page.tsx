@@ -49,7 +49,6 @@ export default function ProfilePage() {
   const [stravaStatus, setStravaStatus] = useState<any>(null);
   const [stravaInterest, setStravaInterest] = useState(false);
   const [disconnecting, setDisconnecting] = useState(false);
-  const [onboardingAgg, setOnboardingAgg] = useState<number>(85); // original value from onboarding
 
   useEffect(() => {
     if (status === "unauthenticated") router.push("/login");
@@ -62,7 +61,6 @@ export default function ProfilePage() {
       fetch("/api/strava/status").then((r) => r.json()),
     ]).then(([profileData, stravaData]) => {
       setProfile(profileData);
-      setOnboardingAgg(profileData.planAggressiveness ?? 85);
       setStravaStatus(stravaData);
       setStravaInterest(Boolean(stravaData?.interest));
       setLoading(false);
@@ -258,7 +256,7 @@ export default function ProfilePage() {
             <PWAInstallInstructions variant="settings" />
 
             <h2 className="font-black text-xl uppercase mt-10 mb-6 border-b border-[#E5E5E5] dark:border-[#333] pb-3">App Notifications</h2>
-            <PushEnrollment compact />
+            <PushEnrollment />
 
             {/* The channel picker sits after both enrolment panels, because
                 every option it offers is unlocked by one of them. */}
@@ -302,11 +300,7 @@ export default function ProfilePage() {
         {/* Plan Aggressiveness */}
         <div className="max-w-[1200px] mx-auto px-6 pb-10">
           <FadeUp delay={120}>
-            <h2 className="font-black text-xl uppercase mb-3 border-b border-[#E5E5E5] dark:border-[#333] pb-3">Plan Aggressiveness</h2>
-            <p className="text-xs text-[#6B6B6B] dark:text-[#A0A0A0] font-mono mb-6 max-w-xl">
-              Controls how much PRform shifts your bedtime before races and after hard workouts.
-              Higher = closer to the scientific optimum. Lower = more compatible with a busy schedule.
-            </p>
+            <h2 className="font-black text-xl uppercase mb-6 border-b border-[#E5E5E5] dark:border-[#333] pb-3">Plan Aggressiveness</h2>
 
             <div className="flex items-center justify-center gap-4 mb-8">
               <button
@@ -327,7 +321,7 @@ export default function ProfilePage() {
             </div>
 
             {/* Live preview */}
-            <div className="border border-[#E5E5E5] dark:border-[#333] mb-6">
+            <div className="border border-[#E5E5E5] dark:border-[#333]">
               <div className="border-b border-[#E5E5E5] dark:border-[#333] p-4">
                 <p className="text-xs font-bold uppercase tracking-wider mb-2">Night Before an A Race</p>
                 <div className="grid grid-cols-2 gap-4">
@@ -355,11 +349,6 @@ export default function ProfilePage() {
                 </div>
               </div>
             </div>
-
-            <p className="text-[10px] font-mono text-[#6B6B6B] dark:text-[#A0A0A0]">
-              PRform set this to {onboardingAgg}% based on your experience level.
-              The scientific optimum is always 100%.
-            </p>
           </FadeUp>
         </div>
 
@@ -372,17 +361,14 @@ export default function ProfilePage() {
               // Strava surface: one line, once, with no button to press twice
               // and nothing about a queue or a position in it.
               <div className="border border-[#E5E5E5] dark:border-[#333] p-6">
-                <p className="text-sm dark:text-[#F5F5F5]">
-                  PRform uses your weekly template and the workouts you log.
-                </p>
                 {stravaInterest ? (
-                  <p className="mt-3 font-mono text-xs text-[#6B6B6B] dark:text-[#A0A0A0]">
+                  <p className="font-mono text-xs text-[#6B6B6B] dark:text-[#A0A0A0]">
                     We will email you when Strava sync is available.
                   </p>
                 ) : (
                   <button
                     onClick={handleStravaInterest}
-                    className="mt-3 font-mono text-xs text-[#6B6B6B] dark:text-[#A0A0A0] underline hover:text-[#0A0A0A] dark:hover:text-[#F5F5F5] transition-colors"
+                    className="font-mono text-xs text-[#6B6B6B] dark:text-[#A0A0A0] underline hover:text-[#0A0A0A] dark:hover:text-[#F5F5F5] transition-colors"
                   >
                     Notify me when Strava sync is available
                   </button>
@@ -431,11 +417,6 @@ export default function ProfilePage() {
                   )}
                 </div>
               </div>
-              {!stravaStatus?.connected && (
-                <p className="mt-4 text-xs text-[#6B6B6B] dark:text-[#A0A0A0] font-mono bg-[#F5F5F5] dark:bg-[#2a2a2a] px-3 py-2">
-                  Without Strava, PRform uses your weekly template and manually logged workouts. Connect Strava to unlock automatic activity sync and performance analysis.
-                </p>
-              )}
             </div>
             )}
           </FadeUp>
@@ -484,11 +465,7 @@ export default function ProfilePage() {
         <div className="max-w-[1200px] mx-auto px-6 pb-10">
           <FadeUp delay={180}>
             <div className="border border-[#E5E5E5] dark:border-[#333] p-6 flex items-center justify-between">
-              <div>
-                <p className="text-xs font-bold uppercase tracking-[0.3em] text-[#6B6B6B] dark:text-[#A0A0A0] mb-1">Sleep Confirmation</p>
-                <p className="font-black text-lg uppercase">Sleep History</p>
-                <p className="text-xs font-mono text-[#6B6B6B] dark:text-[#A0A0A0] mt-1">Review and log past nights. Track your consistency streak.</p>
-              </div>
+              <p className="font-black text-lg uppercase">Sleep History</p>
               <a href="/sleep" className="flex-shrink-0 inline-block border border-[#0A0A0A] dark:border-[#F5F5F5] text-[#0A0A0A] dark:text-[#F5F5F5] font-black text-xs uppercase tracking-widest px-6 py-2 hover:bg-[#0A0A0A] dark:hover:bg-[#F5F5F5] hover:text-white dark:hover:text-[#0A0A0A] transition-colors">
                 View History →
               </a>

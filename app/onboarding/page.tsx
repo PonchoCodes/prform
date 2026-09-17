@@ -223,7 +223,6 @@ export default function OnboardingPage() {
             {/* Step 1: The Essentials */}
             {step === 1 && (
               <div>
-                <p className="text-xs font-bold uppercase tracking-[0.3em] text-[#6B6B6B] dark:text-[#A0A0A0] mb-2">Step 1 of {TOTAL_STEPS}</p>
                 <h1 className="font-black text-3xl uppercase mb-8">The Essentials</h1>
                 <div className="space-y-6">
                   <div>
@@ -281,7 +280,6 @@ export default function OnboardingPage() {
             {/* Step 2: Current Fitness */}
             {step === 2 && (
               <div>
-                <p className="text-xs font-bold uppercase tracking-[0.3em] text-[#6B6B6B] dark:text-[#A0A0A0] mb-2">Step 2 of {TOTAL_STEPS}</p>
                 <h1 className="font-black text-3xl uppercase mb-8">Current Fitness</h1>
 
                 <div className="space-y-8">
@@ -353,7 +351,6 @@ export default function OnboardingPage() {
             {/* Step 3: Your Next Race */}
             {step === 3 && (
               <div>
-                <p className="text-xs font-bold uppercase tracking-[0.3em] text-[#6B6B6B] dark:text-[#A0A0A0] mb-2">Step 3 of {TOTAL_STEPS}</p>
                 <h1 className="font-black text-3xl uppercase mb-8">Your Next Race</h1>
 
                 <div className="space-y-4">
@@ -460,11 +457,7 @@ export default function OnboardingPage() {
             {/* Step 4: Your Training Week */}
             {step === 4 && (
               <div>
-                <p className="text-xs font-bold uppercase tracking-[0.3em] text-[#6B6B6B] dark:text-[#A0A0A0] mb-2">Step 4 of {TOTAL_STEPS}</p>
-                <h1 className="font-black text-3xl uppercase mb-2">Your Training Week</h1>
-                <p className="text-sm text-[#6B6B6B] dark:text-[#A0A0A0] mb-8">
-                  You can adjust any day later, or log workouts as they happen.
-                </p>
+                <h1 className="font-black text-3xl uppercase mb-8">Your Training Week</h1>
 
                 <div className="border border-[#E5E5E5] dark:border-[#444] p-4 space-y-3">
                   {DAYS.map((day, i) => (
@@ -493,11 +486,6 @@ export default function OnboardingPage() {
                     </div>
                   ))}
                 </div>
-
-                <p className="text-[10px] font-mono text-[#6B6B6B] dark:text-[#A0A0A0] mt-4">
-                  This is your normal week. Log what you actually do as you go,
-                  and anything you log takes over from this schedule for that day.
-                </p>
               </div>
             )}
 
@@ -514,21 +502,14 @@ export default function OnboardingPage() {
                 rather than a line at the bottom of another one. */}
             {step === 5 && (
               <div>
-                <p className="text-xs font-bold uppercase tracking-[0.3em] text-[#6B6B6B] dark:text-[#A0A0A0] mb-2">Step 5 of {TOTAL_STEPS}</p>
-                <h1 className="font-black text-3xl uppercase mb-2">Stay On Plan</h1>
-                <p className="text-sm text-[#6B6B6B] dark:text-[#A0A0A0] font-mono mb-8">
-                  Pick how PRform reaches you, or skip and open the app when you want it.
-                </p>
+                <h1 className="font-black text-3xl uppercase mb-8">Stay On Plan</h1>
 
                 <PushEnrollment />
 
-                <h2 className="font-black text-xl uppercase mt-10 mb-2 border-b border-[#E5E5E5] dark:border-[#333] pb-3">
+                <h2 className="font-black text-xl uppercase mt-10 mb-6 border-b border-[#E5E5E5] dark:border-[#333] pb-3">
                   Texts, Not Tabs{" "}
                   <span className="text-xs font-mono normal-case text-[#6B6B6B] dark:text-[#A0A0A0]">(optional)</span>
                 </h2>
-                <p className="text-sm text-[#6B6B6B] dark:text-[#A0A0A0] mb-6">
-                  One text each evening, one each morning.
-                </p>
                 <SmsEnrollment />
               </div>
             )}

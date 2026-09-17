@@ -64,19 +64,11 @@ export function SleepPaceTrendChart({ trend, onAddPr, hasPaces = true, windowDay
   if (!trend.ready) {
     return (
       <div className="border border-dashed border-[#E5E5E5] dark:border-[#333] p-6">
-        <p className="text-[10px] font-bold uppercase tracking-[0.3em] text-[#6B6B6B] dark:text-[#A0A0A0] mb-3">
-          Building your trend
-        </p>
         {/* Forward-looking and countable. An empty axis would be a chart of
             nothing; this is a number that goes down every time they log. */}
         <p className="font-black uppercase leading-tight text-[clamp(18px,5vw,24px)] max-w-[22ch]">
           {trendCountdownCopy(trend)}
         </p>
-        {!hasPaces && (
-          <p className="mt-3 text-xs font-mono text-[#6B6B6B] dark:text-[#A0A0A0] leading-relaxed max-w-[52ch]">
-            Pace compliance needs a pace to measure against.
-          </p>
-        )}
         {!hasPaces && onAddPr && (
           <button
             onClick={onAddPr}

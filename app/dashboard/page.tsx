@@ -148,7 +148,6 @@ function MorningConfirmationCard({ yesterdayPlan, onDismiss }: MorningCardProps)
               </div>
             ) : (
               <>
-                <p className="text-[10px] font-bold uppercase tracking-[0.3em] text-[#6B6B6B] dark:text-[#E8FF00] mb-2">Last Night</p>
                 <h2 className="font-black text-lg uppercase mb-3 leading-tight">Did You Hit Your Target?</h2>
                 <p className="text-[11px] font-mono text-[#6B6B6B] mb-1">
                   Target bedtime: <span className="text-[#0A0A0A] dark:text-white font-bold">{formatTime12h(yesterdayPlan.recommendedBedtime)}</span>
@@ -159,7 +158,7 @@ function MorningConfirmationCard({ yesterdayPlan, onDismiss }: MorningCardProps)
 
                 {phase === "question" && (
                   <>
-                    <div className="flex gap-px mb-3">
+                    <div className="flex gap-px">
                       <button
                         onClick={() => submit(true)}
                         className="flex-1 min-h-[44px] px-2 bg-[#E8FF00] text-[#0A0A0A] font-black text-[11px] uppercase tracking-widest hover:bg-[#d4e800] transition-colors"
@@ -173,10 +172,6 @@ function MorningConfirmationCard({ yesterdayPlan, onDismiss }: MorningCardProps)
                         No, I Missed It
                       </button>
                     </div>
-                    <p className="text-[10px] font-mono text-[#6B6B6B]">
-                      You can edit this later in your{" "}
-                      <a href="/sleep" className="underline hover:text-[#0A0A0A] dark:hover:text-white">sleep history</a>.
-                    </p>
                   </>
                 )}
 
@@ -215,10 +210,6 @@ function MorningConfirmationCard({ yesterdayPlan, onDismiss }: MorningCardProps)
                     >
                       Confirm
                     </button>
-                    <p className="text-[10px] font-mono text-[#6B6B6B] mt-2">
-                      You can edit this later in your{" "}
-                      <a href="/sleep" className="underline hover:text-[#0A0A0A] dark:hover:text-white">sleep history</a>.
-                    </p>
                   </>
                 )}
 
@@ -313,12 +304,9 @@ function InterventionCard({
                 </p>
                 {adjustResult.cappedAt45 && (
                   <p className="text-xs font-mono text-[#6B6B6B] dark:text-[#E8FF00] mt-2">
-                    PRform can only adjust up to 45 minutes from the optimal target. Going beyond this would significantly impact your race performance.
+                    PRform can only adjust up to 45 minutes from the optimal target.
                   </p>
                 )}
-                <p className="text-[10px] font-mono text-[#6B6B6B] mt-2">
-                  You can change this anytime in <a href="/profile" className="underline hover:text-[#0A0A0A] dark:hover:text-white">Settings</a>.
-                </p>
               </>
             ) : (
               <>
@@ -437,12 +425,7 @@ function WindDownSinglePhase({ windDown, bedtime }: WindDownSinglePhaseProps) {
           without it this column refuses to shrink below its own text and shoves
           the status block clean outside the card. */}
       <div className="flex-1 min-w-0">
-        <div className="flex items-center gap-3 mb-3">
-          <span className={`text-xs font-bold uppercase tracking-widest ${isUpcoming ? "text-[#6B6B6B]" : "text-[#0A0A0A] dark:text-[#E8FF00]"}`}>
-            {isUpcoming ? "UPCOMING" : "● NOW"}
-          </span>
-          <span className="font-mono text-sm text-[#6B6B6B]">{formatTime12h(phaseTime)}</span>
-        </div>
+        <p className="font-mono text-sm text-[#6B6B6B] mb-3">{formatTime12h(phaseTime)}</p>
         <p className="font-black text-xl uppercase mb-2">{phase.label}</p>
         <p className="text-sm text-[#6B6B6B] dark:text-[#AAAAAA] font-mono leading-relaxed">{phase.description}</p>
         {phaseIdx === 1 && (
@@ -657,11 +640,8 @@ function CheckInStreakStrip({
 
         {planning && (
           <div className="mt-4 border border-[#E5E5E5] dark:border-[#333] p-4 max-w-lg">
-            <p className="text-xs font-bold uppercase tracking-[0.3em] text-[#6B6B6B] dark:text-[#A0A0A0] mb-1">
+            <p className="text-xs font-bold uppercase tracking-[0.3em] text-[#6B6B6B] dark:text-[#A0A0A0] mb-4">
               Mark days away
-            </p>
-            <p className="text-xs font-mono text-[#6B6B6B] dark:text-[#A0A0A0] mb-4">
-              These days won&apos;t count for or against your streak.
             </p>
             <div className="flex flex-wrap gap-3 items-end">
               <label className="text-[10px] font-bold uppercase tracking-wider">
@@ -1203,13 +1183,7 @@ export default function DashboardPage() {
           <section className="px-6 py-10 border-b border-[#E5E5E5] dark:border-[#333]">
             <div className="max-w-[1200px] mx-auto">
               <FadeUp>
-                <p className="text-xs font-bold uppercase tracking-[0.3em] text-[#6B6B6B] dark:text-[#A0A0A0] mb-2">This Week</p>
-                <div className="flex items-center gap-3 mb-6">
-                  <h2 className="font-black text-2xl uppercase">Sleep Schedule</h2>
-                  <span className="text-xs font-bold uppercase tracking-wider text-[#6B6B6B] dark:text-[#A0A0A0] border border-[#E5E5E5] dark:border-[#333] px-2 py-1">
-                    Track &amp; Field
-                  </span>
-                </div>
+                <h2 className="font-black text-2xl uppercase mb-6">Sleep Schedule</h2>
               </FadeUp>
               {(() => {
                 const activityByDate: Record<string, { name: string; distance: number; averageSpeed: number; averageHeartrate?: number | null }> = {};
