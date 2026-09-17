@@ -13,7 +13,7 @@
 //
 // Pure — dates in as "YYYY-MM-DD", no server imports, no clock.
 
-import { addDays, daysBetween, earlierOf, laterOf, toUtc, type DateKey } from "@/lib/dateKeys";
+import { addDays, daysBetween, earlierOf, laterOf, weekdayName, type DateKey } from "@/lib/dateKeys";
 import {
   deriveAthleteStatus,
   isShortNight,
@@ -87,12 +87,6 @@ export interface MeetReadiness {
   noData: AthleteMeetReadiness[];
   /** "4 of 6 on the ramp" */
   summary: string;
-}
-
-const WEEKDAYS = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
-
-export function weekdayName(date: DateKey): string {
-  return WEEKDAYS[toUtc(date).getUTCDay()];
 }
 
 /** "Tuesday", "Tuesday and Thursday", "Monday, Tuesday and Thursday". */

@@ -9,6 +9,7 @@ import { Footer } from "@/components/Footer";
 import { Button } from "@/components/Button";
 import { TEAM_CONSENT_TEXT } from "@/lib/team/consent";
 import { TeamMeetsPanel } from "@/components/team/TeamMeetsPanel";
+import { SessionForecastLine, type SessionForecastRow } from "@/components/team/SessionForecastLine";
 import { INPUT, REMOVE_BUTTON, formatDate } from "@/components/team/ui";
 
 // One page, both sides of the relationship.
@@ -446,6 +447,7 @@ function OwnedTeamPanel({ team, onCodeRotated }: { team: OwnedTeam; onCodeRotate
   const [exceptions, setExceptions] = useState<ExceptionsPayload | null>(null);
   const [needsPlan, setNeedsPlan] = useState(false);
   const [sessions, setSessions] = useState<PlannedSessionRow[]>([]);
+  const [forecasts, setForecasts] = useState<Record<string, SessionForecastRow>>({});
   const [rotating, setRotating] = useState(false);
   // durationMinutes starts empty, not at a default. Prefilling it would put a
   // number the owner never chose onto every athlete's training load.
@@ -471,7 +473,13 @@ function OwnedTeamPanel({ team, onCodeRotated }: { team: OwnedTeam; onCodeRotate
       // leaderboard are all still here; only this panel is behind the plan.
       setNeedsPlan(true);
     }
-    if (sesRes.ok) setSessions((await sesRes.json()).sessions ?? []);
+    if (sesRes.ok) {
+      const data = await sesRes.json();
+      setSessions(data.sessions ?? []);
+      const byId: Record<string, SessionForecastRow> = {};
+      for (const f of (data.forecasts ?? []) as SessionForecastRow[]) byId[f.sessionId] = f;
+      setForecasts(byId);
+    }
   }, [team.id]);
 
   useEffect(() => {
@@ -662,23 +670,23 @@ function OwnedTeamPanel({ team, onCodeRotated }: { team: OwnedTeam; onCodeRotate
         ) : (
           <div className="space-y-px bg-[#E5E5E5] dark:bg-[#333]">
             {sessions.map((s) => (
-              <div key={s.id} className="bg-white dark:bg-[#242424] p-3 flex items-center justify-between gap-4">
-                <div className="flex items-center gap-4">
-                  <p className="font-mono text-sm text-[#6B6B6B] dark:text-[#A0A0A0] w-28">{formatDate(s.date)}</p>
-                  <span className="text-xs font-bold uppercase tracking-wider">{s.sessionType.replace("_", " ")}</span>
-                  <span className="text-xs font-mono text-[#6B6B6B] dark:text-[#A0A0A0]">{s.durationMinutes} min</span>
-                  {(s.description || s.targetPaces) && (
-                    <span className="text-xs font-mono text-[#6B6B6B] dark:text-[#A0A0A0]">
-                      {[s.description, s.targetPaces].filter(Boolean).join(". ")}
-                    </span>
-                  )}
+              <div key={s.id} className="bg-white dark:bg-[#242424] p-3">
+                <div className="flex items-center justify-between gap-4">
+                  <div className="flex items-center gap-4 min-w-0">
+                    <p className="font-mono text-sm text-[#6B6B6B] dark:text-[#A0A0A0] w-28 shrink-0">{formatDate(s.date)}</p>
+                    <span className="text-xs font-bold uppercase tracking-wider">{s.sessionType.replace("_", " ")}</span>
+                    <span className="text-xs font-mono text-[#6B6B6B] dark:text-[#A0A0A0]">{s.durationMinutes} min</span>
+                    {(s.description || s.targetPaces) && (
+                      <span className="text-xs font-mono text-[#6B6B6B] dark:text-[#A0A0A0] truncate">
+                        {[s.description, s.targetPaces].filter(Boolean).join(". ")}
+                      </span>
+                    )}
+                  </div>
+                  <button onClick={() => removeSession(s.id)} className={REMOVE_BUTTON}>
+                    Remove
+                  </button>
                 </div>
-                <button
-                  onClick={() => removeSession(s.id)}
-                  className={REMOVE_BUTTON}
-                >
-                  Remove
-                </button>
+                <SessionForecastLine forecast={forecasts[s.id]} />
               </div>
             ))}
           </div>

@@ -65,3 +65,10 @@ export function earlierOf(a: DateKey, b: DateKey): DateKey {
 export function todayKey(now: Date = new Date()): DateKey {
   return toKey(now);
 }
+
+const WEEKDAYS = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+
+/** "Tuesday". Full names: coach-facing lines read them in a sentence. */
+export function weekdayName(date: DateKey): string {
+  return WEEKDAYS[toUtc(date).getUTCDay()];
+}
