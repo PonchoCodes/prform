@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { calculateSleepPlan } from "@/lib/sleepAlgorithm";
 import { getWorkoutsForDateRange } from "@/lib/workoutDataSource";
+import { meetsForPlan } from "@/lib/team/meets";
 import { sendMessage } from "@/lib/messaging/send";
 import { scheduleMorning } from "@/lib/messaging/morning";
 import { closeUnresolvedNights } from "@/lib/messaging/night";
@@ -87,7 +88,7 @@ async function planByLocalDate(user: Candidate): Promise<Map<string, DailySleepP
 
   const [{ workouts }, meets] = await Promise.all([
     getWorkoutsForDateRange(user.id, start, end),
-    prisma.meet.findMany({ where: { userId: user.id }, orderBy: { date: "asc" } }),
+    meetsForPlan(user.id),
   ]);
 
   const plans = calculateSleepPlan(
@@ -99,12 +100,7 @@ async function planByLocalDate(user: Candidate): Promise<Map<string, DailySleepP
       planAggressiveness: user.planAggressiveness,
       bedtimeAdjustmentMinutes: user.bedtimeAdjustmentMinutes,
     },
-    meets.map((m) => ({
-      date: m.date,
-      priority: m.priority as "A" | "B" | "C",
-      name: m.name,
-      raceTime: m.raceTime ?? null,
-    })),
+    meets,
     workouts,
     undefined,
     { startDayOffset: -1 },

@@ -8,6 +8,23 @@ export type WorkoutType =
   | "rest"
   | "cross_train";
 
+/**
+ * The session types that cost something to absorb. The same four the sleep
+ * algorithm gives a larger training-load bonus and the verdict treats as the
+ * day to back off from; the coach-side forecast and the meet view read from
+ * here so "hard" means one thing everywhere.
+ */
+export const HARD_WORKOUT_TYPES: ReadonlySet<string> = new Set<string>([
+  "tempo",
+  "track",
+  "long_run",
+  "race",
+]);
+
+export function isHardWorkout(type: string): boolean {
+  return HARD_WORKOUT_TYPES.has(type);
+}
+
 export interface NormalizedWorkout {
   id?: string;           // DB id for manual one-off workouts; undefined for Strava/assumed
   date: Date;

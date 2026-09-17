@@ -38,10 +38,21 @@ export interface AthleteStatus {
  * deficit — the owner view is meant to flag earlier than the athlete view
  * panics, because the owner's lever (tomorrow's session) needs a day of lead.
  */
-const SHORT_NIGHT_DEFICIT_HOURS = 0.75;
+export const SHORT_NIGHT_DEFICIT_HOURS = 0.75;
 
 /** Target to assume when an old row has none. Matches the plan's floor. */
-const FALLBACK_TARGET_HOURS = 8;
+export const FALLBACK_TARGET_HOURS = 8;
+
+/**
+ * Whether one night counts as short. Exported so the meet view, the session
+ * forecast and the team trend all draw the same line the exception list does;
+ * three modules with three thresholds would flag three different athletes.
+ */
+export function isShortNight(night: NightForStatus): boolean {
+  if (night.needsReview || night.actualSleepHours == null) return false;
+  const target = night.targetSleepHours ?? FALLBACK_TARGET_HOURS;
+  return target - night.actualSleepHours >= SHORT_NIGHT_DEFICIT_HOURS;
+}
 
 /** How many scoreable nights before "no data" stops being the story. */
 const MIN_NIGHTS_FOR_SIGNAL = 3;
@@ -64,8 +75,7 @@ export function deriveAthleteStatus(nights: NightForStatus[], windowDays = 7): A
 
   let short = 0;
   for (const night of scoreable) {
-    const target = night.targetSleepHours ?? FALLBACK_TARGET_HOURS;
-    if (target - (night.actualSleepHours as number) >= SHORT_NIGHT_DEFICIT_HOURS) short++;
+    if (isShortNight(night)) short++;
   }
 
   const logged = scoreable.length;

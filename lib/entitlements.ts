@@ -188,8 +188,12 @@ export function hasSeatForJoin(
 /** One athlete, as a coach-side surface is allowed to see them named. */
 export interface ConsentedAthlete {
   userId: string;
+  /** The membership row, the only athlete handle a coach-side request may carry. */
+  membershipId: string;
   name: string;
   consentAt: Date;
+  /** Bounds every window a coach-side view reads: nothing before this counts. */
+  joinedAt: Date;
 }
 
 export type CoachAccess =
@@ -236,7 +240,7 @@ export async function assertCoachAccess(teamId: string, userId: string): Promise
 
   const memberships = await prisma.teamMembership.findMany({
     where: { teamId, status: "ACTIVE" },
-    select: { userId: true, consentAt: true, user: { select: { name: true } } },
+    select: { id: true, userId: true, consentAt: true, joinedAt: true, user: { select: { name: true } } },
     orderBy: { joinedAt: "asc" },
   });
 
@@ -248,8 +252,10 @@ export async function assertCoachAccess(teamId: string, userId: string): Promise
     .filter((m) => m.consentAt != null)
     .map((m) => ({
       userId: m.userId,
+      membershipId: m.id,
       name: m.user.name ?? "Unnamed athlete",
       consentAt: m.consentAt,
+      joinedAt: m.joinedAt,
     }));
 
   return { ok: true, team: { id: team.id, name: team.name }, entitlement, athletes };

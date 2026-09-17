@@ -4,9 +4,9 @@
 // that night", and both need it keyed by a local date rather than an array
 // index. Kept in one place so the two cannot drift.
 
-import { prisma } from "@/lib/prisma";
 import { calculateSleepPlan, type DailySleepPlan } from "@/lib/sleepAlgorithm";
 import { getWorkoutsForDateRange } from "@/lib/workoutDataSource";
+import { meetsForPlan } from "@/lib/team/meets";
 import type { LocalDate } from "@/lib/messaging/time";
 
 export interface PlanUser {
@@ -55,7 +55,7 @@ export async function planIndexFor(
 
   const [{ workouts }, meets] = await Promise.all([
     getWorkoutsForDateRange(user.id, start, end),
-    prisma.meet.findMany({ where: { userId: user.id }, orderBy: { date: "asc" } }),
+    meetsForPlan(user.id),
   ]);
 
   const plans = calculateSleepPlan(
@@ -67,12 +67,7 @@ export async function planIndexFor(
       planAggressiveness: user.planAggressiveness,
       bedtimeAdjustmentMinutes: user.bedtimeAdjustmentMinutes,
     },
-    meets.map((m) => ({
-      date: m.date,
-      priority: m.priority as "A" | "B" | "C",
-      name: m.name,
-      raceTime: m.raceTime ?? null,
-    })),
+    meets,
     workouts,
     undefined,
     {

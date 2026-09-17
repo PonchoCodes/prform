@@ -641,9 +641,37 @@ model Team {
   owner           User             @relation("OwnedTeams", fields: [ownerId], references: [id], onDelete: Cascade)
   memberships     TeamMembership[]
   plannedSessions PlannedSession[]
+  teamMeets       TeamMeet[]
   pilotCode       PilotCode?
 
   @@index([ownerId])
+}
+
+/// A meet the owner puts on the whole team's calendar.
+///
+/// Reaches each athlete's plan through lib/team/meets.ts, merged with their
+/// own Meet rows, so the existing meet ramp in calculateSleepPlan fires from
+/// it. There is no second ramp: a team meet becomes a MeetInput like any
+/// other, at TEAM_MEET_PRIORITY, and an athlete's own meet on the same date
+/// wins because it carries the priority they chose.
+///
+/// No event, PR or race-time fields. Those belong to the athlete's own Meet,
+/// where the performance prediction reads them; a coach's calendar entry
+/// says when and what, not how fast anyone has run.
+model TeamMeet {
+  id     String @id @default(cuid())
+  teamId String
+
+  name      String
+  date      DateTime
+  /// Free text ("5K, 4x400"). Display only.
+  distances String
+
+  createdAt DateTime @default(now())
+
+  team Team @relation(fields: [teamId], references: [id], onDelete: Cascade)
+
+  @@index([teamId, date])
 }
 
 /// A code that puts one team on the pilot terms: every feature, 40 seats, and

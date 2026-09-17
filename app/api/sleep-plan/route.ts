@@ -12,6 +12,7 @@ import { manualDailyTss } from "@/lib/trainingLoad";
 import { resolvePaces } from "@/lib/paceSource";
 import { computeSleepDebtMinutes } from "@/lib/verdict";
 import { isValidTimeZone, localClockOf } from "@/lib/messaging/time";
+import { meetsForPlan } from "@/lib/team/meets";
 
 /**
  * PMC needs the 90-day window plus its 42-day warm-up; 200 days covers that
@@ -78,6 +79,7 @@ export async function GET() {
   const [
     { workouts, conflicts },
     meets,
+    planMeets,
     sleepLogs,
     recentSleepLogs,
     debtLogs,
@@ -85,7 +87,11 @@ export async function GET() {
     loggedWorkouts,
   ] = await Promise.all([
     getWorkoutsForDateRange(userId, yesterday, endDate),
+    // The athlete's own rows, kept for the meet list and the predictions,
+    // which key off Meet ids and the event fields only an own meet carries.
     prisma.meet.findMany({ where: { userId }, orderBy: { date: "asc" } }),
+    // What the plan ramps toward: own meets plus the team's, merged.
+    meetsForPlan(userId),
     prisma.sleepLog.findMany({
       where: { userId, date: { gte: yesterday, lte: endDate } },
       orderBy: { date: "asc" },
@@ -204,13 +210,6 @@ export async function GET() {
     }
   }
 
-  const meetsForPlan = meets.map((m) => ({
-    date: m.date,
-    priority: m.priority as "A" | "B" | "C",
-    name: m.name,
-    raceTime: m.raceTime ?? null,
-  }));
-
   const allPlans = calculateSleepPlan(
     {
       age: user.age ?? 25,
@@ -220,7 +219,7 @@ export async function GET() {
       planAggressiveness: user.planAggressiveness ?? 85,
       bedtimeAdjustmentMinutes: user.bedtimeAdjustmentMinutes ?? 0,
     },
-    meetsForPlan,
+    planMeets,
     workouts,
     // The algorithm has always accepted a TSB for its pre-race fatigue boost;
     // until now nothing computed one to pass.

@@ -8,6 +8,8 @@ import { Navbar } from "@/components/Navbar";
 import { Footer } from "@/components/Footer";
 import { Button } from "@/components/Button";
 import { TEAM_CONSENT_TEXT } from "@/lib/team/consent";
+import { TeamMeetsPanel } from "@/components/team/TeamMeetsPanel";
+import { INPUT, REMOVE_BUTTON, formatDate } from "@/components/team/ui";
 
 // One page, both sides of the relationship.
 //
@@ -79,13 +81,6 @@ interface PlannedSessionRow {
 // Mirrors the bounds enforced by POST /api/teams/[teamId]/sessions.
 const MIN_SESSION_MINUTES = 5;
 const MAX_SESSION_MINUTES = 600;
-
-const INPUT =
-  "border border-[#E5E5E5] dark:border-[#333] dark:bg-[#2a2a2a] dark:text-[#F5F5F5] px-3 py-2 text-sm font-mono focus:outline-none focus:border-[#0A0A0A] dark:focus:border-[#F5F5F5]";
-
-function formatDate(d: string): string {
-  return new Date(d).toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" });
-}
 
 export default function TeamPage() {
   const { status } = useSession();
@@ -218,7 +213,7 @@ export default function TeamPage() {
                       </div>
                       <button
                         onClick={() => handleLeave(m.team.id)}
-                        className="text-[10px] font-bold uppercase tracking-wider border border-[#E5E5E5] dark:border-[#333] px-2 py-0.5 text-[#6B6B6B] dark:text-[#A0A0A0] hover:border-[#0A0A0A] dark:hover:border-[#F5F5F5] hover:text-[#0A0A0A] dark:hover:text-[#F5F5F5] transition-colors"
+                        className={REMOVE_BUTTON}
                       >
                         Leave team
                       </button>
@@ -604,6 +599,8 @@ function OwnedTeamPanel({ team, onCodeRotated }: { team: OwnedTeam; onCodeRotate
         )}
       </div>
 
+      <TeamMeetsPanel teamId={team.id} needsPlan={needsPlan} />
+
       {/* Planned sessions */}
       <div className="p-6">
         <p className="text-xs font-bold uppercase tracking-[0.3em] text-[#6B6B6B] mb-4">Planned Sessions</p>
@@ -678,7 +675,7 @@ function OwnedTeamPanel({ team, onCodeRotated }: { team: OwnedTeam; onCodeRotate
                 </div>
                 <button
                   onClick={() => removeSession(s.id)}
-                  className="text-[10px] font-bold uppercase tracking-wider border border-[#E5E5E5] dark:border-[#333] px-2 py-0.5 text-[#6B6B6B] dark:text-[#A0A0A0] hover:border-[#0A0A0A] dark:hover:border-[#F5F5F5] hover:text-[#0A0A0A] dark:hover:text-[#F5F5F5] transition-colors"
+                  className={REMOVE_BUTTON}
                 >
                   Remove
                 </button>
