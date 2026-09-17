@@ -70,6 +70,8 @@ STRIPE_PRICE_PROGRAM_LOCKED # $199/yr, pilot-locked
 VAPID_PUBLIC_KEY      # Web push. Generate with `npm run push:keys`
 VAPID_PRIVATE_KEY     # Rotating the pair unsubscribes every device
 VAPID_SUBJECT         # mailto: or https:// — how a push service contacts you
+NUDGE_DRY_RUN         # Default true. Coach nudges are recorded and logged, never sent
+DIGEST_DRY_RUN        # Default true. The Monday coach digest is logged, never sent
 ```
 
 Production is served at **https://prform.app** — the canonical host, and the value of
@@ -173,6 +175,15 @@ PostgreSQL via Neon, managed with Prisma 7. Connection is configured in `prisma.
 
 Key model relationships: `User → Workout[]`, `User → Meet[]`, `User → SleepLog[]`. Workouts are dual-purpose: `isTemplate: true` + `dayOfWeek` = repeating weekly schedule slot; `isTemplate: false` + `date` = one-off logged workout.
 
+Team side: `Team → TeamMembership[]`, `Team → PlannedSession[]`, `Team → TeamMeet[]`,
+`Team → Nudge[]`. `TeamMeet` and `PlannedSession` are the two things a coach puts on a calendar
+and both reach athletes only through merge layers (`lib/team/meets.ts`, `lib/workoutDataSource.ts`).
+`Nudge` is the record of a coach-to-athlete message; `Team.timezone`, `digestEnabled` and
+`digestLastSentOn` belong to the Monday digest.
+
+To write a migration without touching any database, diff two copies of the schema:
+`npx prisma migrate diff --from-schema <old>.prisma --to-schema prisma/schema.prisma --script`.
+
 ### Auth
 
 NextAuth v4 with a credentials provider (`lib/auth.ts`). The session JWT carries `userId` and `onboardingDone`. All API routes call `getServerSession(authOptions)` and extract `(session.user as any).id`. Users who haven't completed onboarding are redirected to `/onboarding` by the sleep-plan route.
@@ -257,6 +268,61 @@ member-scoped team route).
   today would mark everyone late every day.
 - **A mid-week joiner is not judged on the days before they joined**, and "no nights possible
   yet" is `rate: null`, not 0% — having had no chance is not a miss.
+
+#### The coach dashboard
+
+Five things a team owner sees beyond the roster, all derived, none of them a sleep value.
+
+- **The coach copy guard is the rule, and it is enforced by test.** `lib/team/coachCopyGuard.ts`
+  (`findSleepValueLeaks`, `findSleepValueLeaksInPayload`) forbids clock times, decimals, hours,
+  minutes and am/pm in any coach-facing string, and forbids payload keys that name a sleep value.
+  Counts, percentages, day counts and weekday names pass. Every module below has a test that
+  walks its output through it; a new coach-facing string producer must too.
+- **Data assembly lives in `lib/team/coachView.ts`** (`loadAttention`, `loadMeetReadiness`,
+  `loadSessionForecasts`, `loadTeamTrend`). Sleep rows are read there and die there; routes add
+  a guard, the digest cron adds a loop, neither repeats a query. Every loader takes the roster
+  `assertCoachAccess` returns, so nothing reaches them without the ownership check, the
+  entitlement check and the consent filter.
+- **Team meets** (`TeamMeet`; owner CRUD at `/api/teams/[teamId]/meets`, free tier) reach each
+  athlete's plan through `lib/team/meets.ts` → `meetsForPlan`, merged with their own `Meet` rows
+  into the `MeetInput[]` `calculateSleepPlan` already ramps toward. **There is one ramp.** A team
+  meet is priority `B` (`TEAM_MEET_PRIORITY`); an athlete's own meet on the same date wins. The
+  three plan call sites (`/api/sleep-plan`, `/api/cron/messaging`, `lib/messaging/plan.ts`) all go
+  through `meetsForPlan`; do not fetch `prisma.meet` for a plan anywhere else.
+- **Meet readiness** (`lib/team/meetReadiness.ts`, `/api/teams/[teamId]/meet-readiness`, paid):
+  per athlete a colour, a ramp status (on ramp / behind / no data) over the ten-night ramp
+  (`RAMP_DAYS`, never fewer than the trailing week), and a line built from their own short
+  nights, gaps, nights left and the next hard session. Worst first; no-data athletes are a
+  separate group. On the ramp means at most one miss a week (`ON_RAMP_RATE`), the same line the
+  exception list draws for amber.
+- **Session forecasts** (`lib/sessionForecast.ts`, returned by `GET /api/teams/[teamId]/sessions`,
+  free tier because they are counts): ready / marginal / not ready per upcoming session from the
+  trailing week's colour, sleep debt and nights logged, docked for a hard session adjacent to
+  another hard session or on the eve of the meet. Two nights before the session lift one step; a
+  red week never forecasts above marginal. `shift` is the one suggestion per row, made only when
+  moving a day raises the ready count. "Hard" is `HARD_WORKOUT_TYPES` in `lib/workoutTypes.ts`.
+- **Team trend** (`lib/teamTrend.ts`, `/api/teams/[teamId]/trend`, paid): per ISO week for eight
+  weeks, compliance (targets hit over nights with a verdict), logging rate (over nights possible,
+  bounded by join dates) and short-night count, with hard-session dates for the chart's bars.
+  `components/charts/TeamTrendChart.tsx` follows `SleepPaceTrendChart`: dynamic import, countdown
+  under `MIN_TEAM_NIGHTS`.
+- **Nudge** (`Nudge` model, `POST /api/teams/[teamId]/nudge`, paid): the body takes a
+  `membershipId`, never a user id, resolved against the roster before anything is read. Channel
+  is text when `isSmsReady`, email otherwise, forced through `sendMessage` as `COACH_NUDGE`. The
+  body carries the athlete's own target; the owner sees `coachNudgePreview()` and an outcome.
+  **One per athlete per team per athlete-local day** (`canNudgeAgain` in `lib/team/nudge.ts`,
+  enforced in the route against the latest `Nudge` row). `NUDGE_DRY_RUN` defaults on and records
+  the nudge without calling `sendMessage`, because `SMS_DRY_RUN` does not cover the email path.
+- **The Monday digest** (`lib/team/digest.ts`, `lib/team/digestEmail.ts`, `/api/cron/coach-digest`
+  hourly): four sections built from the loaders above, emailed to the owner at 06:00 Monday in
+  `Team.timezone` (`lib/team/digestSchedule.ts`; `Team.digestLastSentOn` stops a second send in
+  the same hour). `Team.digestEnabled` is the owner's switch, set with the zone at
+  `PATCH /api/teams/[teamId]/settings`. `DIGEST_DRY_RUN` defaults on and logs the rendered
+  digest; a dry run does not stamp the team.
+- **Migrations for all of this are written and not applied** as of 2026-09-17:
+  `20260917000000_add_team_meet`, `20260917010000_add_nudge`,
+  `20260917020000_add_team_digest_settings`. Apply in that order via `db execute` + `migrate
+  resolve` (see the Prisma drift note), then `npm run test:db:push` before the integration suite.
 
 ### Retention measurement
 
