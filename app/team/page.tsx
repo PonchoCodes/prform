@@ -11,6 +11,7 @@ import { TEAM_CONSENT_TEXT } from "@/lib/team/consent";
 import { TeamMeetsPanel } from "@/components/team/TeamMeetsPanel";
 import { TeamTrendPanel } from "@/components/team/TeamTrendPanel";
 import { SessionForecastLine, type SessionForecastRow } from "@/components/team/SessionForecastLine";
+import { NudgeButton, NudgeAllButton, useNudges } from "@/components/team/Nudge";
 import { INPUT, REMOVE_BUTTON, formatDate } from "@/components/team/ui";
 
 // One page, both sides of the relationship.
@@ -58,6 +59,7 @@ interface Membership {
 }
 
 interface ExceptionEntry {
+  membershipId: string;
   name: string;
   color: "amber" | "red";
   trend: string;
@@ -450,6 +452,7 @@ function OwnedTeamPanel({ team, onCodeRotated }: { team: OwnedTeam; onCodeRotate
   const [sessions, setSessions] = useState<PlannedSessionRow[]>([]);
   const [forecasts, setForecasts] = useState<Record<string, SessionForecastRow>>({});
   const [rotating, setRotating] = useState(false);
+  const nudges = useNudges(team.id);
   // durationMinutes starts empty, not at a default. Prefilling it would put a
   // number the owner never chose onto every athlete's training load.
   const [sessionForm, setSessionForm] = useState({
@@ -562,7 +565,12 @@ function OwnedTeamPanel({ team, onCodeRotated }: { team: OwnedTeam; onCodeRotate
 
       {/* Exception list */}
       <div className="p-6 border-b border-[#E5E5E5] dark:border-[#333]">
-        <p className="text-xs font-bold uppercase tracking-[0.3em] text-[#6B6B6B] mb-3">Needs Attention</p>
+        <div className="flex items-center justify-between gap-4 mb-3">
+          <p className="text-xs font-bold uppercase tracking-[0.3em] text-[#6B6B6B]">Needs Attention</p>
+          {exceptions && exceptions.exceptions.length > 1 && (
+            <NudgeAllButton nudges={nudges} count={exceptions.exceptions.length} />
+          )}
+        </div>
         {needsPlan ? (
           <p className="text-sm text-[#6B6B6B] dark:text-[#A0A0A0]">
             Readiness for each athlete comes with the team plan.{" "}
@@ -586,17 +594,18 @@ function OwnedTeamPanel({ team, onCodeRotated }: { team: OwnedTeam; onCodeRotate
           </p>
         ) : (
           <div className="space-y-px bg-[#E5E5E5] dark:bg-[#333]">
-            {exceptions.exceptions.map((e, i) => (
-              <div key={`${e.name}-${i}`} className="bg-white dark:bg-[#242424] p-4 flex items-start gap-4">
+            {exceptions.exceptions.map((e) => (
+              <div key={e.membershipId} className="bg-white dark:bg-[#242424] p-4 flex items-start gap-4">
                 <span
                   aria-label={e.color === "red" ? "Red, act today" : "Amber, watch"}
                   className={`mt-1 inline-block w-3 h-3 flex-shrink-0 ${e.color === "red" ? "bg-[#FF4444]" : "bg-[#E8FF00]"}`}
                 />
-                <div>
+                <div className="flex-1 min-w-0">
                   <p className="font-bold text-sm uppercase tracking-wider">{e.name}</p>
                   <p className="text-xs font-mono text-[#6B6B6B] dark:text-[#A0A0A0] mt-0.5">{e.trend}</p>
                   <p className="text-sm mt-1">{e.recommendation}</p>
                 </div>
+                <NudgeButton nudges={nudges} membershipId={e.membershipId} />
               </div>
             ))}
           </div>
@@ -604,6 +613,11 @@ function OwnedTeamPanel({ team, onCodeRotated }: { team: OwnedTeam; onCodeRotate
         {exceptions && exceptions.rosterSize > 0 && exceptions.exceptions.length > 0 && (
           <p className="text-[10px] font-mono text-[#6B6B6B] dark:text-[#A0A0A0] mt-3">
             {exceptions.onTrack} of {exceptions.rosterSize} on track and not shown.
+          </p>
+        )}
+        {nudges.preview && (
+          <p className="text-[10px] font-mono text-[#6B6B6B] dark:text-[#A0A0A0] mt-2">
+            Sent as: {nudges.preview}
           </p>
         )}
       </div>

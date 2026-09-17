@@ -98,3 +98,43 @@ export function friendlyTime(clock24: string): string {
   const hour12 = h % 12 || 12;
   return `${hour12}:${String(m).padStart(2, "0")}${period}`;
 }
+
+/**
+ * A coach's nudge, as the athlete reads it. Names who it is from, because a
+ * message that reads as the app checking in is one they already get; the
+ * point of a nudge is that a person noticed.
+ *
+ * The athlete's own target is theirs to see, and it is the one number that
+ * makes tonight actionable. `targetHours` is null when no plan could be
+ * built, and the sentence then says to check the app rather than inventing
+ * a figure.
+ */
+export function coachNudge(input: {
+  coachName: string;
+  teamName: string;
+  targetHours: number | null;
+}): string {
+  const target =
+    input.targetHours == null
+      ? "Tonight's target is in the app."
+      : `Tonight's target is ${formatHours(input.targetHours)}.`;
+  return `${input.coachName} from ${input.teamName} checked in. ${target} Log it in the morning.`.slice(
+    0,
+    MAX_BODY_LENGTH,
+  );
+}
+
+/**
+ * What the coach is shown instead of the body. Fixed, and it carries no
+ * number: the athlete's target is the athlete's, and the preview is held to
+ * lib/team/coachCopyGuard.ts in nudge.test.ts.
+ */
+export function coachNudgePreview(): string {
+  return "Your coach checked in. Tonight's target is in the app. Log it in the morning.";
+}
+
+/** "8h", "8.5h", "8.25h" — the shortest honest form. */
+function formatHours(hours: number): string {
+  const rounded = Math.round(hours * 4) / 4;
+  return `${rounded % 1 === 0 ? rounded : rounded.toString()}h`;
+}

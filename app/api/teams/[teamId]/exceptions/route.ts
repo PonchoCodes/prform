@@ -75,6 +75,12 @@ export async function GET(_req: Request, { params }: { params: { teamId: string 
 
   let green = 0;
   const exceptions: Array<{
+    /**
+     * The handle a Nudge request carries back. A membership id rather than
+     * the athlete's user id: it is scoped to this team by construction, and
+     * the nudge route resolves it against the roster again before acting.
+     */
+    membershipId: string;
     name: string;
     color: "amber" | "red";
     trend: string;
@@ -95,6 +101,7 @@ export async function GET(_req: Request, { params }: { params: { teamId: string 
       continue;
     }
     exceptions.push({
+      membershipId: member.membershipId,
       name: member.name,
       color: status.color as "amber" | "red",
       trend: status.trend,

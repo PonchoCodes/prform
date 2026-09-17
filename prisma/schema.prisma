@@ -528,6 +528,9 @@ enum MessageType {
   STOP_ACK
   /// Step 8 phone verification.
   VERIFICATION_CODE
+  /// A team owner tapped Nudge on the exception list. Athlete-facing; the
+  /// owner sees a fixed preview and never the body (see lib/team/nudge.ts).
+  COACH_NUDGE
 }
 
 enum MessageStatus {
@@ -642,6 +645,7 @@ model Team {
   memberships     TeamMembership[]
   plannedSessions PlannedSession[]
   teamMeets       TeamMeet[]
+  nudges          Nudge[]
   pilotCode       PilotCode?
 
   @@index([ownerId])
@@ -760,6 +764,33 @@ model PlannedSession {
   team Team @relation(fields: [teamId], references: [id], onDelete: Cascade)
 
   @@index([teamId, date])
+}
+
+/// One tap of Nudge on the exception list: a message from the team owner to
+/// one athlete, sent through the same sendMessage path as everything else.
+///
+/// Its own table rather than a SentMessage query because the rate limit is
+/// per team as well as per athlete and per day, and SentMessage has no team
+/// on it. The body is stored so what an athlete was told is on record; it is
+/// never returned to the owner, who sees a fixed preview instead.
+model Nudge {
+  id String @id @default(cuid())
+
+  teamId        String
+  coachId       String
+  athleteUserId String
+
+  channel     MessageChannel
+  body        String
+  /// The provider identifier from the send, or null under a dry run.
+  providerSid String?
+
+  createdAt DateTime @default(now())
+
+  team Team @relation(fields: [teamId], references: [id], onDelete: Cascade)
+
+  /// The rate-limit query: the latest nudge to one athlete from one team.
+  @@index([teamId, athleteUserId, createdAt])
 }
 
 /// Phone verification codes. Separate from User so a code has a lifetime, an

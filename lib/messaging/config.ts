@@ -30,6 +30,18 @@ export function isDryRun(): boolean {
 }
 
 /**
+ * Coach nudges: log the recipient, channel and body; hand nothing to
+ * sendMessage. Defaults to ON for the same reason SMS_DRY_RUN does.
+ *
+ * Separate from SMS_DRY_RUN because that flag governs texts only, by design,
+ * and a nudge falls back to email — an athlete with no verified number would
+ * otherwise receive a real email from a feature that was meant to be dark.
+ */
+export function isNudgeDryRun(): boolean {
+  return envFlag("NUDGE_DRY_RUN", true);
+}
+
+/**
  * The global brake. When set, nothing goes out at all — not replies, not
  * verification codes, not the mandatory auto-replies.
  *
