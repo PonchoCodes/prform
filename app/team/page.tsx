@@ -9,6 +9,7 @@ import { Footer } from "@/components/Footer";
 import { Button } from "@/components/Button";
 import { TEAM_CONSENT_TEXT } from "@/lib/team/consent";
 import { TeamMeetsPanel } from "@/components/team/TeamMeetsPanel";
+import { TeamTrendPanel } from "@/components/team/TeamTrendPanel";
 import { SessionForecastLine, type SessionForecastRow } from "@/components/team/SessionForecastLine";
 import { INPUT, REMOVE_BUTTON, formatDate } from "@/components/team/ui";
 
@@ -692,6 +693,8 @@ function OwnedTeamPanel({ team, onCodeRotated }: { team: OwnedTeam; onCodeRotate
           </div>
         )}
       </div>
+
+      <TeamTrendPanel teamId={team.id} needsPlan={needsPlan} />
     </div>
   );
 }
