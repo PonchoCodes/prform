@@ -1,4 +1,102 @@
-# Handoff — 2026-08-12
+# Handoff — 2026-09-18
+
+Written at the end of the session that shipped the coach dashboard (units 1 to 5,
+built 2026-09-17) to production. The sections below this one are earlier handoffs,
+kept because their facts still hold; the 2026-08-12 one is the previous state.
+
+**Read this first if you are picking the work up cold.** `CLAUDE.md` explains how
+everything works (the coach dashboard has its own section there); this file
+explains what state it is in right now.
+
+---
+
+## Committed and deployed (2026-09-18)
+
+Everything from 2026-09-15 and 2026-09-17 is now **pushed and live on prform.app**:
+open signup, team entitlements, pilot codes, Strava eligibility, and the five coach
+dashboard units (team meets, session forecasts, team trend, nudges, Monday digest).
+Head is `418c760`.
+
+**The three migrations were applied to Neon** via `db execute` + `migrate resolve`,
+in order: `20260917000000_add_team_meet`, `20260917010000_add_nudge`,
+`20260917020000_add_team_digest_settings`. `prisma migrate status` reports the
+database up to date, so `prisma migrate deploy` during the build was a no-op.
+
+**Production had been running the 2026-08-12 build for 37 days.** The 2026-09-15
+and 2026-09-17 pushes to GitHub produced no Vercel deployment at all (nothing in
+`vercel ls` between 37d and today), so open signup and pilot codes were never live
+until this build. Today's push did trigger a build (Ready in about a minute). If a
+future push does not show up in `vercel ls` within a minute, check the Git
+integration on the Vercel project rather than assuming it is queued.
+
+**Smoked on production** as the two seeded coaches (`coach.paid@prform.test`,
+`coach.free@prform.test`, see `scripts/seedTeams.ts`): login, `/api/teams`, and
+every coach route. Paid: exceptions (with `membershipId`), sessions with forecasts,
+meets, meet-readiness, trend, leaderboard all 200 and the `/team` page renders. Free:
+sessions, meets and leaderboard 200; exceptions, meet-readiness and trend 402
+`UPGRADE_REQUIRED`, which is the documented split. `/api/cron/coach-digest` exists
+(401 unauthenticated). Not exercised: the forced digest (`?force=1`), a nudge, and
+team meet creation, none of which are read-only.
+
+**Three integration tests were stale and are fixed** (`418c760`), all test-side:
+
+- `teams.entitlements` "accepts a code typed with spaces": never called `makeFree`,
+  and the world seeds every team as PILOT, so the route's 409 was correct.
+- `teams.privacy` exception shape: `membershipId` is part of an exception since the
+  nudge button needs it (`c59bbc0`).
+- `push.send` "no_channel": every account has an email, so with a real
+  `RESEND_API_KEY` in local `.env` the message went out through Resend. The test now
+  blanks the key for that case and restores it. The suite should no longer put mail
+  in a real inbox from that test.
+
+## Verification state
+
+- `npx tsc --noEmit` clean
+- `npm test` — 632 passing
+- `npm run test:integration` — 132 passing after the fixes above (run
+  `npm run test:db:push` first after any schema change). The first full run of the
+  day failed 45 tests with hook timeouts and bare TypeErrors; a rerun with the test
+  database warm passed. That is Neon waking up, not the code. Rerun before
+  investigating.
+- Production build Ready; migrations no-op during build.
+
+## The two dry-run flags: recommendation, not yet flipped
+
+`NUDGE_DRY_RUN` and `DIGEST_DRY_RUN` are **not set in Vercel production**, so both
+default on. Nothing coach-initiated leaves the building yet. Recommendation:
+
+1. **Do not flip `DIGEST_DRY_RUN` while the seeded teams have `digestEnabled = true`.**
+   Their owners are `@prform.test` addresses, which do not exist. The first live
+   Monday would send two emails from `hi@prform.app` that bounce, which is the
+   cheapest way to damage the domain's reputation before a real coach ever gets
+   one. Either set `digestEnabled = false` on both seed teams (through
+   `PATCH /api/teams/[teamId]/settings` as each coach, or by making
+   `scripts/seedTeams.ts` seed them that way), or point the seed owners at real
+   inboxes.
+2. **Flip `DIGEST_DRY_RUN` the week the first real coach is on the platform**, after
+   one forced dry run (`GET /api/cron/coach-digest?force=1` with the cron secret)
+   whose rendered digest has been read in the Vercel function logs. A dry run does
+   not stamp the team, so the flip sends on the next due hour.
+3. **Flip `NUDGE_DRY_RUN` at the same moment or later, never earlier.** The same
+   bounce argument applies to the seeded athletes, and a nudge reaches a minor.
+   Before flipping, send one to your own account as an athlete on a test team with a
+   real email. SMS nudges stay dry regardless until Twilio exists (`SMS_DRY_RUN`).
+
+Both flags are read by `lib/messaging/config.ts`; `false`, `0`, `no` or `off` turns
+one off. Like every env change, it takes effect on the next deploy.
+
+## Still open, in priority order
+
+1. **Disable the digest on the two seed teams** (or fix the seed), per above.
+2. **The write paths on production**: create a team meet as the paid coach and
+   confirm it appears on a roster athlete's plan; send one nudge in dry run and read
+   the log line; force one digest in dry run and read the rendered email.
+3. **Device testing** from the 2026-08-12 handoff still stands: PWA install modal
+   branches and iOS/Android push, on real phones.
+
+---
+
+## Handoff — 2026-08-12
 
 Written at the end of a session that added a triggered PWA install modal,
 sharing one component with the settings page. The modal opens from the

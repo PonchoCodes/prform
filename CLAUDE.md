@@ -319,10 +319,11 @@ Five things a team owner sees beyond the roster, all derived, none of them a sle
   the same hour). `Team.digestEnabled` is the owner's switch, set with the zone at
   `PATCH /api/teams/[teamId]/settings`. `DIGEST_DRY_RUN` defaults on and logs the rendered
   digest; a dry run does not stamp the team.
-- **Migrations for all of this are written and not applied** as of 2026-09-17:
-  `20260917000000_add_team_meet`, `20260917010000_add_nudge`,
-  `20260917020000_add_team_digest_settings`. Apply in that order via `db execute` + `migrate
-  resolve` (see the Prisma drift note), then `npm run test:db:push` before the integration suite.
+- **Migrations for all of this were applied to Neon on 2026-09-18** via `db execute` +
+  `migrate resolve` (see the Prisma drift note), in order: `20260917000000_add_team_meet`,
+  `20260917010000_add_nudge`, `20260917020000_add_team_digest_settings`. `NUDGE_DRY_RUN` and
+  `DIGEST_DRY_RUN` are unset in production, so both still default on; HANDOFF.md has the
+  conditions for flipping them.
 
 ### Retention measurement
 
