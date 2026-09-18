@@ -246,6 +246,7 @@ describe("pilot redemption", () => {
   });
 
   it("accepts a code typed with spaces and in lower case", async () => {
+    await makeFree(world.teamA.id);
     const code = await makeCode("MNPQ6789");
     signInAs(world.ownerA.id);
 

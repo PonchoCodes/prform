@@ -350,12 +350,22 @@ describe("no channel at all", () => {
   it("reports no_channel rather than blocked when nothing is set up", async () => {
     await prisma.pushSubscription.deleteMany({ where: { userId } });
 
-    const outcome = await sendMessage({
-      userId,
-      messageType: "MORNING_VERDICT",
-      body: "Solid night.",
-      localDate: LOCAL_DATE,
-    });
+    // Every account has an email address, so "nothing configured" is only true
+    // when there is no email provider either. Local .env carries a real
+    // RESEND_API_KEY; without this the message goes out through Resend.
+    const resendKey = process.env.RESEND_API_KEY;
+    delete process.env.RESEND_API_KEY;
+    let outcome;
+    try {
+      outcome = await sendMessage({
+        userId,
+        messageType: "MORNING_VERDICT",
+        body: "Solid night.",
+        localDate: LOCAL_DATE,
+      });
+    } finally {
+      if (resendKey !== undefined) process.env.RESEND_API_KEY = resendKey;
+    }
 
     // Distinct from "blocked": nothing refused this message. There is simply
     // nowhere to send it, which is a different fact about the athlete and one

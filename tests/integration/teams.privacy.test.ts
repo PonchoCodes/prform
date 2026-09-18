@@ -92,7 +92,7 @@ describe("an owner’s own team: readiness, never sleep", () => {
     }
   });
 
-  it("an exception carries exactly a name, a color, a trend and a recommendation", async () => {
+  it("an exception carries exactly a name, a color, a trend, a recommendation and the membership id the nudge needs", async () => {
     const result = await invoke(exceptionsGET, { teamId: world.teamA.id });
 
     expect(Object.keys(result.body).sort()).toEqual(
@@ -100,7 +100,7 @@ describe("an owner’s own team: readiness, never sleep", () => {
     );
     for (const exception of result.body.exceptions) {
       expect(Object.keys(exception).sort()).toEqual(
-        ["color", "name", "recommendation", "trend"].sort(),
+        ["color", "membershipId", "name", "recommendation", "trend"].sort(),
       );
     }
   });
